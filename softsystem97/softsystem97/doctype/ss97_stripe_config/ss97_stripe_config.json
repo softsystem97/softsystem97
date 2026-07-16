@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-07-16 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "test_mode",
+  "payments_live_enabled",
+  "column_break_mode",
+  "success_url",
+  "cancel_url",
+  "section_break_test",
+  "test_publishable_key",
+  "test_secret_key",
+  "test_webhook_secret",
+  "section_break_live",
+  "live_publishable_key",
+  "live_secret_key",
+  "webhook_secret"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "fieldname": "test_mode",
+   "fieldtype": "Check",
+   "label": "Mode test"
+  },
+  {
+   "default": "0",
+   "fieldname": "payments_live_enabled",
+   "fieldtype": "Check",
+   "label": "Paiements LIVE activés"
+  },
+  {
+   "fieldname": "column_break_mode",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "/espace-client/paiements/merci",
+   "fieldname": "success_url",
+   "fieldtype": "Data",
+   "label": "URL succès"
+  },
+  {
+   "default": "/espace-client/paiements",
+   "fieldname": "cancel_url",
+   "fieldtype": "Data",
+   "label": "URL annulation"
+  },
+  {
+   "fieldname": "section_break_test",
+   "fieldtype": "Section Break",
+   "label": "Clés TEST"
+  },
+  {
+   "fieldname": "test_publishable_key",
+   "fieldtype": "Data",
+   "label": "Publishable key (test)"
+  },
+  {
+   "fieldname": "test_secret_key",
+   "fieldtype": "Password",
+   "label": "Secret key (test)"
+  },
+  {
+   "fieldname": "test_webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook secret (test)"
+  },
+  {
+   "fieldname": "section_break_live",
+   "fieldtype": "Section Break",
+   "label": "Clés LIVE"
+  },
+  {
+   "fieldname": "live_publishable_key",
+   "fieldtype": "Data",
+   "label": "Publishable key (live)"
+  },
+  {
+   "fieldname": "live_secret_key",
+   "fieldtype": "Password",
+   "label": "Secret key (live)"
+  },
+  {
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook secret (live)"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-07-16 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SoftSystem97",
+ "name": "SS97 Stripe Config",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "Accounts Manager",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
