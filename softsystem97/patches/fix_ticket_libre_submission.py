@@ -127,6 +127,29 @@ except Exception:
 """
 
 
+AI_RECEPTION_SCRIPT_NAME = "SS97 AI Agent Reception After Insert"
+AI_CATEGORY_OVERWRITE = '    frappe.db.set_value("Issue", doc.name, "ss97_category", cat_map.get(category, "Autre"), update_modified=False)'
+AI_CATEGORY_PRESERVE = '''    if not (doc.ss97_category or "").strip():
+        frappe.db.set_value("Issue", doc.name, "ss97_category", cat_map.get(category, "Autre"), update_modified=False)'''
+AI_PRIORITY_OVERWRITE = '    frappe.db.set_value("Issue", doc.name, "priority", prio_map.get(urgency, "Medium"), update_modified=False)'
+AI_PRIORITY_PRESERVE = '''    if not (doc.priority or "").strip():
+        frappe.db.set_value("Issue", doc.name, "priority", prio_map.get(urgency, "Medium"), update_modified=False)'''
+
+
+def _preserve_explicit_ticket_choices(script: str) -> str:
+    if AI_CATEGORY_PRESERVE not in script:
+        if AI_CATEGORY_OVERWRITE not in script:
+            frappe.throw("Expected AI category assignment was not found")
+        script = script.replace(AI_CATEGORY_OVERWRITE, AI_CATEGORY_PRESERVE, 1)
+
+    if AI_PRIORITY_PRESERVE not in script:
+        if AI_PRIORITY_OVERWRITE not in script:
+            frappe.throw("Expected AI priority assignment was not found")
+        script = script.replace(AI_PRIORITY_OVERWRITE, AI_PRIORITY_PRESERVE, 1)
+
+    return script
+
+
 def execute() -> None:
     if frappe.db.exists("Web Form", "ss97-ouvrir-ticket"):
         frappe.db.set_value(
@@ -147,5 +170,11 @@ def execute() -> None:
             TICKET_LIBRE_AFTER_INSERT_SCRIPT,
             update_modified=True,
         )
+
+    if frappe.db.exists("Server Script", AI_RECEPTION_SCRIPT_NAME):
+        ai_script = frappe.get_doc("Server Script", AI_RECEPTION_SCRIPT_NAME)
+        preserved_script = _preserve_explicit_ticket_choices(ai_script.script or "")
+        if preserved_script != ai_script.script:
+            ai_script.db_set("script", preserved_script, update_modified=True)
 
     frappe.clear_cache(doctype="Web Form")
