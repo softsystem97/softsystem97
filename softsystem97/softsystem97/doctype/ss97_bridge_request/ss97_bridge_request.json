@@ -1,0 +1,83 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "field:request_id",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "request_id",
+    "status",
+    "action",
+    "sam_account_name",
+    "display_name",
+    "role",
+    "result_json",
+    "error_message"
+  ],
+  "fields": [
+    {
+      "fieldname": "request_id",
+      "fieldtype": "Data",
+      "label": "Request ID",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "default": "PENDING",
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "PENDING\nRECEIVED\nPROCESSING\nSUCCESS\nERROR",
+      "reqd": 1
+    },
+    {
+      "fieldname": "action",
+      "fieldtype": "Data",
+      "label": "Action",
+      "reqd": 1
+    },
+    {
+      "fieldname": "sam_account_name",
+      "fieldtype": "Data",
+      "label": "SamAccountName",
+      "reqd": 1
+    },
+    {
+      "fieldname": "display_name",
+      "fieldtype": "Data",
+      "label": "Display Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "role",
+      "fieldtype": "Data",
+      "label": "Role",
+      "reqd": 1
+    },
+    {
+      "fieldname": "result_json",
+      "fieldtype": "Long Text",
+      "label": "Result JSON"
+    },
+    {
+      "fieldname": "error_message",
+      "fieldtype": "Long Text",
+      "label": "Error Message"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "module": "SoftSystem97",
+  "name": "SS97 Bridge Request",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "write": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC"
+}
