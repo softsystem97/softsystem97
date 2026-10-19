@@ -1,0 +1,63 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Ticket Bridge Event",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "prompt",
+  "field_order": [
+    "actor",
+    "action",
+    "request_hash",
+    "issue",
+    "detail",
+    "response_json"
+  ],
+  "fields": [
+    {
+      "fieldname": "actor",
+      "label": "actor",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "action",
+      "label": "action",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "request_hash",
+      "label": "request_hash",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "issue",
+      "label": "issue",
+      "fieldtype": "Link",
+      "options": "Issue"
+    },
+    {
+      "fieldname": "detail",
+      "label": "detail",
+      "fieldtype": "Text"
+    },
+    {
+      "fieldname": "response_json",
+      "label": "response_json",
+      "fieldtype": "Long Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "create": 1,
+      "write": 1,
+      "delete": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "index_web_pages_for_search": 0,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

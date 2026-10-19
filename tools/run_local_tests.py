@@ -25,7 +25,8 @@ def main():
     try:
         suite = unittest.defaultTestLoader.loadTestsFromNames([
             'softsystem97.tests.test_access', 'softsystem97.tests.test_mail_queue',
-            'softsystem97.tests.test_api_helpers', 'softsystem97.tests.test_provisioning'])
+            'softsystem97.tests.test_api_helpers', 'softsystem97.tests.test_provisioning',
+            'softsystem97.tests.test_ticket_bridge'])
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
     finally:

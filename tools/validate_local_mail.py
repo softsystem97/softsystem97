@@ -2,7 +2,7 @@
 
 Requires aiosmtpd==1.4.6 in the bench Python environment. Only disposable audit/test
 sites with allow_tests are accepted. This validates Frappe infrastructure, not the
-absent SS97 ticket confirmation producer. Run from the bench directory.
+legacy SS97 ticket confirmation producer. --bridge exercises the replacement producer. Run from the bench directory.
 """
 import argparse
 import json
@@ -30,6 +30,7 @@ class Sink:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--site', required=True)
+    parser.add_argument('--bridge', action='store_true', help='Exercise the opt-in replacement bridge producer')
     args = parser.parse_args()
     if not args.site.startswith(('audit.', 'test_')):
         parser.error('Disposable audit/test site required')
@@ -42,6 +43,8 @@ def main():
         raise RuntimeError('allow_tests must be enabled on the disposable site')
     if frappe.db.exists('Email Account', {'enable_outgoing': 1}):
         raise RuntimeError('Refusing to change a site with an existing outgoing account')
+    if args.bridge and frappe.db.exists('Email Queue', {'status': ['in', ['Not Sent', 'Sending', 'Error']]}):
+        raise RuntimeError('Bridge probe requires an empty pending mail queue on the disposable site')
     # Never copy a site_config file or retrieve any account password/API credentials.
     sink = Sink()
     smtp = Controller(sink, hostname='127.0.0.1', port=8026)
@@ -74,42 +77,48 @@ def main():
                      smtp_server='127.0.0.1', smtp_port=8026, use_tls=0,
                      no_smtp_authentication=1)).insert()
         created.append((account.doctype, account.name))
-        notification = frappe.get_doc(dict(doctype='Notification',
-            name='SS97 Local Audit Confirmation', document_type='Issue', event='New',
-            channel='Email', enabled=1, subject='SS97 isolated confirmation probe',
-            message='Local synthetic probe only',
-            recipients=[dict(receiver_by_document_field='raised_by')])).insert()
-        created.append((notification.doctype, notification.name))
-        issue = frappe.get_doc(dict(doctype='Issue', subject='SS97 isolated mail audit',
-                                    raised_by='recipient@example.invalid')).insert()
-        created.append((issue.doctype, issue.name))
+        if args.bridge:
+            from bridge_mail_fixture import produce
+            issue = produce(account, created)
+            expected_count = 6  # opening, assignment, resolution and closure (two recipients each).
+        else:
+            notification = frappe.get_doc(dict(doctype='Notification',
+                name='SS97 Local Audit Confirmation', document_type='Issue', event='New',
+                channel='Email', enabled=1, subject='SS97 isolated confirmation probe',
+                message='Local synthetic probe only',
+                recipients=[dict(receiver_by_document_field='raised_by')])).insert()
+            created.append((notification.doctype, notification.name))
+            issue = frappe.get_doc(dict(doctype='Issue', subject='SS97 isolated mail audit',
+                                        raised_by='recipient@example.invalid')).insert()
+            created.append((issue.doctype, issue.name))
+            expected_count = 1
         queued = frappe.get_all('Email Queue', filters={'reference_doctype': 'Issue',
                                  'reference_name': issue.name}, pluck='name')
-        assert len(queued) == 1, 'Issue creation must trigger exactly one queued notification'
-        mail = frappe.get_doc('Email Queue', queued[0])
-        created.append((mail.doctype, mail.name))
-        # Age only the synthetic record beyond Frappe's documented 10-second undo window.
-        frappe.db.set_value(mail.doctype, mail.name, 'creation',
-                            frappe.utils.add_to_date(None, seconds=-20), update_modified=False)
+        assert len(queued) == expected_count, 'Unexpected notification count'
+        for name in queued:
+            created.append(('Email Queue', name))
+            frappe.db.set_value('Email Queue', name, 'creation',
+                                frappe.utils.add_to_date(None, seconds=-20), update_modified=False)
         frappe.db.commit()
-        assert frappe.db.get_value(mail.doctype, mail.name, 'status') == 'Not Sent'
+        assert all(frappe.db.get_value('Email Queue', name, 'status') == 'Not Sent' for name in queued)
         assert not sink.received.is_set()
-        print('PASS Issue insert -> native Notification -> Email Queue: Not Sent exactly once', flush=True)
+        producer = 'replacement bridge with repeated requests' if args.bridge else 'native Notification'
+        print(f'PASS {producer} -> Email Queue: {expected_count} Not Sent, no duplicates', flush=True)
         # Use real processes and the registered scheduler; never call flush or Send Now here.
         for command in [['bench', 'worker', '--queue', 'default'], ['bench', 'schedule']]:
             processes.append(subprocess.Popen(command, cwd=bench, stdout=log_file, stderr=log_file))
         deadline = time.monotonic() + 50
         while time.monotonic() < deadline:
             frappe.db.rollback()
-            status = frappe.db.get_value(mail.doctype, mail.name, 'status')
-            if sink.received.is_set() and status == 'Sent':
+            statuses = [frappe.db.get_value('Email Queue', name, 'status') for name in queued]
+            if sink.received.is_set() and all(status == 'Sent' for status in statuses):
                 break
             if any(p.poll() is not None for p in processes):
                 raise AssertionError('Scheduler or worker exited; inspect local process log')
             time.sleep(0.5)
-        assert status == 'Sent' and sink.count == 1, (status, sink.count)
+        assert all(status == 'Sent' for status in statuses) and sink.count == expected_count, (statuses, sink.count)
         assert frappe.db.exists('Scheduled Job Log', {'scheduled_job_type': job.name, 'status': 'Complete'})
-        print('PASS autonomous scheduler -> default worker -> local SMTP: Sent exactly once', flush=True)
+        print(f'PASS autonomous scheduler -> worker -> local SMTP: {expected_count} Sent, exactly once each', flush=True)
     finally:
         for proc in reversed(processes):
             proc.terminate()

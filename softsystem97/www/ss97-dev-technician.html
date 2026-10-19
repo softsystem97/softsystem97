@@ -1,0 +1,46 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<style>
+.ss97-bridge { max-width: 60rem; margin: 1rem auto; padding: 1rem; }
+.ss97-bridge label, .ss97-bridge input, .ss97-bridge textarea, .ss97-bridge select { display:block; width:100%; margin:.5rem 0; }
+.ss97-bridge button, .ss97-bridge a { margin:.4rem .4rem .4rem 0; }
+.ss97-bridge article { border:1px solid #aab3bd; border-radius:.5rem; padding:1rem; margin:.7rem 0; overflow-wrap:anywhere; }
+.ss97-bridge [hidden] { display:none!important; }
+.ss97-bridge #ss97-error { color:#9a1c1c; }
+.ss97-bridge #ss97-history { white-space:pre-wrap; }
+@media (max-width:600px) { .ss97-bridge { padding:.5rem; } .ss97-bridge button { min-height:44px; } }
+</style>
+<main class="ss97-bridge" aria-label="Interventions">
+<h1>Interventions</h1>
+<p>Interface de développement — commentaires partagés avec le client.</p>
+<p id="ss97-error" role="alert" aria-live="polite"></p>
+{% if is_guest %}
+<form id="ss97-login">
+  <label for="ss97-email">E-mail</label><input id="ss97-email" type="email" autocomplete="username" required>
+  <label for="ss97-password">Mot de passe</label><input id="ss97-password" type="password" autocomplete="current-password" required>
+  <button id="ss97-show-password" type="button" aria-controls="ss97-password" aria-pressed="false">Afficher le mot de passe</button>
+  <button type="submit">Se connecter</button>
+  <a href="/login?redirect-to=%2Fss97-dev-technician">Connexion Frappe (SSO ou double authentification)</a>
+</form>
+{% else %}
+<section id="ss97-workspace">
+  <label for="ss97-audience">Espace</label><select id="ss97-audience"><option value="technician">Technicien</option><option value="client">Client</option></select>
+  <button id="ss97-refresh" type="button">Actualiser</button><a href="/login?redirect-to=%2Fss97-dev-technician">Connexion</a>
+  <form id="ss97-create" hidden><h2>Ouvrir un ticket</h2>
+    <label for="ss97-subject">Sujet</label><input id="ss97-subject" maxlength="140" required>
+    <label for="ss97-description">Description</label><textarea id="ss97-description" maxlength="10000" required></textarea>
+    <button type="submit">Créer le ticket</button>
+  </form>
+  <h2>Tickets</h2><div id="ss97-tickets" aria-live="polite"></div>
+  <button id="ss97-previous" type="button">Précédents</button><button id="ss97-next" type="button">Suivants</button>
+  <section id="ss97-detail" hidden><h2 id="ss97-title"></h2><p id="ss97-body"></p>
+    <p id="ss97-status"></p><form id="ss97-status-form"><label for="ss97-status-choice">Nouveau statut</label><select id="ss97-status-choice"></select><button type="submit">Enregistrer le statut</button></form>
+    <h3>Historique partagé</h3><div id="ss97-history"></div>
+    <form id="ss97-comment"><label for="ss97-content">Commentaire partagé</label><textarea id="ss97-content" maxlength="5000" required></textarea><button type="submit">Ajouter</button></form>
+  </section>
+  <h2>Notifications</h2><div id="ss97-notifications"></div>
+</section>
+{% endif %}
+</main>
+<script src="/assets/softsystem97/js/ticket_bridge.js" defer></script>
+{% endblock %}
