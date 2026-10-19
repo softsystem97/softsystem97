@@ -24,7 +24,8 @@ def main():
     frappe.in_test = True
     try:
         suite = unittest.defaultTestLoader.loadTestsFromNames([
-            'softsystem97.tests.test_access', 'softsystem97.tests.test_mail_queue'])
+            'softsystem97.tests.test_access', 'softsystem97.tests.test_mail_queue',
+            'softsystem97.tests.test_api_helpers'])
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
     finally:

@@ -9,6 +9,14 @@ import warnings
 from urllib.parse import urlsplit
 
 
+def is_authenticated_payload(payload):
+    if not isinstance(payload, dict):
+        return False
+    identity = payload.get('message')
+    return (isinstance(identity, str) and bool(identity.strip())
+            and identity == identity.strip() and identity != 'Guest')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--base-url', required=True, help='Authorized HTTPS site, no URL credentials')
@@ -37,7 +45,7 @@ def main():
     try:
         with urllib.request.build_opener(NoRedirect).open(request, timeout=20) as response:
             payload = json.load(response)
-            ok = isinstance(payload.get('message'), str) and payload['message'] != 'Guest'
+            ok = is_authenticated_payload(payload)
     except urllib.error.HTTPError as exc:
         print(f'Authentication check failed (HTTP {exc.code}); response body suppressed.')
         return 1
