@@ -96,7 +96,6 @@ def main():
             assert guest.status_code == 403, guest.status_code
             passed('Anonymous request denied by real HTTP dispatcher')
             login = call('POST', '/api/method/login', data={'usr': tech.name, 'pwd': password})
-            password = None
             assert login.status_code == 200, login.status_code
             assert login.json['message'] == 'No App', 'Expected native Website User success response'
             passed('Native Website User password login succeeds with No App response')
@@ -142,6 +141,21 @@ def main():
                 foreign = call('GET', prefix + 'get_ticket', query_string={'name': name})
                 assert foreign.status_code == 403, foreign.status_code
             passed('Existing other-customer Issue and nonexistent Issue denied over authenticated HTTP')
+            old_cookie = client.get_cookie('sid', domain='audit.localhost')
+            assert old_cookie is not None
+            logout = call('POST', '/api/method/logout', headers=headers)
+            assert logout.status_code == 200, logout.status_code
+            after_logout = call('GET', prefix + 'list_tickets')
+            assert after_logout.status_code in {401, 403}, after_logout.status_code
+            replay = Client(frappe_app.application, Response)
+            replay.set_cookie('sid', old_cookie.value, domain='audit.localhost')
+            replayed = replay.get(prefix + 'list_tickets', base_url=base, buffered=True)
+            assert replayed.status_code in {401, 403}, replayed.status_code
+            replayed.close()
+            passed('Native logout invalidates access and replay of the old session cookie')
+            relogin = call('POST', '/api/method/login', data={'usr': tech.name, 'pwd': password})
+            password = None
+            assert relogin.status_code == 200, relogin.status_code
             # Disable only the synthetic user; a previously issued cookie must stop working.
             connect()
             frappe.db.set_value('User', tech.name, 'enabled', 0)

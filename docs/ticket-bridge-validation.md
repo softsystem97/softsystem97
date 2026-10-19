@@ -17,8 +17,8 @@ Environnement réellement utilisé : site jetable `audit.localhost`, Frappe 16.5
 | Reprises et créations concurrentes | Réussi | Deux connexions DB indépendantes, rollback/reprise des conflits ; un seul Issue et une confirmation |
 | E-mails applicatifs réels | Réussi | Ouverture, attribution, résolution et clôture avec répétition des requêtes : six Email Queue attendus, six reçus par SMTP local, une seule fois chacun |
 | Scheduler et worker | Réussi | Traitement autonome des six messages par le job natif de vidage de file |
-| Interface Chromium | Réussi | 12 scénarios : connexions Website User/System User, mot de passe, erreurs, liste/détail, texte échappé, conflit, reprise après rechargement, création client, clôture et mobile |
-| Session HTTP native en laboratoire | Réussi | 13 scénarios WSGI Frappe réels : connexion Website User, cookies, route/page Jinja, CSRF, méthodes HTTP, interventions, statuts, refus et compte désactivé |
+| Interface Chromium | Réussi | 13 scénarios : connexions Website User/System User, mot de passe, erreurs, liste/détail, texte échappé, conflit, reprise après rechargement, création client, clôture et mobile |
+| Session HTTP native en laboratoire | Réussi | 14 scénarios WSGI Frappe réels : connexion Website User, cookies, route/page Jinja, CSRF, méthodes HTTP, interventions, statuts, refus et compte désactivé |
 | Connexion du compte réel, SSO/2FA et session de production | Non exécuté | Aucun accès administratif/session réelle au serveur de production |
 | Portail historique, profils personnalisés et workflows réels | Non exécuté | Sources et métadonnées privées indisponibles ; adaptateurs nécessaires si présents |
 | Déploiement et attribution au compte réel | Non exécuté | Exigent recette, sauvegarde et autorisation explicite |
@@ -54,3 +54,11 @@ Le test HTTP natif a révélé des défauts que les réponses HTTP simulées ne 
 La suite HTTP utilise des comptes synthétiques jetables et un mot de passe aléatoire uniquement en mémoire pour un compte de laboratoire ; aucun mot de passe ni jeton n’est imprimé ou committé. Elle n’intercepte pas les réponses applicatives et ne désactive pas CSRF. L’activation du pont est injectée dans le contexte des requêtes de test, pas dans la configuration persistante. Les objets de test sont supprimés ensuite.
 
 Lors de cette reprise, les 52 tests Frappe, 13 scénarios HTTP réels, 12 scénarios Chromium et la construction des ressources ont été exécutés. La preuve SMTP de six messages reçus une seule fois est conservée de la livraison précédente : le producteur n’a pas changé et aucun renvoi supplémentaire n’a été demandé. La vérification de création idempotente du rôle exact SS97 Technicien est nouvelle et s’effectue dans une transaction de laboratoire annulée après le test.
+
+## Déconnexion — reprise ciblée
+
+Un bouton de déconnexion manquait dans l’interface de développement. Il appelle désormais le logout natif par POST avec CSRF, efface l’affichage des tickets et revient au formulaire de connexion. Les réponses de chargement encore en vol ne repeuplent pas le tableau pendant la déconnexion.
+
+Les validateurs ciblés ont été exécutés : **14 scénarios HTTP Frappe réels**, dont refus d’accès après logout et après réutilisation de l’ancien cookie ; **13 scénarios Chromium**, dont bouton POST et retour au formulaire. La suite de 52 tests Frappe et l’essai SMTP antérieurs n’ont pas été relancés : aucun producteur, rôle, modèle de données ou migration n’a changé. Ces nouveaux résultats restent exclusivement locaux.
+
+Aucun résultat de collecte de production n’est disponible. Le paquet privé de collecte est distinct du dépôt public et ne contient aucun changement de compte ou déploiement automatique.

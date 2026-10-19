@@ -55,6 +55,9 @@ def main():
                 return route.abort()
             payload = parse_qs(request.post_data or urlparse(request.url).query)
             requests.append((path, request.method, payload, request.url))
+            if path.endswith('/logout'):
+                state['guest'] = True
+                return route.fulfill(status=200, content_type='application/json', body='{}')
             if path.endswith('/login'):
                 if state['login_success']:
                     state['guest'] = False
@@ -163,6 +166,12 @@ def main():
         if args.screenshot:
             page.screenshot(path=args.screenshot, full_page=True)
         passed('Mobile viewport has no horizontal overflow')
+        page.locator('#ss97-logout').click()
+        page.locator('#ss97-login').wait_for()
+        logout = next(r for r in requests if r[0].endswith('/logout'))
+        assert logout[1] == 'POST' and 'pwd' not in logout[2]
+        assert page.locator('#ss97-workspace').count() == 0
+        passed('Logout uses native POST and returns to login without retaining ticket view')
         browser.close()
     print(f'TOTAL: {count} browser scenarios passed (HTTP fixtures; not live authentication).')
 

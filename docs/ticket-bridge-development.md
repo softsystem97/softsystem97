@@ -120,3 +120,5 @@ L’essai SMTP nécessite `aiosmtpd==1.4.6`, une file en attente vide, aucun com
 Les tests de cette branche couvrent aussi les permissions corrigées précédemment. Les résultats effectifs et limites sont consignés dans `ticket-bridge-validation.md`.
 
 Le validateur HTTP utilise le vrai point d’entrée WSGI de Frappe, les vrais cookies de session, le routage/Jinja et les contrôles CSRF/méthodes HTTP natifs. Il reste limité au site jetable ; il ne démarre pas de serveur public et ne contacte pas la production. Il faut le lancer séparément des autres essais DB/SMTP. Le contrôleur de la route à tirets doit s’appeler `www/ss97_dev_technician.py`, conformément à la résolution native Frappe. Après correction ou installation, vider le cache du site pour retirer les anciennes pages rendues.
+
+La déconnexion de l’interface utilise `/api/method/logout` par POST avec le jeton CSRF natif. Le tableau est vidé pendant l’opération et le navigateur revient à la page de connexion après succès. Le validateur HTTP contrôle aussi le refus d’accès après déconnexion et après réutilisation de l’ancien cookie ; ces essais concernent uniquement un utilisateur synthétique du site jetable.

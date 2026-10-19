@@ -4,8 +4,8 @@
   const el = id => document.getElementById(`ss97-${id}`);
   const error = message => { el('error').textContent = message; };
   const prefix = '/api/method/softsystem97.integrations.ticket_bridge.api.';
-  async function request(method, args = {}, mutate = false, nativeLogin = false) {
-    const url = nativeLogin ? '/api/method/login' : prefix + method;
+  async function request(method, args = {}, mutate = false, nativeMethod = null) {
+    const url = nativeMethod ? '/api/method/' + nativeMethod : prefix + method;
     const response = await fetch(mutate ? url : `${url}?${new URLSearchParams(args)}`, {
       method: mutate ? 'POST' : 'GET', credentials: 'same-origin', redirect: 'error',
       headers: mutate ? { 'Content-Type': 'application/x-www-form-urlencoded',
@@ -35,7 +35,7 @@
       event.preventDefault(); hide(); error('');
       const button = event.submitter; button.disabled = true;
       try {
-        const result = await request('', { usr: el('email').value, pwd: password.value }, true, true);
+        const result = await request('', { usr: el('email').value, pwd: password.value }, true, 'login');
         password.value = '';
         if (result === 'Logged In' || result === 'No App') window.location.replace('/ss97-dev-technician');
         else { error('Poursuivez avec la connexion Frappe pour terminer l’authentification.'); }
@@ -45,7 +45,7 @@
     return;
   }
   if (!el('workspace')) return;
-  let current, offset = 0;
+  let current, offset = 0, loggingOut = false;
   const audience = () => el('audience').value;
   async function key(action, payload) {
     // Retain only an opaque key + payload hash across a reload, never form contents.
@@ -64,6 +64,7 @@
   async function detail(name) {
     clearDetail();
     const result = await request('get_ticket', { name, audience: audience() });
+    if (loggingOut) return;
     current = result.ticket;
     el('title').textContent = `${current.name} — ${current.subject}`;
     el('body').textContent = current.description;
@@ -80,6 +81,7 @@
     error(''); clearDetail(); el('tickets').replaceChildren(); el('notifications').replaceChildren();
     el('create').hidden = audience() !== 'client';
     const result = await request('list_tickets', { audience: audience(), offset });
+    if (loggingOut) return;
     el('previous').disabled = offset === 0; el('next').disabled = result.tickets.length < 50;
     if (!result.tickets.length) el('tickets').textContent = 'Aucun ticket accessible.';
     for (const row of result.tickets) {
@@ -89,11 +91,20 @@
       article.append(button); el('tickets').append(article);
     }
     const notices = await request('get_notifications', { audience: audience() });
+    if (loggingOut) return;
     for (const notice of notices.notifications) {
       const item = document.createElement('p'); item.textContent = `${notice.title} — ${notice.message}`; el('notifications').append(item);
     }
   }
   const run = fn => fn().catch(err => error(err.message));
+  el('logout').onclick = async () => {
+    const button = el('logout'); button.disabled = true; loggingOut = true;
+    clearDetail(); el('tickets').replaceChildren(); el('notifications').replaceChildren();
+    try {
+      await request('', {}, true, 'logout');
+      window.location.replace('/ss97-dev-technician');
+    } catch (err) { loggingOut = false; button.disabled = false; error(err.message); }
+  };
   el('refresh').onclick = () => run(refresh);
   el('audience').onchange = () => { offset = 0; run(refresh); };
   el('previous').onclick = () => { offset = Math.max(0, offset - 50); run(refresh); };

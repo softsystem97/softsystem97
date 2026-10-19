@@ -25,7 +25,7 @@
 {% else %}
 <section id="ss97-workspace">
   <label for="ss97-audience">Espace</label><select id="ss97-audience"><option value="technician">Technicien</option><option value="client">Client</option></select>
-  <button id="ss97-refresh" type="button">Actualiser</button><a href="/login?redirect-to=%2Fss97-dev-technician">Connexion</a>
+  <button id="ss97-refresh" type="button">Actualiser</button><button id="ss97-logout" type="button">Se déconnecter</button>
   <form id="ss97-create" hidden><h2>Ouvrir un ticket</h2>
     <label for="ss97-subject">Sujet</label><input id="ss97-subject" maxlength="140" required>
     <label for="ss97-description">Description</label><textarea id="ss97-description" maxlength="10000" required></textarea>
