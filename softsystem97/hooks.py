@@ -12,6 +12,13 @@ app_version = "1.0.0"
 
 required_apps = ["erpnext"]
 
+permission_query_conditions = {
+	"SS97 Client Notification": "softsystem97.portal.notifications.get_permission_query_conditions",
+}
+has_permission = {
+	"SS97 Client Notification": "softsystem97.portal.notifications.has_permission",
+}
+
 # --- API publique (whitelist) ---
 # Stripe webhook (POST, guest) :
 #   /api/method/softsystem97.integrations.stripe.webhook.stripe_webhook
