@@ -232,6 +232,41 @@ class TestAccess(unittest.TestCase):
         for field in data['user_api_fields'].values():
             self.assertEqual(set(field), {'present', 'hidden', 'permlevel'})
 
+    def test_existing_technician_diagnostic_does_not_grant_or_infer_roles(self):
+        from softsystem97.diagnostics import technician_access
+        frappe.set_user(self.client)
+        with self.assertRaises(frappe.PermissionError):
+            technician_access(self.other)
+        frappe.set_user(self.staff)
+        before = {dt: frappe.db.count(dt) for dt in ['User', 'Role', 'Has Role', 'DocShare']}
+        roles = frappe.get_roles(self.client)
+        with patch('frappe.set_user', side_effect=AssertionError('No impersonation')):
+            data = technician_access(self.client)
+        self.assertEqual(data['roles'], roles)
+        self.assertIsNone(data['technician_profile_active'])
+        self.assertFalse(data['browser_session_verified'])
+        self.assertEqual(data['account'].enabled, 1)
+        self.assertIn('unknown', data['portal_role_policy'])
+        self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
+        with self.assertRaises(frappe.DoesNotExistError):
+            technician_access('nonexistent-audit-user@example.invalid')
+        self.assertEqual(before['User'], frappe.db.count('User'))
+
+    def test_technician_diagnostic_reports_native_access_without_mutation(self):
+        from softsystem97.diagnostics import technician_access
+        from frappe.desk.form import assign_to
+        issue = frappe.get_doc(dict(doctype='Issue', subject='Read-only access probe')).insert()
+        self.records.append((issue.doctype, issue.name))
+        data = technician_access(self.unprivileged, 'Issue', issue.name)
+        self.assertFalse(data['ticket']['native_read'])
+        self.assertEqual(data['ticket']['open_native_assignment_count'], 0)
+        assign_to.add(dict(doctype='Issue', name=issue.name, assign_to=[self.unprivileged]))
+        for dt, filters in [('ToDo', {'reference_type': 'Issue', 'reference_name': issue.name}),
+                            ('Notification Log', {'document_type': 'Issue', 'document_name': issue.name})]:
+            self.records.extend((dt, name) for name in frappe.get_all(dt, filters=filters, pluck='name'))
+        self.assertTrue(technician_access(self.unprivileged, 'Issue', issue.name)['ticket']['native_read'])
+        self.assertFalse(technician_access(self.other, 'Issue', issue.name)['ticket']['native_read'])
+
     def test_native_api_generation_requires_system_manager(self):
         from frappe.core.doctype.user.user import generate_keys
         for user in [self.client, self.unprivileged, 'Guest']:

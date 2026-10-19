@@ -7,6 +7,80 @@ import frappe
 from frappe.utils import cint
 
 
+def technician_access(user, ticket_doctype=None, ticket_name=None):
+    """Inspect an existing account; never infer the missing portal's role policy.
+
+    For an authorized bench operator only. No HTTP endpoint, impersonation,
+    session/token inspection, account creation or permission modification.
+    ticket_name must be the internal name, not an unverified public reference.
+    """
+    frappe.only_for('System Manager')
+    account = frappe.db.get_value('User', user, ['enabled', 'user_type'], as_dict=True)
+    if account is None:
+        frappe.throw('Existing user not found; no account was created', frappe.DoesNotExistError)
+    from frappe.desk.doctype.notification_settings.notification_settings import (
+        is_notifications_enabled,
+        is_email_notifications_enabled_for_type,
+    )
+    data = {
+        'account': account,
+        'roles': frappe.get_roles(user),
+        'portal_role_policy': 'unknown_until_portal_source_is_available',
+        'technician_profile_active': None,
+        'browser_session_verified': False,
+        'assignment_notifications': {
+            'in_app_enabled': bool(is_notifications_enabled(user)),
+            'email_enabled': bool(is_email_notifications_enabled_for_type(user, 'Assignment')),
+        },
+        'ticket': None,
+    }
+    if bool(ticket_doctype) != bool(ticket_name):
+        frappe.throw('Supply both the confirmed ticket DocType and internal document name')
+    if ticket_doctype:
+        if not frappe.db.exists(ticket_doctype, ticket_name):
+            data['ticket'] = {'exists': False}
+        else:
+            data['ticket'] = {
+                'exists': True,
+                'native_read': bool(frappe.has_permission(ticket_doctype, 'read',
+                    doc=ticket_name, user=user)),
+                'native_write': bool(frappe.has_permission(ticket_doctype, 'write',
+                    doc=ticket_name, user=user)),
+                'open_native_assignment_count': frappe.db.count('ToDo', {
+                    'reference_type': ticket_doctype, 'reference_name': ticket_name,
+                    'allocated_to': user, 'status': 'Open'}),
+            }
+    return data
+
+
+def queued_mail_conditions(queue_name):
+    """Inspect one existing mail's eligibility without sending or reading bodies/errors."""
+    frappe.only_for('System Manager')
+    from frappe.utils import get_datetime, now_datetime
+
+    row = frappe.db.get_value('Email Queue', queue_name, [
+        'status', 'send_after', 'creation', 'retry', 'email_account'], as_dict=True)
+    if row is None:
+        frappe.throw('Email Queue record not found', frappe.DoesNotExistError)
+    now = now_datetime()
+    account_name = row.pop('email_account', None)
+    account = frappe.db.get_value('Email Account', account_name,
+        ['enable_outgoing', 'default_outgoing'], as_dict=True) if account_name else None
+    return {
+        'queue': row,
+        'send_after_due': not row.send_after or get_datetime(row.send_after) < now,
+        'undo_window_elapsed': (now - get_datetime(row.creation)).total_seconds() > 10,
+        'pending_send_status': row.status in ('Not Sent', 'Partially Sent'),
+        'has_recorded_error': bool(frappe.db.exists('Email Queue', {
+            'name': queue_name, 'error': ['is', 'set']})),
+        'suspend_email_queue': cint(frappe.db.get_default('suspend_email_queue')),
+        'emails_muted': bool(frappe.are_emails_muted()),
+        'explicit_outgoing_account': account,
+        'outgoing_account_selection_verified': account_name is not None and account is not None,
+        'smtp_delivery_verified': False,
+    }
+
+
 def collect(queue_name=None, user=None):
     frappe.only_for('System Manager')
     user = user or frappe.session.user

@@ -57,6 +57,22 @@ class TestMailQueue(unittest.TestCase):
             flush()
             send.assert_not_called()
 
+    def test_mail_condition_diagnostic_never_sends_or_reads_credentials(self):
+        from softsystem97.diagnostics import queued_mail_conditions
+        doc = self.mail()
+        frappe.db.set_value(doc.doctype, doc.name, 'send_after',
+                            frappe.utils.add_to_date(None, hours=1), update_modified=False)
+        with patch.object(EmailQueue, 'send', side_effect=AssertionError('Must not send')):
+            data = queued_mail_conditions(doc.name)
+        self.assertFalse(data['send_after_due'])
+        self.assertTrue(data['pending_send_status'])
+        self.assertFalse(data['smtp_delivery_verified'])
+        self.assertIsNone(data['explicit_outgoing_account'])
+        self.assertNotIn('error', data['queue'])
+        self.assertNotIn('message', data['queue'])
+        self.assertNotIn('sender', data['queue'])
+        self.assertEqual(frappe.db.get_value(doc.doctype, doc.name, 'status'), 'Not Sent')
+
     def transport(self):
         server = MagicMock()
         server.session.has_extn.return_value = False
