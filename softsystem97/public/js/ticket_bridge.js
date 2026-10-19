@@ -37,7 +37,7 @@
       try {
         const result = await request('', { usr: el('email').value, pwd: password.value }, true, true);
         password.value = '';
-        if (result === 'Logged In') window.location.replace('/ss97-dev-technician');
+        if (result === 'Logged In' || result === 'No App') window.location.replace('/ss97-dev-technician');
         else { error('Poursuivez avec la connexion Frappe pour terminer l’authentification.'); }
       } catch (err) { password.value = ''; error(err.message); }
       finally { button.disabled = false; }

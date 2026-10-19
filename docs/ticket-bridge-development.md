@@ -111,9 +111,12 @@ Depuis un bench Frappe v16 isolé dont le site commence par `audit.` ou `test_` 
 python /chemin/softsystem97/tools/run_local_tests.py --site audit.localhost
 python /chemin/softsystem97/tools/validate_local_mail.py --site audit.localhost --bridge
 python /chemin/softsystem97/tools/test_ticket_bridge_browser.py --chromium /usr/bin/chromium
+python /chemin/softsystem97/tools/validate_ticket_bridge_http.py --site audit.localhost
 node --check /chemin/softsystem97/softsystem97/public/js/ticket_bridge.js
 ```
 
 L’essai SMTP nécessite `aiosmtpd==1.4.6`, une file en attente vide, aucun compte sortant existant, un SMTP local sur loopback et les processus locaux de scheduler/worker. Il crée puis supprime ses données `.invalid` et restaure sa configuration. Ne pas le lancer en parallèle avec les tests DB. Le test navigateur nécessite `playwright==1.58.0` et Chromium ; il utilise du HTML et du JavaScript réels avec des réponses HTTP contrôlées. Il ne remplace pas un test de session sur le site Frappe ni une recette de production.
 
 Les tests de cette branche couvrent aussi les permissions corrigées précédemment. Les résultats effectifs et limites sont consignés dans `ticket-bridge-validation.md`.
+
+Le validateur HTTP utilise le vrai point d’entrée WSGI de Frappe, les vrais cookies de session, le routage/Jinja et les contrôles CSRF/méthodes HTTP natifs. Il reste limité au site jetable ; il ne démarre pas de serveur public et ne contacte pas la production. Il faut le lancer séparément des autres essais DB/SMTP. Le contrôleur de la route à tirets doit s’appeler `www/ss97_dev_technician.py`, conformément à la résolution native Frappe. Après correction ou installation, vider le cache du site pour retirer les anciennes pages rendues.

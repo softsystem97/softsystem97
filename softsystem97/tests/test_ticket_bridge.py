@@ -259,7 +259,7 @@ class TestTicketBridge(unittest.TestCase):
 
     def test_development_page_disabled_and_no_cache(self):
         import importlib
-        page = importlib.import_module('softsystem97.www.ss97-dev-technician')
+        page = importlib.import_module('softsystem97.www.ss97_dev_technician')
         frappe.conf.ss97_ticket_bridge['enabled'] = False
         with self.assertRaises(frappe.DoesNotExistError):
             page.get_context(frappe._dict())
@@ -384,3 +384,17 @@ class TestTicketBridge(unittest.TestCase):
         self.assertEqual(frappe.db.count('Issue', {'raised_by': self.client}), 0)
         self.assertEqual(frappe.db.count(api.EVENT, {'actor': self.client}), 0)
         self.assertEqual(frappe.db.count('SS97 Client Notification', {'for_user': self.client}), 0)
+
+    def test_default_ss97_role_installation_is_idempotent_without_user_or_issue_grants(self):
+        from softsystem97.integrations.ticket_bridge.install import prepare
+        existed = bool(frappe.db.exists('Role', 'SS97 Technicien'))
+        before = {dt: frappe.db.count(dt) for dt in ['User', 'Has Role', 'DocPerm', 'Custom DocPerm']}
+        first = prepare(dry_run=False, compatibility_confirmed=True)
+        second = prepare(dry_run=False, compatibility_confirmed=True)
+        self.assertEqual(first['role']['role_name'], 'SS97 Technicien')
+        self.assertEqual(first['role']['changed'], not existed)
+        self.assertFalse(second['role']['changed'])
+        self.assertTrue(frappe.db.exists('Role', 'SS97 Technicien'))
+        self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
+        self.assertFalse(second['users_changed'])
+        self.assertEqual(second['issue_permissions_added'], [])

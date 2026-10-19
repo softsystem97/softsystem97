@@ -11,6 +11,9 @@ def get_context(context):
     except frappe.PermissionError:
         frappe.local.message_log = []
         raise frappe.DoesNotExistError('Page indisponible')
+    if frappe.session.user != 'Guest':
+        from frappe.sessions import get_csrf_token
+        get_csrf_token()  # Persist native session CSRF before rendering a form.
     context.no_cache = 1
     context.title = 'Interventions — développement'
     context.is_guest = frappe.session.user == 'Guest'

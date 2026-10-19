@@ -8,7 +8,7 @@ Environnement réellement utilisé : site jetable `audit.localhost`, Frappe 16.5
 |---|---|---|
 | Migration du nouveau DocType technique | Réussi | `bench --site audit.localhost migrate`, code 0 |
 | Construction des ressources | Réussi | `bench build --app softsystem97`, code 0 |
-| Tests Frappe | Réussi | 51 tests, dont 22 nouveaux tests du pont et 29 régressions existantes, code 0 |
+| Tests Frappe | Réussi | 52 tests, dont 23 tests du pont et 29 régressions existantes, code 0 |
 | Désactivation par défaut, compatibilité/profil/rôle explicites | Réussi | Refus et absence d’écritures testés |
 | Client autorisé, client étranger, lien client ambigu | Réussi | Vrais User/Customer/Portal User et Issue du laboratoire |
 | Technicien attribué, non attribué, sans rôle, candidat, invité | Réussi | Contrôles serveur et absence de droits natifs Issue globaux |
@@ -17,8 +17,9 @@ Environnement réellement utilisé : site jetable `audit.localhost`, Frappe 16.5
 | Reprises et créations concurrentes | Réussi | Deux connexions DB indépendantes, rollback/reprise des conflits ; un seul Issue et une confirmation |
 | E-mails applicatifs réels | Réussi | Ouverture, attribution, résolution et clôture avec répétition des requêtes : six Email Queue attendus, six reçus par SMTP local, une seule fois chacun |
 | Scheduler et worker | Réussi | Traitement autonome des six messages par le job natif de vidage de file |
-| Interface Chromium | Réussi | 10 scénarios : mot de passe, erreurs, liste/détail, texte échappé, conflit, reprise après rechargement, création client, clôture et mobile |
-| Connexion native du compte réel, SSO/2FA et session de production | Non exécuté | Aucun accès administratif/session réelle ; les réponses HTTP du test navigateur sont contrôlées |
+| Interface Chromium | Réussi | 12 scénarios : connexions Website User/System User, mot de passe, erreurs, liste/détail, texte échappé, conflit, reprise après rechargement, création client, clôture et mobile |
+| Session HTTP native en laboratoire | Réussi | 13 scénarios WSGI Frappe réels : connexion Website User, cookies, route/page Jinja, CSRF, méthodes HTTP, interventions, statuts, refus et compte désactivé |
+| Connexion du compte réel, SSO/2FA et session de production | Non exécuté | Aucun accès administratif/session réelle au serveur de production |
 | Portail historique, profils personnalisés et workflows réels | Non exécuté | Sources et métadonnées privées indisponibles ; adaptateurs nécessaires si présents |
 | Déploiement et attribution au compte réel | Non exécuté | Exigent recette, sauvegarde et autorisation explicite |
 
@@ -29,14 +30,27 @@ bench --site audit.localhost migrate
 bench build --app softsystem97
 python /workspace/softsystem97/tools/run_local_tests.py --site audit.localhost
 python /workspace/softsystem97/tools/validate_local_mail.py --site audit.localhost --bridge
+python /workspace/softsystem97/tools/validate_ticket_bridge_http.py --site audit.localhost
 python /workspace/softsystem97/tools/test_ticket_bridge_browser.py --screenshot /workspace/ticket-bridge-mobile.png
 node --check /workspace/softsystem97/softsystem97/public/js/ticket_bridge.js
 ```
 
-Journaux de l’environnement, non publiés : `ticket-bridge-migrate.log`, `ticket-bridge-build.log`, `ticket-bridge-tests.log`, `ticket-bridge-smtp.log`, `ticket-bridge-browser.log` dans le dossier logs du bench. Les vérifications PowerShell antérieures n’ont pas été relancées : aucun de leurs fichiers n’a changé.
+Journaux de l’environnement, non publiés : `ticket-bridge-migrate.log`, `ticket-bridge-build.log`, `ticket-bridge-tests.log`, `ticket-bridge-smtp.log`, `ticket-bridge-browser.log`, `ticket-bridge-http.log` dans le dossier logs du bench. Les vérifications PowerShell antérieures n’ont pas été relancées : aucun de leurs fichiers n’a changé.
 
 Un conflit de transaction observé sur MariaDB avec isolation snapshot a été traité par une réponse HTTP 409 et des reprises conservant la clé d’idempotence ; il n’est pas masqué par un commit anticipé. Les tests simultanés vérifient la convergence après rollback. Les scénarios Chromium utilisent le navigateur système : le téléchargement du navigateur Playwright était refusé par le réseau ; cela n’a pas empêché l’exécution avec Chromium installé.
 
 Les écritures privilégiées internes restent un point de revue explicite avant activation : elles sont bornées par l’identité active, l’affectation ou l’association client et les listes de champs autorisés. Aucun résultat local ne prouve les permissions ou le fonctionnement du portail de production.
 
 Procédure complète de mise en service et retour arrière : [ticket-bridge-development.md](ticket-bridge-development.md).
+
+## Corrections de la reprise finale
+
+Le test HTTP natif a révélé des défauts que les réponses HTTP simulées ne couvraient pas :
+
+- Le contrôleur Python avait des tirets. Le routeur Frappe recherche une version avec underscores ; le fichier est désormais `www/ss97_dev_technician.py`. La désactivation renvoie réellement 404 et la page invitée affiche réellement le formulaire de connexion.
+- Le contrôleur initialise maintenant le jeton CSRF natif de la session authentifiée avant le rendu. Une mutation sans jeton est effectivement refusée après ouverture de la page ; avec le jeton natif et le cookie de session, elle réussit.
+- Le JavaScript accepte `No App`, qui représente une connexion Website User réussie, ainsi que `Logged In` pour System User. Les autres réponses restent soumises au parcours natif, notamment pour SSO/2FA.
+
+La suite HTTP utilise des comptes synthétiques jetables et un mot de passe aléatoire uniquement en mémoire pour un compte de laboratoire ; aucun mot de passe ni jeton n’est imprimé ou committé. Elle n’intercepte pas les réponses applicatives et ne désactive pas CSRF. L’activation du pont est injectée dans le contexte des requêtes de test, pas dans la configuration persistante. Les objets de test sont supprimés ensuite.
+
+Lors de cette reprise, les 52 tests Frappe, 13 scénarios HTTP réels, 12 scénarios Chromium et la construction des ressources ont été exécutés. La preuve SMTP de six messages reçus une seule fois est conservée de la livraison précédente : le producteur n’a pas changé et aucun renvoi supplémentaire n’a été demandé. La vérification de création idempotente du rôle exact SS97 Technicien est nouvelle et s’effectue dans une transaction de laboratoire annulée après le test.

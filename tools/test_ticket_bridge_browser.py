@@ -40,7 +40,7 @@ def main():
         page = context.new_page()
         page.set_default_timeout(10000)
         state = {'guest': True, 'deny': False, 'conflict': False, 'failed_comment': False,
-                 'status': 'Open', 'modified': 'revision-1'}
+                 'status': 'Open', 'modified': 'revision-1', 'login_success': None}
         requests = []
         ticket = {'name': 'ISS-LAB-1', 'subject': 'Controlled support request', 'description': 'Synthetic',
                   'status': 'Open', 'modified': 'revision-1', 'allowed_statuses': ['Resolved']}
@@ -56,6 +56,10 @@ def main():
             payload = parse_qs(request.post_data or urlparse(request.url).query)
             requests.append((path, request.method, payload, request.url))
             if path.endswith('/login'):
+                if state['login_success']:
+                    state['guest'] = False
+                    return route.fulfill(status=200, content_type='application/json',
+                        body=json.dumps({'message': state['login_success']}))
                 return route.fulfill(status=401, content_type='application/json', body='{}')
             if state['deny']:
                 return route.fulfill(status=403, content_type='application/json', body='{}')
@@ -93,6 +97,16 @@ def main():
         assert login[1] == 'POST' and 'pwd' in login[2] and '?' not in login[3]
         assert page.locator('#ss97-password').input_value() == ''
         passed('Login uses POST with no password in URL and clears the field on failure')
+        for success in ['No App', 'Logged In']:
+            state.update(guest=True, login_success=success)
+            page.goto('https://ss97.test/ss97-dev-technician')
+            page.locator('#ss97-email').fill('browser-lab@example.invalid')
+            page.locator('#ss97-password').fill('synthetic UI input')
+            page.get_by_role('button', name='Se connecter', exact=True).click()
+            page.locator('#ss97-workspace').wait_for()
+            assert page.url == 'https://ss97.test/ss97-dev-technician'
+            passed('Successful native login response redirects: ' + success)
+        state['login_success'] = None
         state['guest'] = False
         page.reload()
         page.locator('#ss97-tickets button').wait_for()
