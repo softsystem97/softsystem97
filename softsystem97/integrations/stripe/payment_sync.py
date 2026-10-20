@@ -452,7 +452,9 @@ def process_successful_payment(ctx: dict[str, Any]) -> dict[str, Any]:
 	if invoice_name:
 		ok, warn = verify_amount_currency(invoice_name, amount, currency)
 		if not ok:
-			result["amount_warning"] = warn
+			# A failed existing check must stop confirmation, not merely annotate it.
+			# Do not include raw invoice/payment values in the public error.
+			frappe.throw("Montant ou devise du paiement incompatible avec la facture.", frappe.ValidationError)
 
 	session_id = obj.get("id") if obj.get("object") == "checkout.session" else obj.get("session") or None
 	payment_intent = obj.get("payment_intent") or (

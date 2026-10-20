@@ -11,7 +11,7 @@ from html import escape
 import frappe
 from frappe.utils import strip_html
 
-from . import policy
+from . import historical, policy
 
 EVENT = 'SS97 Ticket Bridge Event'
 FIELDS = ['name', 'subject', 'status', 'modified']
@@ -129,7 +129,7 @@ def list_tickets(audience='technician', offset=0):
         user = policy.technician()
         # Assignment bounds the service query; no global Issue read grant.
         rows = frappe.db.sql("""SELECT i.name, i.subject, i.status, i.modified
-            FROM `tabIssue` i WHERE EXISTS (SELECT 1 """ + policy.APPROVED_ASSIGNMENT_QUERY + """
+            FROM `tabIssue` i WHERE EXISTS (SELECT 1 """ + policy.approved_assignment_query() + """
               AND t.reference_name=i.name AND t.allocated_to=%s)
             ORDER BY i.modified DESC, i.name DESC LIMIT 50 OFFSET %s""", (user, offset), as_dict=True)
     elif audience == 'client':
@@ -162,12 +162,13 @@ def create_ticket(subject, description, request_id):
     if previous is not None:
         policy.authorize(_issue(previous['name'], lock=True), 'client')
         return previous
+    business = historical.require_authorization('create', customer=client, target_status='Open')
     doc = frappe.get_doc(dict(doctype='Issue', subject=subject, description=escape(description),
                              customer=client, raised_by=user, status='Open'))
     # Client/customer are session-derived. No user-supplied fields, assignment or identity.
     doc.insert(ignore_permissions=True)
     _notify(doc, [user], 'Confirmation d’ouverture du ticket')
-    return _finish(event, doc, 'Ticket ouvert', _result(doc, 'client'))
+    return _finish(event, doc, 'Ticket ouvert' + business, _result(doc, 'client'))
 
 
 @frappe.whitelist(methods=['POST'])
@@ -182,10 +183,14 @@ def assign_ticket(name, technician, request_id):
         return previous  # Acknowledgment only; never creates/restores an approval.
     if doc.status == 'Closed':
         frappe.throw('Un ticket clôturé ne peut pas être attribué.')
+    previously_approved = policy.assigned(name, technician)
+    business = historical.require_authorization('assign', doc, technician=technician)
+    if historical.enabled() and doc.ss97_technician != technician:
+        doc.ss97_technician = technician
+        doc.save(ignore_permissions=True)  # Existing admin Issue/write already checked.
     filters = {'reference_type': 'Issue', 'reference_name': name,
                'allocated_to': technician, 'status': 'Open'}
     existing = frappe.db.exists('ToDo', filters)
-    previously_approved = policy.assigned(name, technician)
     if not existing:
         # Native lifecycle keeps _assign/timeline; ToDo does not grant bridge access by itself.
         todo = frappe.get_doc(dict(doctype='ToDo', **filters, assigned_by=frappe.session.user,
@@ -195,7 +200,7 @@ def assign_ticket(name, technician, request_id):
         existing_name = existing
     event.assignment = existing_name
     event.technician = technician
-    response = _finish(event, doc, 'Intervention attribuée',
+    response = _finish(event, doc, 'Intervention attribuée' + business,
                        {'name': name, 'already_assigned': bool(existing)})
     if not previously_approved:
         _notify(doc, [technician], 'Nouvelle intervention attribuée')
@@ -216,6 +221,8 @@ def update_status(name, status, expected_modified, request_id):
         frappe.throw('Ticket modifié entre-temps. Rechargez avant de réessayer.', frappe.TimestampMismatchError)
     if status not in policy.TRANSITIONS.get(doc.status, []):
         frappe.throw('Transition de statut interdite.')
+    business = historical.require_authorization('status', doc,
+        technician=frappe.session.user, target_status=status)
     doc.status = status  # The only writable Issue field exposed by this capability.
     doc.save(ignore_permissions=True)
     doc.add_comment('Comment', escape(f'Statut : {status}'))
@@ -226,7 +233,7 @@ def update_status(name, status, expected_modified, request_id):
             policy.assigned(name, r.allocated_to))]
     _notify(doc, users + [_client_recipient(doc)],
             'Ticket clôturé' if status == 'Closed' else 'Avancement du ticket')
-    return _finish(event, doc, status, _result(doc, 'technician'))
+    return _finish(event, doc, status + business, _result(doc, 'technician'))
 
 
 @frappe.whitelist(methods=['POST'])
@@ -241,8 +248,10 @@ def add_intervention(name, content, request_id, audience='technician'):
         return previous  # Current authorization was rechecked before reading the receipt.
     if doc.status == 'Closed':
         frappe.throw('Ticket clôturé : commentaire refusé.')
+    business = historical.require_authorization('intervention', doc,
+        technician=frappe.session.user) if audience == 'technician' else ''
     comment = doc.add_comment('Comment', escape(content))
-    return _finish(event, doc, content, {'name': name, 'comment': comment.name})
+    return _finish(event, doc, content + business, {'name': name, 'comment': comment.name})
 
 
 @frappe.whitelist(methods=['GET'])

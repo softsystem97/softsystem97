@@ -1,5 +1,6 @@
 """Fail-closed policy for the replacement bridge, not the unknown legacy portal."""
 import frappe
+from . import historical
 
 FORBIDDEN_ROLES = {'system manager', 'administrator', 'all', 'guest', 'customer', 'candidat ss97'}
 TRANSITIONS = {
@@ -29,6 +30,7 @@ def settings():
     if not all(approval_meta.has_field(field) for field in ['assignment', 'technician', 'revoked']):
         frappe.throw('Migration des approbations requise.', frappe.PermissionError)
     meta = frappe.get_meta('Issue')
+    historical.validate_configuration(config, meta)
     if (not all(meta.has_field(field) for field in ['subject', 'description', 'raised_by', 'customer', 'status'])
             or meta.get_field('customer').options != 'Customer'
             or meta.get_field('status').fieldtype != 'Select'
@@ -109,8 +111,17 @@ APPROVED_ASSIGNMENT_QUERY = """FROM `tabToDo` t
 
 
 def assigned(name, user):
-    return bool(frappe.db.sql('SELECT 1 ' + APPROVED_ASSIGNMENT_QUERY +
+    return bool(frappe.db.sql('SELECT 1 ' + approved_assignment_query() +
         ' AND t.reference_name = %s AND t.allocated_to = %s LIMIT 1', (name, user)))
+
+
+def approved_assignment_query():
+    query = APPROVED_ASSIGNMENT_QUERY
+    if historical.enabled():
+        query += """ AND EXISTS (SELECT 1 FROM `tabIssue` historical_issue
+            WHERE historical_issue.name = t.reference_name
+              AND historical_issue.ss97_technician = t.allocated_to)"""
+    return query
 
 
 def authorize(doc, audience):
