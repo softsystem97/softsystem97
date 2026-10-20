@@ -1,5 +1,7 @@
 # Pont client–technicien de remplacement (développement)
 
+La [recette d’intégration historique et procédure de déploiement contrôlé](historical-technician-integration.md) précise les points bloquants de paiement/affectation, les tests à implémenter après import des sources et les critères d’arrêt et de retour arrière. Elle ne constitue pas une validation du portail historique.
+
 Ce module est une reconstruction autorisée, pas la récupération du portail privé et pas une réparation de production. Il est **désactivé par défaut** : aucun hook, patch ou migration ne l’active, ne crée de rôle ni ne modifie un utilisateur. La migration ajoute le journal technique `SS97 Ticket Bridge Event` ; la correction de sécurité y ajoute `assignment`, `technician` et `revoked`, sans approbation automatique des anciennes affectations.
 
 ## Sources confirmées et choix du modèle
