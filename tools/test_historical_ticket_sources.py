@@ -107,6 +107,14 @@ class HistoricalSourceTests(unittest.TestCase):
         self.assertEqual(result['doc']['name'], 'FAKE-1')
         self.assertNotIn('password', result['doc'])
 
+    def test_owner_can_receive_existing_checkout_link_without_creating_payment(self):
+        f = self.facade()
+        url = 'https://checkout.stripe.com/c/pay/synthetic-test-only'
+        f.get_doc.return_value.as_dict.return_value['ss97_stripe_checkout_url'] = url
+        self.assertEqual(self.execute(f)['doc']['ss97_stripe_checkout_url'], url)
+        f.call.assert_not_called()
+        f.db.commit.assert_not_called()
+
     def test_guest_and_disabled_accounts_rejected(self):
         for f in [self.facade(user='Guest'), self.facade(enabled=False)]:
             with self.subTest(user=f.session.user), self.assertRaises(Denied):
@@ -249,6 +257,28 @@ user='Guest';
 loadDoc();
 assert.equal(DOC,null);
 assert.equal(elements['tk-hist'].innerHTML,'');
+'''
+        result = subprocess.run(['node', '-e', program], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_late_client_response_cannot_restore_ticket_after_session_change(self):
+        _, script = workspace.ticket_detail_body_and_js()
+        program = '''const assert=require('node:assert/strict');
+let name='FAKE',followToken='',DOC=null,CLIENT_DETAIL=null,TOKEN_ACCESS=false;
+let user='client@example.invalid',rendered=false,request;
+const elements={};
+const document={getElementById:(id)=>(elements[id]??={innerHTML:'',style:{}})};
+const sessionUser=()=>user,isTechOrAdmin=()=>false;
+const applyTicketDoc=()=>{rendered=true;};
+const frappe={call:(options)=>{request=options;}};
+const window={frappe};
+''' + js_function(script, 'clearTicket') + js_function(script, 'loadDoc') + '''
+loadDoc();
+user='Guest';
+request.callback({message:{doc:{name:'FAKE'},comments:[]}});
+assert.equal(rendered,false);
+assert.equal(DOC,null);
+assert.equal(CLIENT_DETAIL,null);
 '''
         result = subprocess.run(['node', '-e', program], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)

@@ -1008,6 +1008,7 @@ def ticket_detail_body_and_js() -> tuple[str, str]:
   function loadDoc(){
     if(!name){ document.getElementById('tk-head').innerHTML='<p class="msg err">Référence manquante. Ouvrez un ticket depuis Mes tickets.</p>'; return; }
     if(!(window.frappe&&frappe.call)){ document.getElementById('tk-head').innerHTML='<p class="msg err">Session indisponible.</p>'; return; }
+    var requestedUser=sessionUser();
     if(sessionUser()==='Guest' && followToken){
       frappe.call({
         method:'ss97_ticket_public_detail',
@@ -1038,6 +1039,7 @@ def ticket_detail_body_and_js() -> tuple[str, str]:
         method:'ss97_client_ticket_api',
         args:{action:'get',name:name},
         callback:function(r){
+          if(sessionUser()!==requestedUser){ clearTicket('Session modifiée. Reconnectez-vous.'); return; }
           CLIENT_DETAIL=r.message||null;
           if(!CLIENT_DETAIL || !CLIENT_DETAIL.doc){ clearTicket('Ticket inaccessible.'); return; }
           applyTicketDoc(CLIENT_DETAIL.doc);

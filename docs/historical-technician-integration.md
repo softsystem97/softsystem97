@@ -22,6 +22,16 @@ Déploiement/retour : appliquer les points d’arrêt ci-dessous, conserver une 
 
 ## État et séparation des composants
 
+### Revue d’intégration après réception
+
+La revue des six fichiers a révélé un raccordement incomplet : l’API client ne retournait pas `ss97_stripe_checkout_url`, pourtant consommé par la page. Ce champ est maintenant conservé dans sa réponse bornée au propriétaire, sans création de paiement. Une réponse client arrivée après changement d’identité/session est également rejetée avant rendu. Deux tests supplémentaires couvrent ces régressions.
+
+Exécution complète disponible lors de cette revue : **66 tests Frappe réussis**, **17 tests ciblés des sources importées réussis** après corrections, **15 scénarios HTTP natifs réussis**, **13 scénarios Chromium avec réponses HTTP simulées réussis**, **29 assertions PowerShell hors ligne réussies**. Syntaxes Python/JavaScript et `git diff --check` vérifiés. Les journaux privés du bench sont `final-review-frappe.log`, `final-review-historical.log`, `final-review-http.log`, `final-review-browser.log` et `final-review-powershell.log`.
+
+**Échec réel :** `final-review-smtp.log` observe six Email Queue Not Sent sans doublons, puis zéro livraison au SMTP loopback dans les 50 secondes imparties. `audit-mail-processes.log` montre le worker occupé par des jobs de fixtures antérieures, dont des créations de Contact référant des utilisateurs déjà supprimés. Cela ne prouve pas un défaut du transport SMTP, mais cette exécution ne valide pas la livraison autonome scheduler → worker → SMTP. Aucun message historique n’a été renvoyé et les fixtures/configurations de l’essai ont été nettoyées/restaurées.
+
+Le portail historique n’est **pas prêt pour une recette fonctionnelle complète Frappe Cloud**. Le seul contrôleur technicien du dépôt est `softsystem97/www/ss97_dev_technician.py`, pour `/ss97-dev-technician`, distinct et désactivé par défaut. Aucun contrôleur de `/espace-technicien/tickets` n’est fourni. À récupérer : la Web Page/le contrôleur et ses API réellement déployés, `integrations/ss97_tickets/workflow_logic.py` (`next_ss97_ticket_ref`, `prepare_new_issue`), la définition Custom Field de `Issue.ss97_technician` et du profil lié, les producteurs `ss97_ticket_confirm_payment`, `ss97_ticket_public_detail`, `ss97_ticket_public_message`, `ss97_ai_agent_dialogue_turn`. Le SDK `migrate_odoo_erpnext/erpnext_client.py` manque aussi pour utiliser les scripts de déploiement originaux, sans être nécessaire au runtime du garde applicatif. Les dépendances ne doivent pas être remplacées par des simulations en production.
+
 Base vérifiée : `c5f0be1` sur `fix/ticket-notification-privacy` (la référence fournie `c5f9eb1` n’est pas résolue localement). La PR #3 reste indépendante. Les 66 tests Frappe et 15 scénarios HTTP déjà réussis concernent le pont de développement, pas `/espace-technicien/tickets`. Ils ne sont pas relancés pour cette préparation documentaire.
 
 Les trois sources historiques ne sont pas importées. `SS97 Technician` et `ss97_technician` sont des exigences communiquées, pas des modèles vérifiés ici. Le pont utilise une configuration de rôle explicite et un ToDo lié à une approbation protégée ; il ne lit pas ce champ personnalisé et ne contrôle pas le paiement. **Ne pas le brancher sur la route historique ni l’activer comme solution de paiement.**

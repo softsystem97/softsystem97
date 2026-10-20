@@ -34,6 +34,7 @@ ticket_fields = [
     "name", "subject", "description", "status", "priority", "creation", "modified",
     "raised_by", "ss97_contact_email", "ss97_public_ref", "ss97_ticket_status",
     "ss97_payment_status", "ss97_payment_ref", "ss97_invoice_amount", "ss97_contract_ref",
+    "ss97_stripe_checkout_url",
     "ss97_category", "ss97_source", "ss97_device_summary", "ss97_technician",
     "ss97_appointment_on", "ss97_intervention_started_on", "ss97_resolved_on",
     "ss97_intervention_report", "ss97_intervention_address",
