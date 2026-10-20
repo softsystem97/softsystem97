@@ -1,5 +1,25 @@
 # Intégration du portail historique : recette et déploiement contrôlé
 
+## Sources reçues — état qui remplace l’absence d’import ci-dessous
+
+L’archive a maintenant été reçue et les trois fichiers lus sans exécution de leur code de déploiement. Les originaux restent hors Git dans un dossier privé. Aucun littéral correspondant aux signatures de secrets recherchées n’a été détecté ; ce contrôle ne constitue pas une garantie universelle. Les copies corrigées sont dans `integrations/ss97_client_support/` et `integrations/ss97_client_ops/`.
+
+Le contenu réel est différent d’un contrôleur technicien complet : `ticket_workspace.py` génère `/espace-client/ticket`, `client_ticket_api.py` installe un Server Script client et `ticket_types.py` utilise un workflow externe. L’archive ne fournit ni le contrôleur `/espace-technicien/tickets`, ni la définition du champ `ss97_technician`, ni `integrations.ss97_tickets.workflow_logic`, ni `migrate_odoo_erpnext.erpnext_client`. Les API Stripe/public-detail/agent appelées depuis la page ne sont pas incluses. Le rôle `SS97 Technician` est bien cité dans le JavaScript, mais aucune autorisation serveur technicien ne peut être déduite de ce seul contrôle d’interface.
+
+Corrections appliquées : compte client désactivé refusé ; commentaires internes/non classifiés non renvoyés ; fichiers soumis aux permissions natives ; messages clients échappés sans commit anticipé ; garde POST/session native pour l’écriture ; page client raccordée à son API cloisonnée, affichage effacé sur refus/session perdue ; rôle technicien seul ne donnant plus accès visuel aux tickets d’autrui ; paiement affiché confirmé uniquement pour une valeur positive explicite (pas une référence seule ou une sous-chaîne comme « non confirmé »). La préparation métier de création doit réussir et une insertion incertaine n’est jamais répétée automatiquement.
+
+Validation ciblée : **15 tests réussis, zéro échec**, exécutés avec Frappe 16.52.0 sur le site jetable `audit.localhost`. Les actions du script sont exécutées par `safe_exec` réel avec une façade de données fictives ; le test du garde emploie la fonction Frappe native et des contextes requête/session synthétiques ; deux tests Node exécutent les fonctions JavaScript extraites. Ce ne sont pas des essais de bout en bout avec les DocTypes personnalisés ou Stripe. Le comportement positif de préparation métier est simulé, pas une preuve de paiement réel. Les 66 tests et 15 scénarios HTTP antérieurs ne sont pas relancés dans cette livraison.
+
+Commande reproductible depuis le bench isolé :
+
+```sh
+env/bin/python /chemin/softsystem97/tools/test_historical_ticket_sources.py --frappe-site audit.localhost
+```
+
+Intégration interdite en production en l’état : retrouver les dépendances ci-dessus, vérifier schéma et workflow de paiement en staging, puis exécuter la recette H01–H09 ci-dessous. Le nouveau module `softsystem97.integrations.historical_ticket_guard` doit être installé **avant** toute mise à jour manuelle du Server Script client ; sans lui, l’écriture échoue volontairement. Aucun hook n’installe ces scripts ni ne modifie les routes. Les signatures de commentaires partagés sont une liste fermée à confronter aux producteurs réels ; les anciennes notes non classifiées restent masquées. Les refus File renvoient une liste vide, sans contournement. La correction d’affichage du paiement ne remplace jamais un contrôle métier serveur.
+
+Déploiement/retour : appliquer les points d’arrêt ci-dessous, conserver une copie privée du Server Script et de la Web Page avant modification, installer le SHA applicatif validé, puis mettre à jour explicitement les composants historiques en staging avec les outils originaux retrouvés. Ne pas exécuter les fichiers importés avec des identifiants de production. En cas d’échec, suspendre le parcours concerné ; restaurer uniquement les versions revues et sûres des pages/scripts, sans réintroduire la divulgation de notes, sans supprimer reçus/tickets et sans renvoi de file. Aucun compte réel ni aucune production n’a été modifié.
+
 ## État et séparation des composants
 
 Base vérifiée : `c5f0be1` sur `fix/ticket-notification-privacy` (la référence fournie `c5f9eb1` n’est pas résolue localement). La PR #3 reste indépendante. Les 66 tests Frappe et 15 scénarios HTTP déjà réussis concernent le pont de développement, pas `/espace-technicien/tickets`. Ils ne sont pas relancés pour cette préparation documentaire.
