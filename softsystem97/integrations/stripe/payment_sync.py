@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import time
 from typing import Any
 
@@ -230,11 +231,19 @@ def verify_amount_currency(invoice_name: str, amount: float, currency: str | Non
 	if not inv:
 		return False, "Facture introuvable"
 
-	if currency and inv.currency and currency.upper() != (inv.currency or "").upper():
+	if not isinstance(currency, str) or not currency.strip() or not inv.currency:
+		return False, "Devise de paiement ou de facture manquante"
+	if currency.upper() != inv.currency.upper():
 		return False, f"Devise incompatible ({currency} vs {inv.currency})"
 
 	expected = flt(inv.outstanding_amount or inv.grand_total)
-	if amount and expected and abs(amount - expected) > 0.05:
+	try:
+		amount = float(amount)
+	except (TypeError, ValueError, OverflowError):
+		return False, "Montant de paiement invalide"
+	if not math.isfinite(amount) or not math.isfinite(expected):
+		return False, "Montant de paiement ou de facture invalide"
+	if abs(amount - expected) > 0.05:
 		return False, f"Montant divergent ({amount} vs {expected})"
 	return True, ""
 

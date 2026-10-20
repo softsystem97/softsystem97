@@ -1,5 +1,25 @@
 # Intégration du portail historique : recette et déploiement contrôlé
 
+## Consolidation de la révocation et des contrôles de paiement
+
+Deux régressions d’affectation et quatre sous-cas d’un test de paiement ont été reproduits avant correction (`bridge-consolidation-before.log`, 79 tests, six échecs comptabilisés). Lors d’une réaffectation historique approuvée, `api.assign_ticket` révoque maintenant définitivement les anciennes approbations du ticket dans la transaction de changement du champ ; restaurer `ss97_technician` ne suffit plus à les réactiver. Une nouvelle décision métier et une nouvelle clé d’affectation sont nécessaires pour réautoriser l’ancien technicien. La relecture d’un ancien reçu reste sans effet. Cette correction ne modifie pas les règles natives d’écriture Issue et ne remplace pas un hook de workflow privé pour les changements externes à ces API.
+
+`payment_sync.verify_amount_currency` refuse désormais les devises absentes et les montants absents, non numériques ou non finis ; il applique aussi la comparaison existante lorsqu’un montant vaut zéro. La tolérance historique de 0,05 et la résolution de facture restent inchangées ; aucune exemption métier n’est inventée. Cela valide une comparaison comptable, pas l’existence d’un paiement Stripe réel.
+
+Deux tests supplémentaires vérifient qu’une réaffectation refusée préserve l’ancien accès et qu’un échec de notification annule le changement de champ, la révocation et la nouvelle approbation à la frontière de rollback. Le contrôle de ces transactions utilise Frappe natif et des données fictives ; le fournisseur métier reste simulé.
+
+Les commandes de consolidation sont exécutées depuis le bench jetable :
+
+```sh
+env/bin/python /chemin/softsystem97/tools/run_local_tests.py --site audit.localhost
+env/bin/python /chemin/softsystem97/tools/test_historical_ticket_sources.py --frappe-site audit.localhost
+env/bin/python /chemin/softsystem97/tools/validate_ticket_bridge_http.py --site audit.localhost
+```
+
+Les journaux sont `bridge-consolidation-after.log`, `bridge-consolidation-sources.log` et `bridge-consolidation-http.log`. Aucun autre contrôleur historique n’a été reçu : l’unique archive accessible contient toujours les trois fichiers client/types déjà importés. Le fournisseur `business_policy.py`, le workflow privé, le SDK externe et les API historiques nommés ci-dessous restent absents. Le transport SMTP n’est pas relancé : le précédent échec demeure non validé, sans renvoi de messages. Aucun changement de compte réel ou de production.
+
+Résultat final de ces commandes : **81 tests de la suite Frappe réussis**, **17 tests des sources importées réussis**, **15 scénarios HTTP natifs réussis**, sans échec final. Les cinq nouveaux tests de consolidation s’ajoutent aux 76 précédents ; les montants/devises et le fournisseur métier utilisent des contextes simulés explicitement décrits dans les modules de tests.
+
 ## Raccordement applicatif optionnel : contrat métier obligatoire
 
 `softsystem97/integrations/ticket_bridge/historical.py` fournit maintenant un contrat serveur typé pour raccorder le pont existant au workflow privé, sans créer un contrôleur historique. Il ne confirme aucun paiement. Le mode reste désactivé tant que `ss97_ticket_bridge.historical_integration` n’est pas explicitement `true`. Les garde-fous existants du pont (activation, compatibilité, profil, schéma, Workflow/Server Scripts et producteurs concurrents) restent obligatoires.
@@ -52,7 +72,7 @@ Le portail historique n’est **pas prêt pour une recette fonctionnelle complè
 
 Base vérifiée : `c5f0be1` sur `fix/ticket-notification-privacy` (la référence fournie `c5f9eb1` n’est pas résolue localement). La PR #3 reste indépendante. Les 66 tests Frappe et 15 scénarios HTTP déjà réussis concernent le pont de développement, pas `/espace-technicien/tickets`. Ils ne sont pas relancés pour cette préparation documentaire.
 
-Les trois sources historiques ne sont pas importées. `SS97 Technician` et `ss97_technician` sont des exigences communiquées, pas des modèles vérifiés ici. Le pont utilise une configuration de rôle explicite et un ToDo lié à une approbation protégée ; il ne lit pas ce champ personnalisé et ne contrôle pas le paiement. **Ne pas le brancher sur la route historique ni l’activer comme solution de paiement.**
+État antérieur désormais dépassé par les sections ci-dessus : les trois sources sont importées et le raccordement optionnel lit et écrit `ss97_technician` uniquement après vérification d’un schéma Link User. Le rôle et le schéma réels de production ne sont pas confirmés ; le fournisseur métier et le contrôleur historique restent absents. **Ne pas activer le raccordement sur la route historique sans recette et approbation.**
 
 La revue des sources accessibles confirme : contrôle de session et de rôle serveur, contrôle d’affectation sur liste/détail/mutation, refus d’auto-affectation par ToDo seul, notifications filtrées par autorisation actuelle. Les écritures internes privilégiées sont bornées après ces contrôles ; elles restent à revoir avec les hooks et permissions réellement déployés. Les droits natifs hérités ne sont pas retirés par ce module.
 

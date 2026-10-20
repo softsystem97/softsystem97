@@ -138,6 +138,57 @@ class TestHistoricalLifecycle(unittest.TestCase):
                     return_value=lambda request: result):
                 self.assert_denied_without_effect(lambda: self.assign(ticket['name']))
 
+    def test_replaced_approval_cannot_revive_when_legacy_field_is_restored(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        first = frappe.db.get_value(api.EVENT, {'issue': ticket['name'], 'action': 'assign'}, 'name')
+        self.assign(ticket['name'], self.tech2, 'second-tech')
+        # A legacy/native writer restoring the field must not resurrect old approval.
+        frappe.db.set_value('Issue', ticket['name'], 'ss97_technician', self.tech)
+        frappe.set_user(self.tech)
+        self.assertEqual(api.list_tickets()['tickets'], [])
+        self.assert_denied_without_effect(lambda: api.get_ticket(ticket['name']))
+        self.assertEqual(frappe.db.get_value(api.EVENT, first, 'revoked'), 1)
+
+    def test_returning_technician_needs_new_approved_request_not_old_receipt(self):
+        ticket = self.create()
+        self.assign(ticket['name'], request_id='original-a')
+        first = frappe.db.get_value(api.EVENT, {'issue': ticket['name'], 'action': 'assign'}, 'name')
+        self.assign(ticket['name'], self.tech2, 'second-b')
+        self.assign(ticket['name'], request_id='original-a')  # Receipt only, no reassignment.
+        self.assertEqual(frappe.db.get_value('Issue', ticket['name'], 'ss97_technician'), self.tech2)
+        self.assertEqual(frappe.db.get_value(api.EVENT, first, 'revoked'), 1)
+        self.assign(ticket['name'], request_id='new-approved-a')
+        frappe.set_user(self.tech)
+        self.assertEqual(api.get_ticket(ticket['name'])['ticket']['name'], ticket['name'])
+        frappe.set_user(self.tech2)
+        self.assertEqual(api.list_tickets()['tickets'], [])
+        self.assertEqual(frappe.db.count('SS97 Client Notification',
+            {'reference_name': ticket['name'], 'for_user': self.tech}), 2)
+
+    def test_denied_reassignment_keeps_existing_authorized_technician(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        self.allowed = False
+        self.assert_denied_without_effect(lambda: self.assign(ticket['name'], self.tech2, 'denied-b'))
+        self.assertEqual(frappe.db.get_value('Issue', ticket['name'], 'ss97_technician'), self.tech)
+        frappe.set_user(self.tech)
+        self.assertEqual(api.get_ticket(ticket['name'])['ticket']['name'], ticket['name'])
+
+    def test_failed_notification_rolls_back_field_revocation_and_new_approval(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        before = frappe.db.count(api.EVENT)
+        frappe.conf.ss97_ticket_bridge['email_enabled'] = True
+        frappe.db.savepoint('failed_reassignment_mail')
+        with self.assertRaises(frappe.ValidationError):
+            self.assign(ticket['name'], self.tech2, 'failed-mail-b')
+        frappe.db.rollback(save_point='failed_reassignment_mail')
+        self.assertEqual(frappe.db.count(api.EVENT), before)
+        self.assertEqual(frappe.db.get_value('Issue', ticket['name'], 'ss97_technician'), self.tech)
+        self.assertTrue(policy.assigned(ticket['name'], self.tech))
+        self.assertFalse(policy.assigned(ticket['name'], self.tech2))
+
     def test_wrong_revision_or_operation_in_decision_is_rejected(self):
         ticket = self.create()
         real = self.evaluate

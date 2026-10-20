@@ -186,6 +186,11 @@ def assign_ticket(name, technician, request_id):
     previously_approved = policy.assigned(name, technician)
     business = historical.require_authorization('assign', doc, technician=technician)
     if historical.enabled() and doc.ss97_technician != technician:
+        # A single historical assignee replaces prior approvals permanently.
+        # Merely restoring the legacy field must not resurrect an old capability.
+        # The current receipt has no Issue yet and is sealed below only on success.
+        frappe.db.set_value(EVENT, {'issue': name, 'action': 'assign', 'revoked': 0},
+            'revoked', 1, update_modified=False)
         doc.ss97_technician = technician
         doc.save(ignore_permissions=True)  # Existing admin Issue/write already checked.
     filters = {'reference_type': 'Issue', 'reference_name': name,

@@ -7,6 +7,14 @@ from softsystem97.integrations.stripe import payment_sync
 
 
 class TestPaymentEligibility(unittest.TestCase):
+    def test_zero_payment_or_missing_currency_cannot_validate_nonzero_invoice(self):
+        invoice = frappe._dict(grand_total=100, outstanding_amount=100, currency='USD')
+        with patch.object(frappe.db, 'get_value', return_value=invoice):
+            for amount, currency in [(0, 'USD'), (None, 'USD'), (100, None), (100, ''),
+                                     (float('nan'), 'USD'), (float('inf'), 'USD'), ('invalid', 'USD')]:
+                with self.subTest(amount=amount, currency=currency):
+                    self.assertFalse(payment_sync.verify_amount_currency('SYNTHETIC', amount, currency)[0])
+
     def test_existing_amount_and_currency_checks_reject_mismatches(self):
         invoice = frappe._dict(grand_total=100, outstanding_amount=100, currency='USD')
         with patch.object(frappe.db, 'get_value', return_value=invoice):
