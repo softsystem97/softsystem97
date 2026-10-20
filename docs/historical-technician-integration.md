@@ -1,5 +1,7 @@
 # Intégration du portail historique : recette et déploiement contrôlé
 
+L’état courant du candidat unique, ses tests, dépendances et points d’arrêt est fixé dans [consolidated-release.md](consolidated-release.md). Les sections ci-dessous conservent les preuves des reprises précédentes.
+
 ## Composants existants retrouvés et sécurité du webhook
 
 La recherche couvre les références locales et les branches distantes annoncées, un historique Git non tronqué (33 commits accessibles avant ce correctif), les chemins modifiés dans les anciens commits et les archives de travail accessibles. `Issue` existe dans ERPNext installé : `erpnext/support/doctype/issue/issue.json` et `issue.py`. Aucun second DocType de tickets n’est nécessaire. Les définitions SS97 de production ne sont pas fournies par les références de champs des trois sources importées ; les Custom Field des tests sont des fixtures synthétiques.

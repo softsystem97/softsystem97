@@ -11,6 +11,40 @@ from softsystem97.integrations.stripe import payment_sync, webhook
 
 
 class TestPaymentEligibility(unittest.TestCase):
+    def test_checkout_complete_does_not_mean_paid(self):
+        for payment_status in ['unpaid', 'failed', 'canceled', '', None]:
+            with self.subTest(payment_status=payment_status):
+                self.assertFalse(payment_sync.is_confirmed_payment(
+                    {'status': 'complete', 'payment_status': payment_status},
+                    'checkout.session.completed'))
+        for payment_status in ['paid', 'no_payment_required']:
+            self.assertTrue(payment_sync.is_confirmed_payment(
+                {'status': 'complete', 'payment_status': payment_status}, 'checkout.session.completed'))
+        self.assertFalse(payment_sync.is_confirmed_payment(
+            {'status': 'open', 'amount_paid': 25}, 'invoice.paid'))
+
+    def test_failure_cancellation_refund_and_pending_never_dispatch_as_paid(self):
+        cases = [('checkout.session.completed', {'status': 'complete', 'payment_status': 'unpaid'}, 'skip'),
+                 ('checkout.session.completed', {'status': 'complete', 'payment_status': 'canceled'}, 'failed'),
+                 ('payment_intent.payment_failed', {'status': 'requires_payment_method'}, 'failed'),
+                 ('payment_intent.canceled', {'status': 'canceled'}, 'skip'),
+                 ('checkout.session.expired', {'status': 'expired', 'payment_status': 'unpaid'}, 'skip'),
+                 ('invoice.payment_failed', {'status': 'open'}, 'failed'),
+                 ('charge.refunded', {'refunded': True}, 'refund')]
+        for kind, obj, expected in cases:
+            ctx = dict(object=obj, event_type=kind)
+            with self.subTest(kind=kind, obj=obj), \
+                    patch.object(payment_sync, 'extract_event_context', return_value=ctx), \
+                    patch.object(payment_sync, 'process_successful_payment') as paid, \
+                    patch.object(payment_sync, 'process_failed_payment', return_value={'failed': True}) as failed, \
+                    patch.object(payment_sync, 'process_refund', return_value={'refund': True}) as refund:
+                result = payment_sync.dispatch_stripe_event({'type': kind})
+                paid.assert_not_called()
+                self.assertEqual(failed.call_count, int(expected == 'failed'))
+                self.assertEqual(refund.call_count, int(expected == 'refund'))
+                if expected == 'skip':
+                    self.assertTrue(result['skipped'])
+
     def test_zero_payment_or_missing_currency_cannot_validate_nonzero_invoice(self):
         invoice = frappe._dict(grand_total=100, outstanding_amount=100, currency='USD')
         with patch.object(frappe.db, 'get_value', return_value=invoice):

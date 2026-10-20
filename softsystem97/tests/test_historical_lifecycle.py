@@ -86,6 +86,27 @@ class TestHistoricalLifecycle(unittest.TestCase):
         self.assert_denied_without_effect(lambda: self.assign(ticket['name']))
         self.assertFalse(frappe.db.get_value('Issue', ticket['name'], 'ss97_technician'))
 
+    def test_payment_and_ticket_notifications_share_client_authorization(self):
+        from softsystem97.integrations.stripe.payment_sync import get_portal_user_for_customer
+
+        self.assertEqual(get_portal_user_for_customer(self.customers[0]), self.client)
+        frappe.db.set_value('User', self.client, 'enabled', 0)
+        self.assertIsNone(get_portal_user_for_customer(self.customers[0]))
+        frappe.db.set_value('User', self.client, 'enabled', 1)
+        other = frappe.get_doc('Customer', self.customers[1])
+        other.append('portal_users', dict(user=self.client))
+        other.save()
+        self.assertIsNone(get_portal_user_for_customer(self.customers[0]))
+        self.assertIsNone(policy.client_customer_for_user(self.client))
+
+    def test_payment_notification_has_no_fallback_to_customer_email(self):
+        from softsystem97.integrations.stripe.payment_sync import get_portal_user_for_customer
+
+        frappe.db.delete('Portal User', {'parent': self.customers[0],
+            'parenttype': 'Customer', 'parentfield': 'portal_users'})
+        frappe.db.set_value('Customer', self.customers[0], 'email_id', self.client)
+        self.assertIsNone(get_portal_user_for_customer(self.customers[0]))
+
     def test_real_lifecycle_with_simulated_positive_business_decisions(self):
         ticket = self.create()
         self.assign(ticket['name'])

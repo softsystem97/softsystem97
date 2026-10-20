@@ -14,7 +14,7 @@ from frappe.utils import cint, flt, now_datetime
 
 REPLAY_TOLERANCE_SECONDS = 300
 
-SUCCESS_STATUSES = frozenset({"paid", "no_payment_required", "succeeded"})
+SUCCESS_STATUSES = frozenset({"paid", "no_payment_required"})
 FAILURE_STATUSES = frozenset({"failed", "canceled", "payment_failed"})
 
 HANDLED_EVENT_TYPES = frozenset({
@@ -166,7 +166,7 @@ def log_stripe_event(
 		doc.insert(ignore_permissions=True)
 		return doc.name
 	except Exception as exc:
-		frappe.log_error(title="SS97 Stripe Event log failed", message=frappe.get_traceback())
+		frappe.log_error(title="SS97 Stripe Event log failed", message=type(exc).__name__)
 		return None
 
 
@@ -308,8 +308,8 @@ def create_payment_entry_for_invoice(invoice_name: str, amount: float, reference
 		if pe.docstatus == 0:
 			pe.submit()
 		return pe.name
-	except Exception:
-		frappe.log_error(title="SS97 Payment Entry failed", message=frappe.get_traceback())
+	except Exception as exc:
+		frappe.log_error(title="SS97 Payment Entry failed", message=type(exc).__name__)
 		return None
 
 
@@ -324,21 +324,19 @@ def add_invoice_comment(invoice_name: str, content: str) -> None:
 			"reference_name": invoice_name,
 			"content": content,
 		}).insert(ignore_permissions=True)
-	except Exception:
-		frappe.log_error(title="SS97 invoice comment failed", message=frappe.get_traceback())
+	except Exception as exc:
+		frappe.log_error(title="SS97 invoice comment failed", message=type(exc).__name__)
 
 
 def get_portal_user_for_customer(customer: str | None) -> str | None:
 	if not customer:
 		return None
-	users = frappe.get_all("Portal User", filters={"parent": customer}, pluck="user", limit=5)
+	from softsystem97.integrations.ticket_bridge.policy import client_customer_for_user
+
+	users = frappe.get_all("Portal User", filters={"parent": customer,
+		"parenttype": "Customer", "parentfield": "portal_users"}, pluck="user")
 	for user in users:
-		if user and user != "Guest":
-			return user
-	email = frappe.db.get_value("Customer", customer, "email_id")
-	if email:
-		user = frappe.db.get_value("User", {"email": email, "enabled": 1}, "name")
-		if user:
+		if client_customer_for_user(user) == customer:
 			return user
 	return None
 
@@ -368,8 +366,8 @@ def create_client_notification(
 				"reference_name": document_name,
 			}).insert(ignore_permissions=True)
 			return
-		except Exception:
-			frappe.log_error(title="SS97 Client Notification failed", message=frappe.get_traceback())
+		except Exception as exc:
+			frappe.log_error(title="SS97 Client Notification failed", message=type(exc).__name__)
 
 	try:
 		frappe.get_doc({
@@ -381,8 +379,8 @@ def create_client_notification(
 			"document_type": document_type or "Sales Invoice",
 			"document_name": document_name or "",
 		}).insert(ignore_permissions=True)
-	except Exception:
-		frappe.log_error(title="SS97 Notification Log failed", message=frappe.get_traceback())
+	except Exception as exc:
+		frappe.log_error(title="SS97 Notification Log failed", message=type(exc).__name__)
 
 
 def extract_event_context(event: dict[str, Any]) -> dict[str, Any]:
@@ -430,11 +428,12 @@ def extract_event_context(event: dict[str, Any]) -> dict[str, Any]:
 
 def is_confirmed_payment(obj: dict[str, Any], event_type: str) -> bool:
 	if event_type == "checkout.session.completed":
-		return obj.get("payment_status") in SUCCESS_STATUSES or obj.get("status") == "complete"
+		# Checkout completion also occurs for delayed methods still awaiting payment.
+		return obj.get("payment_status") in SUCCESS_STATUSES
 	if event_type == "payment_intent.succeeded":
 		return obj.get("status") == "succeeded"
 	if event_type == "invoice.paid":
-		return obj.get("status") == "paid" or flt(obj.get("amount_paid")) > 0
+		return obj.get("status") == "paid"
 	return False
 
 
