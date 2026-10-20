@@ -53,7 +53,7 @@ class TestHistoricalLifecycle(unittest.TestCase):
     def setUp(self):
         bridge_tests.TestTicketBridge.setUp(self)
         frappe.conf.ss97_ticket_bridge.update(historical_integration=True,
-            business_authorizer='integrations.ss97_tickets.workflow_logic.authorize_ticket_operation')
+            business_authorizer='softsystem97.integrations.ticket_bridge.business_policy.authorize_ticket_operation')
         self.allowed = True
         self.requests = []
         self.provider = patch.object(historical, 'resolve_provider', return_value=self.evaluate)
@@ -153,6 +153,11 @@ class TestHistoricalLifecycle(unittest.TestCase):
                 self.assert_denied_without_effect(lambda: self.assign(ticket['name']))
 
     def test_noncanonical_role_or_non_user_link_is_never_silently_adapted(self):
+        method = frappe.conf.ss97_ticket_bridge['business_authorizer']
+        frappe.conf.ss97_ticket_bridge['business_authorizer'] = 'integrations.ss97_tickets.workflow_logic.authorize_ticket_operation'
+        with self.assertRaises(frappe.PermissionError):
+            policy.settings()
+        frappe.conf.ss97_ticket_bridge['business_authorizer'] = method
         frappe.conf.ss97_ticket_bridge['technician_role'] = self.generic_role
         with self.assertRaises(frappe.PermissionError):
             api.list_tickets()

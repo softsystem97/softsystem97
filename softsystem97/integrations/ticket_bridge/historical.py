@@ -50,8 +50,7 @@ def validate_configuration(config, meta):
         frappe.throw('Rôle canonique et lien ss97_technician vers User requis ; adaptateur de profil sinon.',
                      frappe.PermissionError)
     method = config.get('business_authorizer')
-    if (not isinstance(method, str) or not method.startswith(
-            ('softsystem97.integrations.', 'integrations.ss97_tickets.'))):
+    if not isinstance(method, str) or not method.startswith('softsystem97.integrations.'):
         frappe.throw('Adaptateur métier serveur non configuré.', frappe.PermissionError)
     try:
         provider = resolve_provider(method)
