@@ -10,7 +10,10 @@
     "request_hash",
     "issue",
     "detail",
-    "response_json"
+    "response_json",
+    "assignment",
+    "technician",
+    "revoked"
   ],
   "fields": [
     {
@@ -44,6 +47,27 @@
       "fieldname": "response_json",
       "label": "response_json",
       "fieldtype": "Long Text"
+    },
+    {
+      "fieldname": "assignment",
+      "label": "Approved ToDo ID",
+      "fieldtype": "Data",
+      "read_only": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "technician",
+      "label": "technician",
+      "fieldtype": "Link",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "revoked",
+      "label": "revoked",
+      "fieldtype": "Check",
+      "default": "0",
+      "read_only": 1
     }
   ],
   "permissions": [

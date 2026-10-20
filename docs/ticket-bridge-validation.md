@@ -62,3 +62,7 @@ Un bouton de déconnexion manquait dans l’interface de développement. Il appe
 Les validateurs ciblés ont été exécutés : **14 scénarios HTTP Frappe réels**, dont refus d’accès après logout et après réutilisation de l’ancien cookie ; **13 scénarios Chromium**, dont bouton POST et retour au formulaire. La suite de 52 tests Frappe et l’essai SMTP antérieurs n’ont pas été relancés : aucun producteur, rôle, modèle de données ou migration n’a changé. Ces nouveaux résultats restent exclusivement locaux.
 
 Aucun résultat de collecte de production n’est disponible. Le paquet privé de collecte est distinct du dépôt public et ne contient aucun changement de compte ou déploiement automatique.
+
+## Revue des affectations depuis GitHub
+
+La correction détaillée dans [assignment-authorization-security-review.md](assignment-authorization-security-review.md) remplace la confiance dans un ToDo natif par une approbation administrative protégée. Résultats courants : 60 tests Frappe et 15 scénarios HTTP natifs réussis en laboratoire ; les trois failles d’affectation ont été reproduites avant correction. La vérification des anciens reçus fait partie des huit nouvelles régressions. Aucune validation du champ historique ss97_technician, des règles de paiement privées ou de la production n’est annoncée.

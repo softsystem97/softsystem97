@@ -398,3 +398,120 @@ class TestTicketBridge(unittest.TestCase):
         self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
         self.assertFalse(second['users_changed'])
         self.assertEqual(second['issue_permissions_added'], [])
+
+    def forged_todo(self, name, user):
+        frappe.set_user(user)
+        # Native All/create permits this. assigned_by is client-controlled metadata.
+        return frappe.get_doc(dict(doctype='ToDo', reference_type='Issue', reference_name=name,
+            allocated_to=user, assigned_by='Administrator', status='Open',
+            description='Synthetic unapproved self-assignment')).insert()
+
+    def test_self_created_todo_does_not_authorize_foreign_ticket(self):
+        ticket = self.create()
+        self.forged_todo(ticket['name'], self.tech)
+        self.assertEqual(api.list_tickets()['tickets'], [])
+        with self.assertRaises(frappe.PermissionError):
+            api.get_ticket(ticket['name'])
+        with self.assertRaises(frappe.PermissionError):
+            api.update_status(ticket['name'], 'Resolved', ticket['modified'], 'forged-status')
+        with self.assertRaises(frappe.PermissionError):
+            api.add_intervention(ticket['name'], 'Must not persist', 'forged-comment')
+        with self.assertRaises(frappe.PermissionError):
+            frappe.get_doc(dict(doctype=api.EVENT, actor=self.tech, action='assign',
+                issue=ticket['name'], name='forged-approval')).insert()
+
+    def test_assignee_cannot_retarget_approved_todo_to_another_issue(self):
+        first = self.create()
+        second = self.create(request_id='second', subject='Other unassigned ticket')
+        self.assign(first['name'])
+        frappe.set_user(self.tech)
+        todo = frappe.get_doc('ToDo', {'reference_name': first['name'], 'allocated_to': self.tech})
+        todo.reference_name = second['name']
+        todo.save()  # Native assignee/write must not transfer the bridge authorization.
+        self.assertEqual(api.list_tickets()['tickets'], [])
+        for name in [first['name'], second['name']]:
+            with self.assertRaises(frappe.PermissionError):
+                api.get_ticket(name)
+        todo.reference_name = first['name']
+        todo.save()
+        with self.assertRaises(frappe.PermissionError):
+            api.get_ticket(first['name'])  # Restoring the link does not restore approval.
+
+    def test_unapproved_self_assignment_cannot_receive_status_notifications(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        self.forged_todo(ticket['name'], self.tech2)
+        frappe.set_user(self.tech)
+        current = api.get_ticket(ticket['name'])['ticket']
+        api.update_status(ticket['name'], 'Resolved', current['modified'], 'resolve')
+        self.assertEqual(frappe.db.count('SS97 Client Notification', {
+            'for_user': self.tech2, 'reference_name': ticket['name']}), 0)
+
+    def test_closed_assignment_cannot_self_reopen_approval(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        todo = frappe.get_doc('ToDo', {'reference_name': ticket['name'], 'allocated_to': self.tech})
+        todo.status = 'Cancelled'
+        todo.save()
+        frappe.set_user(self.tech)
+        todo = frappe.get_doc('ToDo', todo.name)
+        todo.status = 'Open'
+        todo.save()  # Native permission remains; privileged approval must stay revoked.
+        self.assertFalse(policy.assigned(ticket['name'], self.tech))
+        with self.assertRaises(frappe.PermissionError):
+            api.get_ticket(ticket['name'])
+        self.assertEqual(api.get_notifications()['notifications'], [])
+        self.assign(ticket['name'], request_id='explicit-reauthorization')
+        frappe.set_user(self.tech)
+        self.assertEqual(api.get_ticket(ticket['name'])['ticket']['name'], ticket['name'])
+
+    def test_administrator_can_explicitly_approve_native_todo_once(self):
+        ticket = self.create()
+        todo = self.forged_todo(ticket['name'], self.tech)
+        self.assertFalse(policy.assigned(ticket['name'], self.tech))
+        self.assign(ticket['name'])
+        self.assertTrue(policy.assigned(ticket['name'], self.tech))
+        event = frappe.get_doc(api.EVENT, {'issue': ticket['name'], 'action': 'assign'})
+        self.assertEqual((event.assignment, event.technician), (todo.name, self.tech))
+        self.assign(ticket['name'], request_id='another-explicit-approval')
+        self.assertEqual(frappe.db.count('SS97 Client Notification', {
+            'for_user': self.tech, 'reference_name': ticket['name']}), 1)
+
+    def test_revocation_still_applies_when_bridge_disabled(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        frappe.conf.ss97_ticket_bridge['enabled'] = False
+        todo = frappe.get_doc('ToDo', {'reference_name': ticket['name'], 'allocated_to': self.tech})
+        todo.status = 'Closed'
+        todo.save()
+        todo.status = 'Open'
+        todo.save()
+        frappe.conf.ss97_ticket_bridge['enabled'] = True
+        frappe.set_user(self.tech)
+        with self.assertRaises(frappe.PermissionError):
+            api.get_ticket(ticket['name'])
+
+    def test_deleted_todo_revokes_all_approval_receipts(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        todo = frappe.db.get_value('ToDo', {'reference_name': ticket['name'], 'allocated_to': self.tech}, 'name')
+        frappe.delete_doc('ToDo', todo)
+        self.assertTrue(all(row.revoked for row in frappe.get_all(api.EVENT,
+            filters={'issue': ticket['name'], 'action': 'assign'}, fields=['revoked'])))
+        self.assertFalse(policy.assigned(ticket['name'], self.tech))
+
+
+    def test_legacy_receipt_needs_fresh_administrative_approval(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        event = frappe.get_doc(api.EVENT, {'issue': ticket['name'], 'action': 'assign'})
+        event.assignment = None
+        event.technician = None
+        event.save()  # Simulate a receipt from before the approval schema migration.
+        frappe.set_user(self.tech)
+        self.assertEqual(api.list_tickets()['tickets'], [])
+        with self.assertRaises(frappe.PermissionError):
+            api.get_ticket(ticket['name'])
+        self.assign(ticket['name'], request_id='reviewed-migration-approval')
+        frappe.set_user(self.tech)
+        self.assertEqual(api.get_ticket(ticket['name'])['ticket']['name'], ticket['name'])

@@ -129,11 +129,10 @@ def list_tickets(audience='technician', offset=0):
     if audience == 'technician':
         user = policy.technician()
         # Assignment bounds the service query; no global Issue read grant.
-        rows = frappe.db.sql('''SELECT i.name, i.subject, i.status, i.modified
-            FROM `tabIssue` i WHERE EXISTS (SELECT 1 FROM `tabToDo` t
-            WHERE t.reference_type='Issue' AND t.reference_name=i.name
-              AND t.allocated_to=%s AND t.status='Open')
-            ORDER BY i.modified DESC, i.name DESC LIMIT 50 OFFSET %s''', (user, offset), as_dict=True)
+        rows = frappe.db.sql("""SELECT i.name, i.subject, i.status, i.modified
+            FROM `tabIssue` i WHERE EXISTS (SELECT 1 """ + policy.APPROVED_ASSIGNMENT_QUERY + """
+              AND t.reference_name=i.name AND t.allocated_to=%s)
+            ORDER BY i.modified DESC, i.name DESC LIMIT 50 OFFSET %s""", (user, offset), as_dict=True)
     elif audience == 'client':
         user, client = policy.customer()
         rows = frappe.get_all('Issue', filters={'customer': client, 'raised_by': user},
@@ -187,13 +186,21 @@ def assign_ticket(name, technician, request_id):
     filters = {'reference_type': 'Issue', 'reference_name': name,
                'allocated_to': technician, 'status': 'Open'}
     existing = frappe.db.exists('ToDo', filters)
+    previously_approved = policy.assigned(name, technician)
     if not existing:
-        # Native ToDo lifecycle updates _assign and writes the assignment timeline.
-        # Deliberately no assign_to.add: its independent mail producer would duplicate ours.
-        frappe.get_doc(dict(doctype='ToDo', **filters, assigned_by=frappe.session.user,
-                            description='Intervention Soft System 97')).insert()
+        # Native lifecycle keeps _assign/timeline; ToDo does not grant bridge access by itself.
+        todo = frappe.get_doc(dict(doctype='ToDo', **filters, assigned_by=frappe.session.user,
+                                  description='Intervention Soft System 97')).insert()
+        existing_name = todo.name
+    else:
+        existing_name = existing
+    event.assignment = existing_name
+    event.technician = technician
+    response = _finish(event, doc, 'Intervention attribuée',
+                       {'name': name, 'already_assigned': bool(existing)})
+    if not previously_approved:
         _notify(doc, [technician], 'Nouvelle intervention attribuée')
-    return _finish(event, doc, 'Intervention attribuée', {'name': name, 'already_assigned': bool(existing)})
+    return response
 
 
 @frappe.whitelist(methods=['POST'])
@@ -216,7 +223,8 @@ def update_status(name, status, expected_modified, request_id):
     users = [r.allocated_to for r in frappe.get_all('ToDo', filters={
         'reference_type': 'Issue', 'reference_name': name, 'status': 'Open'}, fields=['allocated_to'])
         if (frappe.db.get_value('User', r.allocated_to, 'enabled') and
-            policy.settings()['technician_role'] in frappe.get_roles(r.allocated_to))]
+            policy.settings()['technician_role'] in frappe.get_roles(r.allocated_to) and
+            policy.assigned(name, r.allocated_to))]
     _notify(doc, users + [_client_recipient(doc)],
             'Ticket clôturé' if status == 'Closed' else 'Avancement du ticket')
     return _finish(event, doc, status, _result(doc, 'technician'))

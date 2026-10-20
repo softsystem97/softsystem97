@@ -25,6 +25,9 @@ def settings():
     if config.get('profile_required') is not False:
         frappe.throw('Le modèle de profil doit être validé : adaptateur requis ou absence confirmée.',
                      frappe.PermissionError)
+    approval_meta = frappe.get_meta('SS97 Ticket Bridge Event')
+    if not all(approval_meta.has_field(field) for field in ['assignment', 'technician', 'revoked']):
+        frappe.throw('Migration des approbations requise.', frappe.PermissionError)
     meta = frappe.get_meta('Issue')
     if (not all(meta.has_field(field) for field in ['subject', 'description', 'raised_by', 'customer', 'status'])
             or meta.get_field('customer').options != 'Customer'
@@ -81,9 +84,20 @@ def actor(audience):
     frappe.throw('Espace invalide.', frappe.PermissionError)
 
 
+# A native ToDo alone is not an authorization: All/create and assignee/write
+# allow users to create or retarget it. Only the admin-protected approval binds
+# the exact ToDo ID, Issue and technician together.
+APPROVED_ASSIGNMENT_QUERY = """FROM `tabToDo` t
+    INNER JOIN `tabSS97 Ticket Bridge Event` e ON e.assignment = t.name
+    WHERE t.reference_type = 'Issue' AND t.status = 'Open'
+      AND e.action = 'assign' AND e.revoked = 0 AND e.issue = t.reference_name
+      AND e.technician = t.allocated_to
+      AND e.response_json IS NOT NULL AND e.response_json != ''"""
+
+
 def assigned(name, user):
-    return bool(frappe.db.exists('ToDo', {'reference_type': 'Issue', 'reference_name': name,
-                                        'allocated_to': user, 'status': 'Open'}))
+    return bool(frappe.db.sql('SELECT 1 ' + APPROVED_ASSIGNMENT_QUERY +
+        ' AND t.reference_name = %s AND t.allocated_to = %s LIMIT 1', (name, user)))
 
 
 def authorize(doc, audience):
@@ -105,3 +119,25 @@ def dispatcher():
     settings()
     active_user()
     frappe.only_for('System Manager')
+
+
+def revoke_changed_assignment(doc, method=None):
+    """Native lifecycle hook: invalidate only, including while the bridge is off.
+
+    Assignees may edit their own ToDo via native APIs. An old approval must not
+    resurrect when a cancelled/moved/deleted ToDo is reopened or recreated.
+    No user permissions/ToDo behavior change; writes affect only prior approvals.
+    """
+    event_type = 'SS97 Ticket Bridge Event'
+    if not frappe.db.table_exists(event_type):
+        return
+    if not frappe.get_meta(event_type).has_field('revoked'):
+        return  # Existing installs must migrate before bridge APIs can be enabled.
+    approvals = frappe.get_all(event_type, filters={
+        'assignment': doc.name, 'action': 'assign', 'revoked': 0},
+        fields=['name', 'issue', 'technician'])
+    for approval in approvals:
+        if (method == 'on_trash' or doc.status != 'Open' or doc.reference_type != 'Issue'
+                or doc.reference_name != approval.issue or doc.allocated_to != approval.technician):
+            # Scope is server-derived from the bound ToDo; this operation can only revoke.
+            frappe.db.set_value(event_type, approval.name, 'revoked', 1, update_modified=False)

@@ -5,6 +5,7 @@ No production connection, persistent activation, password output or CSRF bypass.
 """
 import argparse
 import copy
+import json
 import os
 from pathlib import Path
 import re
@@ -137,6 +138,16 @@ def main():
             repeated = call('POST', prefix + 'update_status', headers=headers, data=update)
             assert repeated.status_code == 200 and repeated.json['message'] == changed.json['message']
             passed('Status update and identical HTTP retry succeed without duplicate operation')
+            forged = call('POST', '/api/method/frappe.client.insert', headers=headers, data={
+                'doc': json.dumps(dict(doctype='ToDo', reference_type='Issue',
+                    reference_name=foreign_ticket['name'], allocated_to=tech.name,
+                    assigned_by='Administrator', status='Open', description='Synthetic unapproved ToDo'))})
+            assert forged.status_code == 200, forged.status_code
+            denied_forgery = call('GET', prefix + 'get_ticket', query_string={'name': foreign_ticket['name']})
+            assert denied_forgery.status_code == 403, denied_forgery.status_code
+            still_scoped = call('GET', prefix + 'list_tickets')
+            assert [row['name'] for row in still_scoped.json['message']['tickets']] == [ticket['name']]
+            passed('Native HTTP ToDo creation cannot grant access to an unapproved Issue')
             for name in [foreign_ticket['name'], 'unavailable-foreign-ticket']:
                 foreign = call('GET', prefix + 'get_ticket', query_string={'name': name})
                 assert foreign.status_code == 403, foreign.status_code

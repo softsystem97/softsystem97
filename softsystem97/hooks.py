@@ -51,3 +51,11 @@ fixtures = [
 ]
 
 # Permissions portail : les APIs whitelist filtrent strictement par frappe.session.user.
+
+# Only revokes existing bridge approvals; never creates an assignment/grant.
+doc_events = {
+    "ToDo": {
+        "on_update": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+        "on_trash": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+    },
+}

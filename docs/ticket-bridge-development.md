@@ -1,6 +1,6 @@
 # Pont client–technicien de remplacement (développement)
 
-Ce module est une reconstruction autorisée, pas la récupération du portail privé et pas une réparation de production. Il est **désactivé par défaut** : aucun hook, patch ou migration ne l’active, ne crée de rôle ni ne modifie un utilisateur. La migration ajoute seulement le journal technique `SS97 Ticket Bridge Event`.
+Ce module est une reconstruction autorisée, pas la récupération du portail privé et pas une réparation de production. Il est **désactivé par défaut** : aucun hook, patch ou migration ne l’active, ne crée de rôle ni ne modifie un utilisateur. La migration ajoute le journal technique `SS97 Ticket Bridge Event` ; la correction de sécurité y ajoute `assignment`, `technician` et `revoked`, sans approbation automatique des anciennes affectations.
 
 ## Sources confirmées et choix du modèle
 
@@ -29,13 +29,13 @@ Autorisations serveur :
 | Acteur | Capacité |
 |---|---|
 | Client actif avec rôle Customer et lien Portal User unique | Créer et lire ses propres Issue, commenter ses tickets non clôturés |
-| Technicien actif avec rôle configuré et ToDo ouvert pour ce ticket | Lire ce ticket, publier une intervention partagée, appliquer une transition autorisée |
+| Technicien actif avec rôle configuré, ToDo ouvert et approbation administrative liée à ce ToDo/ticket/utilisateur | Lire ce ticket, publier une intervention partagée, appliquer une transition autorisée |
 | Administrateur existant System Manager | Affecter à un technicien actif, sous réserve des permissions natives d’écriture Issue |
 | Invité, compte désactivé, rôle absent/désactivé, technicien non attribué | Refus |
 
 Le service effectue des lectures filtrées et des écritures privilégiées **strictement après** les contrôles ci-dessus. Les `insert/save(ignore_permissions=True)` sont des capacités internes bornées à des champs et destinataires calculés côté serveur ; elles ne confèrent pas de permissions natives au compte. Les validations et événements natifs restent exécutés. Il n’y a ni changement d’identité, ni droit Issue global, ni DocShare persistant. Les comptes portant déjà des rôles larges ou des partages hérités doivent faire l’objet d’une revue séparée : ce module ne réduit pas leurs droits natifs préexistants.
 
-Statuts du remplacement : Open → Replied / On Hold / Resolved ; Replied → On Hold / Resolved ; On Hold → Replied / Resolved ; Resolved → Closed. Closed est terminal. La fermeture conserve le ToDo ouvert comme trace d’autorisation afin que l’intervenant puisse encore lire la clôture ; fermer/annuler ce ToDo révoque immédiatement l’accès via le pont. L’API d’affectation est additive, pas une opération de remplacement d’un intervenant. Une réaffectation avec révocation demande de fermer/annuler explicitement l’ancien ToDo depuis l’administration.
+Statuts du remplacement : Open → Replied / On Hold / Resolved ; Replied → On Hold / Resolved ; On Hold → Replied / Resolved ; Resolved → Closed. Closed est terminal. La fermeture conserve le ToDo ouvert comme trace d’autorisation afin que l’intervenant puisse encore lire la clôture ; fermer/annuler ce ToDo révoque durablement son approbation ; le déplacer ou le supprimer la révoque aussi. Le rouvrir ou restaurer son ancien lien ne rétablit pas cet accès. Le hook conserve cette révocation même quand le pont est désactivé. L’API d’affectation est additive, pas une opération de remplacement d’un intervenant. Une réaffectation avec révocation demande de fermer/annuler explicitement l’ancien ToDo depuis l’administration.
 
 Le pont refuse un Workflow Issue actif, des Server Scripts DocType Event Issue actifs, un schéma de statuts différent ou, si ses e-mails sont activés, des Notifications e-mail Issue déjà actives. Ces cas demandent une adaptation revue, pas une désactivation aveugle des workflows existants.
 
@@ -122,3 +122,11 @@ Les tests de cette branche couvrent aussi les permissions corrigées précédemm
 Le validateur HTTP utilise le vrai point d’entrée WSGI de Frappe, les vrais cookies de session, le routage/Jinja et les contrôles CSRF/méthodes HTTP natifs. Il reste limité au site jetable ; il ne démarre pas de serveur public et ne contacte pas la production. Il faut le lancer séparément des autres essais DB/SMTP. Le contrôleur de la route à tirets doit s’appeler `www/ss97_dev_technician.py`, conformément à la résolution native Frappe. Après correction ou installation, vider le cache du site pour retirer les anciennes pages rendues.
 
 La déconnexion de l’interface utilise `/api/method/logout` par POST avec le jeton CSRF natif. Le tableau est vidé pendant l’opération et le navigateur revient à la page de connexion après succès. Le validateur HTTP contrôle aussi le refus d’accès après déconnexion et après réutilisation de l’ancien cookie ; ces essais concernent uniquement un utilisateur synthétique du site jetable.
+
+## Affectations : exigence de sécurité supplémentaire
+
+Un ToDo natif seul ne suffit jamais à autoriser l’accès : les permissions natives All/create et assignee/write permettent de le créer ou de modifier son ticket. Le service exige désormais une approbation protégée dans SS97 Ticket Bridge Event, créée par l’API d’affectation administrative et liée à l’ID exact du ToDo, au ticket et au technicien. Les listes, détails, mutations et destinataires des notifications utilisent cette même condition. Le hook ToDo peut seulement révoquer une approbation, jamais en créer une ; il ne change pas les permissions ou le fonctionnement des ToDo ordinaires.
+
+Avant activation d’une ancienne installation : migrer, vider le cache, faire revoir chaque affectation nécessaire par un administrateur et appeler `assign_ticket` avec une **nouvelle clé de requête**. Un simple ToDo créé depuis Desk, ou un reçu antérieur sans les nouveaux champs, ne suffit plus. Aucune reprise automatique n’est sûre. L’API refuse l’attribution de tickets Closed ; les accès à ces historiques demandent une revue administrative avant activation, pas un contournement du contrôle. Les anciens clients qui réutilisent une clé d’attribution déjà consommée retrouvent le reçu historique, sans nouvelle autorisation implicite.
+
+Retour arrière de cette correction : garder le pont désactivé. Ne pas réactiver une ancienne version qui faisait confiance aux ToDo seuls. Conserver les tickets et les reçus ; restaurer du code ou une base uniquement après revue des écritures postérieures et approbation.
