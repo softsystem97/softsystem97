@@ -66,3 +66,18 @@ Aucun résultat de collecte de production n’est disponible. Le paquet privé d
 ## Revue des affectations depuis GitHub
 
 La correction détaillée dans [assignment-authorization-security-review.md](assignment-authorization-security-review.md) remplace la confiance dans un ToDo natif par une approbation administrative protégée. Résultats courants : 60 tests Frappe et 15 scénarios HTTP natifs réussis en laboratoire ; les trois failles d’affectation ont été reproduites avant correction. La vérification des anciens reçus fait partie des huit nouvelles régressions. Aucune validation du champ historique ss97_technician, des règles de paiement privées ou de la production n’est annoncée.
+
+## Reprise des reçus après clôture
+
+La revue suivante a identifié deux défauts d’idempotence : une affectation ou un commentaire déjà acceptés ne pouvaient plus être acquittés si la réponse avait été perdue puis le ticket clôturé avant la nouvelle tentative. Deux tests ciblés échouaient avant correction et réussissent après.
+
+Les contrôles d’identité, de rôle et d’accès actuels restent exécutés avant toute lecture de reçu. Une requête identique déjà acceptée retrouve son résultat sans écriture ni notification supplémentaire. Une nouvelle requête de commentaire ou d’affectation reste refusée sur un ticket Closed. Une affectation révoquée reste révoquée, même si un administrateur redemande son ancien reçu ; un technicien révoqué ne peut pas relire le reçu d’intervention.
+
+Exécution de cette reprise :
+
+- `test_comment_retry_after_closure_keeps_receipt_and_checks_revocation` : réussi.
+- `test_assignment_retry_after_closure_does_not_restore_revoked_access` : réussi.
+- Validateur HTTP natif : 15 scénarios réussis sur audit.localhost.
+- Les 60 tests Frappe antérieurs sont conservés ; la suite complète n’a pas été réexécutée. Deux nouveaux tests sont ajoutés au module existant et seront inclus dans son exécution complète ultérieure.
+
+Les journaux de laboratoire sont closure-retry-before.log (deux défauts reproduits), closure-retry-after.log (deux tests réussis) et closure-retry-http.log. Cette correction ne modifie ni schéma, ni permissions, ni configuration de rôle. Aucun compte réel ni serveur de production consulté ou modifié.

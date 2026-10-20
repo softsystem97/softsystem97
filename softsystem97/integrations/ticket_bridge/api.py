@@ -178,11 +178,11 @@ def assign_ticket(name, technician, request_id):
     policy.technician(technician)
     doc = _issue(name, lock=True)
     doc.check_permission('write')
-    if doc.status == 'Closed':
-        frappe.throw('Un ticket clôturé ne peut pas être attribué.')
     event, previous = _begin('assign', request_id, [name, technician])
     if previous is not None:
-        return previous
+        return previous  # Acknowledgment only; never creates/restores an approval.
+    if doc.status == 'Closed':
+        frappe.throw('Un ticket clôturé ne peut pas être attribué.')
     filters = {'reference_type': 'Issue', 'reference_name': name,
                'allocated_to': technician, 'status': 'Open'}
     existing = frappe.db.exists('ToDo', filters)
@@ -236,12 +236,12 @@ def add_intervention(name, content, request_id, audience='technician'):
     policy.actor(audience)
     doc = _issue(name, lock=True)
     policy.authorize(doc, audience)
-    if doc.status == 'Closed':
-        frappe.throw('Ticket clôturé : commentaire refusé.')
     content = _text(strip_html(_text(content, 'Commentaire', 5000)), 'Commentaire', 5000)
     event, previous = _begin('comment', request_id, [name, content, audience])
     if previous is not None:
-        return previous
+        return previous  # Current authorization was rechecked before reading the receipt.
+    if doc.status == 'Closed':
+        frappe.throw('Ticket clôturé : commentaire refusé.')
     comment = doc.add_comment('Comment', escape(content))
     return _finish(event, doc, content, {'name': name, 'comment': comment.name})
 

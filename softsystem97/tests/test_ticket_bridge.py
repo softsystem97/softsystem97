@@ -515,3 +515,48 @@ class TestTicketBridge(unittest.TestCase):
         self.assign(ticket['name'], request_id='reviewed-migration-approval')
         frappe.set_user(self.tech)
         self.assertEqual(api.get_ticket(ticket['name'])['ticket']['name'], ticket['name'])
+
+    def close_test_ticket(self, name):
+        frappe.set_user(self.tech)
+        for status in ['Resolved', 'Closed']:
+            current = api.get_ticket(name)['ticket']
+            api.update_status(name, status, current['modified'], 'close-flow-' + status)
+
+    def test_comment_retry_after_closure_keeps_receipt_and_checks_revocation(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        frappe.set_user(self.tech)
+        args = (ticket['name'], 'Accepted intervention', 'accepted-comment')
+        original = api.add_intervention(*args)
+        self.close_test_ticket(ticket['name'])
+        before = {dt: frappe.db.count(dt) for dt in [api.EVENT, 'Comment', 'SS97 Client Notification']}
+        self.assertEqual(api.add_intervention(*args), original)
+        self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
+        frappe.db.savepoint('closed_new_comment')
+        with self.assertRaises(frappe.ValidationError):
+            api.add_intervention(ticket['name'], 'New comment after closure', 'new-closed-comment')
+        frappe.db.rollback(save_point='closed_new_comment')
+        frappe.set_user('Administrator')
+        todo = frappe.get_doc('ToDo', {'reference_name': ticket['name'], 'allocated_to': self.tech})
+        todo.status = 'Cancelled'
+        todo.save()
+        frappe.set_user(self.tech)
+        with self.assertRaises(frappe.PermissionError):
+            api.add_intervention(*args)  # Historical receipt must not bypass revoked access.
+
+    def test_assignment_retry_after_closure_does_not_restore_revoked_access(self):
+        ticket = self.create()
+        original = self.assign(ticket['name'])
+        self.close_test_ticket(ticket['name'])
+        frappe.set_user('Administrator')
+        todo = frappe.get_doc('ToDo', {'reference_name': ticket['name'], 'allocated_to': self.tech})
+        todo.status = 'Cancelled'
+        todo.save()
+        before = {dt: frappe.db.count(dt) for dt in [api.EVENT, 'ToDo', 'SS97 Client Notification']}
+        self.assertEqual(self.assign(ticket['name']), original)
+        self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
+        self.assertFalse(policy.assigned(ticket['name'], self.tech))
+        frappe.db.savepoint('closed_new_assignment')
+        with self.assertRaises(frappe.ValidationError):
+            self.assign(ticket['name'], request_id='new-closed-assignment')
+        frappe.db.rollback(save_point='closed_new_assignment')
