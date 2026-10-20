@@ -95,7 +95,7 @@ def verify_stripe_signature(payload: bytes, sig_header: str, secret: str, tolera
 	if timestamp is None or not signatures:
 		return False
 
-	if time.time() - timestamp > tolerance:
+	if abs(time.time() - timestamp) > tolerance:
 		return False
 
 	body = payload.decode("utf-8") if isinstance(payload, bytes) else str(payload)

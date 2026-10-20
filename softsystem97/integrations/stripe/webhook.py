@@ -59,15 +59,16 @@ def _handle_stripe_webhook() -> dict:
 	event_type = event.get("type") or ""
 	livemode = bool(event.get("livemode"))
 
-	if event_already_processed(stripe_event_id):
-		return {"ok": True, "duplicate": True, "event_id": stripe_event_id}
-
 	secret = resolve_webhook_secret(livemode)
 	if not secret:
 		_reject("Secret webhook Stripe non configuré", 403)
 
 	if not verify_stripe_signature(raw, sig_header, secret):
 		_reject("Signature Stripe invalide", 403)
+
+	# Even a replay must be authenticated before revealing/acknowledging an event.
+	if event_already_processed(stripe_event_id):
+		return {"ok": True, "duplicate": True, "event_id": stripe_event_id}
 
 	try:
 		enforce_mode_policy(event)
