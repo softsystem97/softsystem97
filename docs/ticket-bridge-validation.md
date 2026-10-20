@@ -93,3 +93,18 @@ Exécution ciblée sur audit.localhost : **cinq tests réussis**, dont quatre no
 **15 scénarios HTTP Frappe natifs réussis** après correction. Les résultats complets antérieurs (60 tests) et les deux régressions de clôture sont conservés, sans relance complète. Les journaux sont notification-privacy-before.log (reproduction, avec un cas de fixture corrigé ensuite), notification-privacy-after.log et notification-privacy-http.log. Aucun SMTP externe ni envoi réel effectué ; les files de test restent Not Sent et les transactions sont annulées.
 
 Cette correction ne rappelle ni ne supprime les messages déjà créés ou mis en file et ne modifie pas les notifications d’autres applications. Elle porte sur les futurs événements du pont de développement. Aucun compte réel, permission native, migration ou configuration de production modifié.
+
+## Validation intégrée des corrections cumulées
+
+La suite complète a ensuite été exécutée sur `audit.localhost`, avec Frappe 16.52.0 et ERPNext 16.51.1 : **66 tests réussis**, puis **15 scénarios HTTP natifs réussis**. Cette exécution intègre les huit régressions d’affectation, les deux régressions de reprise après clôture et les quatre régressions de confidentialité des destinataires ; ces résultats remplacent la réserve précédente sur l’absence de relance complète.
+
+Commandes exécutées depuis le bench de laboratoire :
+
+```sh
+env/bin/python /workspace/softsystem97/tools/run_local_tests.py --site audit.localhost
+env/bin/python /workspace/softsystem97/tools/validate_ticket_bridge_http.py --site audit.localhost
+```
+
+Preuves locales : `logs/final-portal-integration-tests.log` et `logs/final-portal-integration-http.log`. Les utilisateurs et tickets sont fictifs. La suite HTTP couvre notamment la connexion native, CSRF, la portée des tickets, le refus d’auto-affectation non approuvée et l’invalidation de session après déconnexion. Aucun envoi SMTP externe ni accès à la production n’a été effectué.
+
+Les procédures de sauvegarde, staging, activation et retour arrière existent déjà dans [ticket-bridge-development.md](ticket-bridge-development.md). Aucun ajout applicatif n’a été nécessaire pour cette validation intégrée. L’archive historique `SOURCES_TECHNICIEN_PRIVE.zip` n’est toujours pas importée dans cet environnement : le rôle historique `SS97 Technician`, le champ `ss97_technician` et les règles privées de paiement/intervention ne sont pas validés par ces tests du pont distinct, désactivé par défaut. Aucune fusion, attribution de rôle réel ou mise en production n’est réalisée.
