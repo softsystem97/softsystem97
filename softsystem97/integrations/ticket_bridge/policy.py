@@ -60,19 +60,32 @@ def technician(user=None):
     return user
 
 
+def client_customer_for_user(user):
+    """Pure authorization lookup shared by client access and future mail routing.
+
+    No staff override, email fallback or exception/message side effect. A role
+    revocation, disabled account/customer or ambiguous mapping must fail closed.
+    """
+    if (not user or user == 'Guest' or not frappe.db.get_value('User', user, 'enabled')
+            or 'Customer' not in frappe.get_roles(user)
+            or not frappe.db.exists('Role', {'name': 'Customer', 'disabled': 0})):
+        return None
+    links = set(frappe.get_all('Portal User', filters={
+        'user': user, 'parenttype': 'Customer', 'parentfield': 'portal_users'}, pluck='parent'))
+    if len(links) != 1:
+        return None
+    name = links.pop()
+    return name if frappe.db.exists('Customer', {'name': name, 'disabled': 0}) else None
+
+
 def customer():
     settings()
     user = active_user()
     if 'Customer' not in frappe.get_roles(user):
         frappe.throw('Accès client refusé.', frappe.PermissionError)
-    # Deliberately no fuzzy email/contact fallback or caller-selected Customer.
-    links = set(frappe.get_all('Portal User', filters={
-        'user': user, 'parenttype': 'Customer', 'parentfield': 'portal_users'}, pluck='parent'))
-    if len(links) != 1:
-        frappe.throw('Un lien Portal User vers un client unique est requis.', frappe.PermissionError)
-    name = links.pop()
-    if not frappe.db.exists('Customer', {'name': name, 'disabled': 0}):
-        frappe.throw('Client actif requis.', frappe.PermissionError)
+    name = client_customer_for_user(user)
+    if not name:
+        frappe.throw('Un lien Portal User unique vers un client actif est requis.', frappe.PermissionError)
     return user, name
 
 

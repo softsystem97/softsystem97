@@ -49,6 +49,8 @@ class TestTicketBridge(unittest.TestCase):
 
     def setUp(self):
         frappe.set_user('Administrator')
+        # Each transaction simulates a fresh request; do not reuse a rolled-back Email Account.
+        frappe.local.outgoing_email_account = {}
         self.old_conf = copy.deepcopy(frappe.conf.get('ss97_ticket_bridge'))
         frappe.conf.ss97_ticket_bridge = dict(enabled=True, compatibility_confirmed=True,
             technician_role=self.role, profile_required=False, email_enabled=False)
@@ -560,3 +562,71 @@ class TestTicketBridge(unittest.TestCase):
         with self.assertRaises(frappe.ValidationError):
             self.assign(ticket['name'], request_id='new-closed-assignment')
         frappe.db.rollback(save_point='closed_new_assignment')
+
+    def check_future_mail_excludes_revoked_client(self, revoke):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        revoke()  # Administrator context, synthetic customer/user only.
+        before = frappe.db.count('SS97 Client Notification', {
+            'for_user': self.client, 'reference_name': ticket['name']})
+        if frappe.db.exists('Email Account', {'enable_outgoing': 1}):
+            self.fail('Isolated site must not have a pre-existing outgoing account')
+        account = frappe.get_doc(dict(doctype='Email Account',
+            email_account_name='Privacy Lab ' + self.suffix, email_id='sender@example.invalid',
+            enable_outgoing=1, default_outgoing=1, smtp_server='127.0.0.1', smtp_port=8026,
+            use_tls=0, no_smtp_authentication=1)).insert()
+        frappe.conf.ss97_ticket_bridge.update(email_enabled=True, email_account=account.name)
+        old_mute = frappe.conf.get('mute_emails')
+        frappe.conf.mute_emails = False
+        try:
+            frappe.set_user(self.tech)
+            current = api.get_ticket(ticket['name'])['ticket']
+            api.update_status(ticket['name'], 'Resolved', current['modified'], 'privacy-status')
+        finally:
+            frappe.conf.mute_emails = old_mute
+        queued = frappe.get_all('Email Queue', filters={
+            'reference_doctype': 'Issue', 'reference_name': ticket['name']}, pluck='name')
+        recipients = frappe.get_all('Email Queue Recipient', filters={'parent': ['in', queued]},
+                                    pluck='recipient')
+        self.assertIn(self.tech, recipients)
+        self.assertNotIn(self.client, recipients)
+        self.assertEqual(frappe.db.count('SS97 Client Notification', {
+            'for_user': self.client, 'reference_name': ticket['name']}), before)
+        self.assertTrue(all(frappe.db.get_value('Email Queue', name, 'status') == 'Not Sent'
+                            for name in queued))
+
+    def test_customer_role_revocation_stops_future_ticket_notifications(self):
+        def revoke():
+            # ERPNext re-adds Customer from Contact links on User.save. Remove only
+            # synthetic Contact associations first, preserving Portal User to exercise
+            # the exact role-revoked state that the old mail routing trusted.
+            contacts = frappe.get_all('Contact Email', filters={'email_id': self.client}, pluck='parent')
+            for name in contacts:
+                contact = frappe.get_doc('Contact', name)
+                contact.set('links', [row for row in contact.links if row.link_doctype != 'Customer'])
+                contact.save()
+            user = frappe.get_doc('User', self.client)
+            user.set('roles', [row for row in user.roles if row.role != 'Customer'])
+            user.save()
+            frappe.clear_cache(user=self.client)  # Observe the saved role change in this request.
+            self.assertNotIn('Customer', frappe.get_roles(self.client))
+        self.check_future_mail_excludes_revoked_client(revoke)
+
+    def test_ambiguous_customer_link_stops_future_ticket_notifications(self):
+        def revoke():
+            other = frappe.get_doc('Customer', self.customers[1])
+            other.append('portal_users', {'user': self.client})
+            other.save()
+        self.check_future_mail_excludes_revoked_client(revoke)
+
+    def test_disabled_customer_stops_future_ticket_notifications(self):
+        self.check_future_mail_excludes_revoked_client(
+            lambda: frappe.db.set_value('Customer', self.customers[0], 'disabled', 1))
+
+
+    def test_disabled_customer_role_stops_access_and_future_notifications(self):
+        self.check_future_mail_excludes_revoked_client(
+            lambda: frappe.db.set_value('Role', 'Customer', 'disabled', 1))
+        frappe.set_user(self.client)
+        with self.assertRaises(frappe.PermissionError):
+            api.list_tickets('client')

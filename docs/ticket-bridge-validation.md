@@ -81,3 +81,15 @@ Exécution de cette reprise :
 - Les 60 tests Frappe antérieurs sont conservés ; la suite complète n’a pas été réexécutée. Deux nouveaux tests sont ajoutés au module existant et seront inclus dans son exécution complète ultérieure.
 
 Les journaux de laboratoire sont closure-retry-before.log (deux défauts reproduits), closure-retry-after.log (deux tests réussis) et closure-retry-http.log. Cette correction ne modifie ni schéma, ni permissions, ni configuration de rôle. Aucun compte réel ni serveur de production consulté ou modifié.
+
+## Confidentialité des destinataires après changement d’autorisation
+
+Deux cas non couverts ont été reproduits : un utilisateur encore actif, mais lié à plusieurs Customer ou à un Customer désactivé, recevait encore les nouvelles notifications de statut. L’ancien producteur vérifiait seulement la présence d’un lien et l’activation du User. Il n’appliquait pas la politique d’accès client complète.
+
+Le routage utilise maintenant la même résolution que l’accès au portail : User actif, rôle Customer présent et actif, lien Portal User unique et Customer actif correspondant au ticket. Aucun rapprochement approximatif par e-mail ni privilège administratif implicite. Les contrôles des techniciens et des approbations d’affectation restent inchangés.
+
+Exécution ciblée sur audit.localhost : **cinq tests réussis**, dont quatre nouveaux (rôle client retiré, lien client ambigu, Customer désactivé, rôle Customer désactivé) et un test positif existant de la file d’e-mails. Les tests contrôlent les destinataires réels des Email Queue et les notifications applicatives ; le technicien autorisé conserve sa notification, le client révoqué n’en reçoit pas de nouvelle. Le scénario de retrait du rôle tient compte du hook ERPNext qui le réattribue depuis Contact ; les associations fictives sont préparées par les API natives. Le cache de compte sortant propre à la requête est réinitialisé entre les transactions de test pour ne pas réutiliser un compte annulé par rollback.
+
+**15 scénarios HTTP Frappe natifs réussis** après correction. Les résultats complets antérieurs (60 tests) et les deux régressions de clôture sont conservés, sans relance complète. Les journaux sont notification-privacy-before.log (reproduction, avec un cas de fixture corrigé ensuite), notification-privacy-after.log et notification-privacy-http.log. Aucun SMTP externe ni envoi réel effectué ; les files de test restent Not Sent et les transactions sont annulées.
+
+Cette correction ne rappelle ni ne supprime les messages déjà créés ou mis en file et ne modifie pas les notifications d’autres applications. Elle porte sur les futurs événements du pont de développement. Aucun compte réel, permission native, migration ou configuration de production modifié.

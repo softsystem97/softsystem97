@@ -101,11 +101,10 @@ def _notify(doc, users, title):
 
 
 def _client_recipient(doc):
-    # Do not mail arbitrary raised_by addresses on historical tickets.
+    # Notification delivery must not outlive the actual client's authorization.
     user = doc.raised_by
-    return user if (user and frappe.db.exists('Portal User', {'user': user,
-        'parenttype': 'Customer', 'parent': doc.customer}) and
-        frappe.db.get_value('User', user, 'enabled')) else None
+    customer = policy.client_customer_for_user(user)
+    return user if customer and customer == doc.customer else None
 
 
 def _result(doc, audience):
