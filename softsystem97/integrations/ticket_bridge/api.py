@@ -14,7 +14,7 @@ from frappe.utils import strip_html
 from . import historical, policy
 
 EVENT = 'SS97 Ticket Bridge Event'
-FIELDS = ['name', 'subject', 'status', 'modified']
+FIELDS = ['name', 'subject', 'status', 'modified', 'priority']
 
 
 class BridgeConflict(frappe.ValidationError):
@@ -115,8 +115,10 @@ def _result(doc, audience):
 
 
 @frappe.whitelist(methods=['GET'])
-def session_info(audience='technician'):
+def session_info(audience='technician', commercial=False):
     policy.settings()
+    if commercial in (True, 1, '1', 'true') and not historical.enabled():
+        frappe.throw('Fournisseur métier historique requis pour le portail commercial.', frappe.PermissionError)
     user = policy.actor(audience)
     return {'user': user, 'audience': audience}
 
@@ -128,7 +130,7 @@ def list_tickets(audience='technician', offset=0):
     if audience == 'technician':
         user = policy.technician()
         # Assignment bounds the service query; no global Issue read grant.
-        rows = frappe.db.sql("""SELECT i.name, i.subject, i.status, i.modified
+        rows = frappe.db.sql("""SELECT i.name, i.subject, i.status, i.modified, i.priority
             FROM `tabIssue` i WHERE EXISTS (SELECT 1 """ + policy.approved_assignment_query() + """
               AND t.reference_name=i.name AND t.allocated_to=%s)
             ORDER BY i.modified DESC, i.name DESC LIMIT 50 OFFSET %s""", (user, offset), as_dict=True)
@@ -142,14 +144,34 @@ def list_tickets(audience='technician', offset=0):
 
 
 @frappe.whitelist(methods=['GET'])
-def get_ticket(name, audience='technician'):
+def get_ticket(name, audience='technician', commercial=False):
     policy.actor(audience)
+    if commercial in (True, 1, '1', 'true') and not historical.enabled():
+        frappe.throw('Fournisseur métier historique requis pour le portail commercial.', frappe.PermissionError)
     doc = _issue(name)
     policy.authorize(doc, audience)
     history = frappe.get_all(EVENT, filters={'issue': doc.name},
         fields=['creation', 'action', 'detail'], order_by='creation desc, name desc', page_length=200)
     history.reverse()
-    return {'ticket': _result(doc, audience), 'history': history}
+    ticket = _result(doc, audience)
+    if commercial in (True, 1, '1', 'true'):
+        if audience != 'technician':
+            frappe.throw('Espace technicien requis.', frappe.PermissionError)
+        def permitted(operation, target=''):
+            # Query the exact existing server authorization contract, never the catalogue.
+            messages = list(getattr(frappe.local, 'message_log', None) or [])
+            try:
+                historical.require_authorization(operation, doc,
+                    technician=frappe.session.user, target_status=target)
+                return True
+            except frappe.PermissionError:
+                return False
+            finally:
+                frappe.local.message_log = messages
+        ticket['allowed_statuses'] = [target for target in ticket['allowed_statuses']
+            if permitted('status', target)]
+        ticket['can_add_intervention'] = doc.status != 'Closed' and permitted('intervention')
+    return {'ticket': ticket, 'history': history}
 
 
 @frappe.whitelist(methods=['POST'])

@@ -316,3 +316,32 @@ class TestHistoricalLifecycle(unittest.TestCase):
             frappe.conf.ss97_ticket_bridge['enabled'] = False
             with self.assertRaises(frappe.PermissionError):
                 require_cockpit_session(ticket['name'], 'start')
+
+    def test_commercial_session_and_detail_require_historical_provider(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        frappe.set_user(self.tech)
+        self.assertEqual(api.session_info(commercial=True)['user'], self.tech)
+        frappe.conf.ss97_ticket_bridge['historical_integration'] = False
+        with self.assertRaises(frappe.PermissionError):
+            api.session_info(commercial=True)
+        with self.assertRaises(frappe.PermissionError):
+            api.get_ticket(ticket['name'], commercial=True)
+
+    def test_commercial_detail_disables_unapproved_actions_without_writes(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        frappe.set_user(self.tech)
+        allowed = api.get_ticket(ticket['name'], commercial=True)['ticket']
+        self.assertTrue(allowed['allowed_statuses'])
+        self.assertTrue(allowed['can_add_intervention'])
+        self.assertIn('priority', allowed)
+        self.allowed = False
+        before = {dt: frappe.db.count(dt) for dt in ['Issue', 'ToDo', api.EVENT]}
+        denied = api.get_ticket(ticket['name'], commercial=True)['ticket']
+        self.assertEqual(denied['allowed_statuses'], [])
+        self.assertFalse(denied['can_add_intervention'])
+        self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
+        frappe.set_user(self.tech2)
+        with self.assertRaises(frappe.PermissionError):
+            api.get_ticket(ticket['name'], commercial=True)

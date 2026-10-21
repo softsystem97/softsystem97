@@ -134,6 +134,7 @@ NOTIF_BELL_JS = r"""
   window.__ss97ScopedNotifications=true;
   var root=document.createElement('section');
   root.setAttribute('aria-label','Notifications technicien');
+  root.setAttribute('data-ss97-notifications','1');
   var button=document.createElement('button');
   button.type='button';button.textContent='Charger mes notifications';
   var list=document.createElement('ul');
@@ -143,11 +144,14 @@ NOTIF_BELL_JS = r"""
   host.appendChild(root);
   button.addEventListener('click',async function(){
     list.replaceChildren();button.disabled=true;
+    var generation=window.__ss97AccessEpoch||0;
     try{
       var response=await fetch('/api/method/softsystem97.integrations.ticket_bridge.api.get_notifications?audience=technician',
         {credentials:'same-origin',headers:{'Accept':'application/json'},cache:'no-store'});
+      if([401,403].includes(response.status)&&typeof window.ss97ScopedAccessDenied==='function')window.ss97ScopedAccessDenied();
       if(!response.ok)throw new Error('denied');
       var payload=await response.json();
+      if(generation!==(window.__ss97AccessEpoch||0))return;
       if(payload.exc||!payload.message||!Array.isArray(payload.message.notifications))throw new Error('invalid');
       payload.message.notifications.forEach(function(item){
         var row=document.createElement('li');var link=document.createElement('a');
