@@ -69,6 +69,8 @@ def require_authorization(operation, doc=None, *, customer='', technician='', ta
         operation=operation, actor=frappe.session.user,
         customer=doc.customer if doc else customer, technician=technician,
         status=doc.status if doc else '', target_status=target_status)
+    from .business_policy import enforce_confirmed_constraints
+    enforce_confirmed_constraints(request, doc)
     decision = resolve_provider(config['business_authorizer'])(request)
     if (not isinstance(decision, AuthorizationDecision) or decision.allowed is not True
             or decision.request != request or not isinstance(decision.policy_version, str)

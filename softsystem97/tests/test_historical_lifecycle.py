@@ -269,12 +269,12 @@ class TestHistoricalLifecycle(unittest.TestCase):
         self.assign(ticket['name'])
         frappe.set_user(self.tech)
         with patch.object(frappe.local, 'request', SimpleNamespace(method='POST'), create=True):
-            self.assertTrue(require_cockpit_session(ticket['name'], 'start'))
-            self.assertEqual(self.requests[-1].operation, 'cockpit.start')
-            self.assertEqual(self.requests[-1].target_status, 'Intervention en cours')
+            self.assertTrue(require_cockpit_session(ticket['name'], 'gwen_emit'))
+            self.assertEqual(self.requests[-1].operation, 'cockpit.gwen_emit')
+            self.assertEqual(self.requests[-1].target_status, '')
             frappe.set_user(self.tech2)
             with self.assertRaises(frappe.PermissionError):
-                require_cockpit_session(ticket['name'], 'start')
+                require_cockpit_session(ticket['name'], 'gwen_emit')
 
     def test_recovered_cockpit_guard_denies_missing_business_proof_and_admin_action(self):
         from types import SimpleNamespace
@@ -345,3 +345,70 @@ class TestHistoricalLifecycle(unittest.TestCase):
         frappe.set_user(self.tech2)
         with self.assertRaises(frappe.PermissionError):
             api.get_ticket(ticket['name'], commercial=True)
+
+    def test_business_boundary_rejects_forged_actor_revision_and_target_before_provider(self):
+        from softsystem97.integrations.ticket_bridge.business_policy import enforce_confirmed_constraints
+        ticket = self.create()
+        self.assign(ticket['name'])
+        frappe.set_user(self.tech)
+        doc = frappe.get_doc('Issue', ticket['name'])
+        request = historical.AuthorizationRequest(doc.name, str(doc.modified), 'status',
+            self.tech, doc.customer, self.tech, doc.status, 'Resolved')
+        before = len(self.requests)
+        for forged in (replace(request, actor=self.tech2), replace(request, revision='stale'),
+                       replace(request, target_status='Invented'), replace(request, operation='invented')):
+            with self.subTest(request=forged):
+                with self.assertRaises(frappe.PermissionError):
+                    enforce_confirmed_constraints(forged, doc)
+        self.assertEqual(len(self.requests), before)
+
+    def test_business_boundary_rechecks_assignment_even_for_positive_provider(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        doc = frappe.get_doc('Issue', ticket['name'])
+        frappe.set_user(self.tech2)
+        before = len(self.requests)
+        with self.assertRaises(frappe.PermissionError):
+            historical.require_authorization('intervention', doc, technician=self.tech2)
+        self.assertEqual(len(self.requests), before)
+
+    def test_business_boundary_blocks_missing_or_active_security_before_provider(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        doc = frappe.get_doc('Issue', ticket['name'])
+        frappe.set_user(self.tech)
+        before = len(self.requests)
+        doc.set('ss97_ticket_status', 'Intervention en pause')
+        # In-memory synthetic metadata only; no custom field or site setting is installed.
+        with patch.object(doc.meta, 'has_field', return_value=True):
+            for flag in (None, '0', 1):
+                doc.set('ss97_security_suspend', flag)
+                for operation in ('cockpit.start', 'cockpit.resume'):
+                    with self.assertRaises(frappe.PermissionError):
+                        historical.require_authorization(operation, doc, technician=self.tech)
+            doc.set('ss97_security_suspend', 0)
+            doc.set('ss97_ticket_status', 'Suspendu — risque sécurité')
+            with self.assertRaises(frappe.PermissionError):
+                historical.require_authorization('cockpit.resume', doc, technician=self.tech)
+        self.assertEqual(len(self.requests), before)
+        doc.set('ss97_ticket_status', 'Intervention en pause')
+        with patch.object(doc.meta, 'has_field', return_value=False):
+            with self.assertRaises(frappe.PermissionError):
+                historical.require_authorization('cockpit.resume', doc, technician=self.tech)
+        self.assertEqual(len(self.requests), before)
+
+    def test_satisfied_preconditions_and_paid_marker_do_not_replace_business_decision(self):
+        ticket = self.create()
+        self.assign(ticket['name'])
+        doc = frappe.get_doc('Issue', ticket['name'])
+        frappe.set_user(self.tech)
+        doc.set('ss97_security_suspend', 0)
+        doc.set('ss97_ticket_status', 'Intervention en pause')
+        doc.set('ss97_payment_status', 'Payé')
+        self.allowed = False
+        before = len(self.requests)
+        with patch.object(doc.meta, 'has_field', return_value=True):
+            with self.assertRaises(frappe.PermissionError):
+                historical.require_authorization('cockpit.resume', doc, technician=self.tech)
+        self.assertEqual(len(self.requests), before + 1)
+        self.assertEqual(self.requests[-1].operation, 'cockpit.resume')
