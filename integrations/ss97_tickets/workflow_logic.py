@@ -10,7 +10,6 @@ from integrations.ss97_tickets.specs import (
     DT_ISSUE,
     PRIORITY_MAP,
     SLA_HOURS,
-    STATUS_TO_NATIVE,
 )
 
 
@@ -127,7 +126,9 @@ def prepare_new_issue(doc: dict[str, Any]) -> dict[str, Any]:
     doc = dict(doc)
     if not doc.get("ss97_ticket_status"):
         doc["ss97_ticket_status"] = "Nouveau"
-    native = STATUS_TO_NATIVE.get(doc["ss97_ticket_status"], "Open")
+    from softsystem97.integrations.ticket_bridge.business_policy import native_status
+
+    native = native_status(doc["ss97_ticket_status"])
     doc["status"] = native
     # Sanitize priority → Issue Priority Link
     from integrations.ss97_tickets.fix_priority import normalize_priority

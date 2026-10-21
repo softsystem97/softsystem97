@@ -250,3 +250,13 @@ class TestHistoricalLifecycle(unittest.TestCase):
         with self.assertRaises(frappe.ValidationError):
             api.update_status(ticket['name'], 'Closed', current['modified'], 'bad-status')
         self.assertEqual(frappe.db.get_value('Issue', ticket['name'], 'status'), 'Open')
+
+    def test_catalogue_only_module_cannot_authorize_business_operations(self):
+        from softsystem97.integrations.ticket_bridge import business_policy
+
+        self.provider.stop()  # Exercise the actual resolver, not the simulated provider.
+        self.assertFalse(callable(getattr(business_policy, 'authorize_ticket_operation', None)))
+        before = {dt: frappe.db.count(dt) for dt in ['Issue', 'ToDo', api.EVENT]}
+        with self.assertRaises(frappe.PermissionError):
+            policy.settings()
+        self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})

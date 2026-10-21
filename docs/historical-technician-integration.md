@@ -1,20 +1,36 @@
 # Intégration du portail historique : recette et déploiement contrôlé
 
-> Mise à jour — workflow reçu et relu : `integrations/ss97_tickets/workflow_logic.py`
-> est désormais présent. Il prépare une copie d’Issue, les priorités, références et SLA,
-> et fournit un helper de commentaire. Il ne contient aucune politique d’autorisation
-> de paiement/affectation/intervention ni contrôleur `/espace-technicien/tickets`.
-> Ses imports `ss97_tickets/specs.py` et `ss97_tickets/fix_priority.py` restent manquants.
-> Les mentions d’absence du workflow plus bas décrivent l’état antérieur à sa réception.
+> Mise à jour — les cinq sources historiques sont reçues : workflow_logic.py,
+> specs.py, fix_priority.py et les composants client/types précédents sont intégrés.
+> Le catalogue confirme `SS97 Technician`, `Issue.ss97_technician` Link → User,
+> les SLA 72/24/8/2 heures et les actions de statuts déclarées. Cela décrit les sources,
+> pas les métadonnées réellement installées sur Frappe Cloud.
 >
-> Corrections : utilisation de la copie retournée dans `ticket_types.py`, commentaire
-> natif Frappe `Comment` après lecture autorisée de l’Issue, et arrêt si disponibilité
-> de référence invérifiable (pas de référence supposée libre après erreur réseau).
-> Une contrainte serveur reste nécessaire pour l’unicité entre processus concurrents.
-> 28 tests ciblés passent avec runtime Frappe ; les tables de priorité/SLA et leur
-> normaliseur sont fictifs dans ces tests, pas des personnalisations du site réel.
-> `historical_integration` reste non activé par ce lot ; aucun fournisseur métier
-> permissif ni route commerciale concurrente n’est créé.
+> `business_policy.py` contient les contraintes de catalogue et la détection des
+> incohérences ; il ne fournit pas `authorize_ticket_operation`, car les permissions
+> par acteur et les preuves de paiement/consentement ne sont pas définies ici.
+> Le fournisseur d’autorisation réel et le contrôleur commercial restent nécessaires.
+> Aucun raccordement historique n’est activé par ces fichiers.
+>
+> Corrections : import du normaliseur sans SDK privé ; cohérence de « Normale »
+> avec PRIORITY_MAP ; refus d’une priorité hors liste et des états non mappés ;
+> suppression des clés masquées en préservant exactement la dernière valeur Python.
+> Le script administratif de priorités prévisualise par défaut ; écritures et
+> création de tickets de contrôle exigent des options explicites. Il n’est pas exécuté
+> sur un serveur réel ; ses réécritures de formulaires doivent être revues avant usage.
+>
+> À confirmer : « Terminé » mappe vers Closed, mais son alias officiel vers Resolved ;
+> « Suspendu — risque sécurité » n’a pas de mapping natif. Aucune décision inventée.
+> Les helpers conservent aussi les corrections de copie de préparation, Comment
+> natif autorisé et arrêt sur référence invérifiable. L’unicité concurrente exige
+> une contrainte serveur, non prouvée par les lectures du client.
+>
+> Validation ciblée : 13 tests avec les vrais specs/normaliseur/SLA, 28 tests historiques
+> avec runtime Frappe (certaines dépendances restent simulées dans ces anciens cas),
+> et un nouveau test Frappe du refus d’activation sans fournisseur d’autorisation.
+> Zéro échec final ; aucune recette de route commerciale ou de paiement réel revendiquée.
+> Les mentions d’absence des fichiers plus bas décrivent les états antérieurs.
+
 
 
 L’état courant du candidat unique, ses tests, dépendances et points d’arrêt est fixé dans [consolidated-release.md](consolidated-release.md). Les sections ci-dessous conservent les preuves des reprises précédentes.
