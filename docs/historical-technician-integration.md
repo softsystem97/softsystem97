@@ -1,5 +1,22 @@
 # Intégration du portail historique : recette et déploiement contrôlé
 
+> Mise à jour — workflow reçu et relu : `integrations/ss97_tickets/workflow_logic.py`
+> est désormais présent. Il prépare une copie d’Issue, les priorités, références et SLA,
+> et fournit un helper de commentaire. Il ne contient aucune politique d’autorisation
+> de paiement/affectation/intervention ni contrôleur `/espace-technicien/tickets`.
+> Ses imports `ss97_tickets/specs.py` et `ss97_tickets/fix_priority.py` restent manquants.
+> Les mentions d’absence du workflow plus bas décrivent l’état antérieur à sa réception.
+>
+> Corrections : utilisation de la copie retournée dans `ticket_types.py`, commentaire
+> natif Frappe `Comment` après lecture autorisée de l’Issue, et arrêt si disponibilité
+> de référence invérifiable (pas de référence supposée libre après erreur réseau).
+> Une contrainte serveur reste nécessaire pour l’unicité entre processus concurrents.
+> 28 tests ciblés passent avec runtime Frappe ; les tables de priorité/SLA et leur
+> normaliseur sont fictifs dans ces tests, pas des personnalisations du site réel.
+> `historical_integration` reste non activé par ce lot ; aucun fournisseur métier
+> permissif ni route commerciale concurrente n’est créé.
+
+
 L’état courant du candidat unique, ses tests, dépendances et points d’arrêt est fixé dans [consolidated-release.md](consolidated-release.md). Les sections ci-dessous conservent les preuves des reprises précédentes.
 
 ## Composants existants retrouvés et sécurité du webhook

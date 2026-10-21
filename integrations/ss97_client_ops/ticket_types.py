@@ -86,8 +86,10 @@ def create_typed_ticket(
         "ss97_ticket_kind": kind,
         "ss97_ticket_kind_label": label,
     }
-    # Validation/payment preparation is mandatory. Failure must prevent insertion.
-    prepare_new_issue(payload)
+    # Historical preparation returns a copy. This does not authorize payment or assignment.
+    payload = prepare_new_issue(payload)
+    if not isinstance(payload, dict) or payload.get("doctype") != "Issue":
+        raise ValueError("Préparation de ticket invalide.")
     try:
         res = client.insert(payload)
         name = (res.get("data") or res.get("message") or {}).get("name") or res.get("name")
@@ -97,7 +99,7 @@ def create_typed_ticket(
             "public_ref": public_ref,
             "kind": kind,
             "kind_label": label,
-            "priority": priority,
+            "priority": payload.get("priority"),
             "intervention_type": intervention,
         }
     except Exception:

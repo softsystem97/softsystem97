@@ -3,6 +3,7 @@
 The API facade is synthetic. These tests do not validate deployed Server Scripts,
 native Frappe permissions, Stripe confirmation or the missing technician controller.
 """
+from contextlib import contextmanager
 import html
 import importlib.util
 import json
@@ -54,7 +55,7 @@ class HistoricalSourceTests(unittest.TestCase):
                 ('POST', 'Guest', True), ('POST', 'a@example.invalid', False)]:
             with self.subTest(method=method, user=user, enabled=enabled), \
                     patch.object(frappe.local, 'request', SimpleNamespace(method=method), create=True), \
-                    patch.object(frappe.local, 'session', frappe._dict(user=user), create=True), \
+                    patch.dict(frappe.local.session, {'user': user}), \
                     patch.object(frappe.db, 'get_value', return_value=enabled):
                 with self.assertRaises(frappe.PermissionError):
                     require_write_session()
@@ -65,7 +66,7 @@ class HistoricalSourceTests(unittest.TestCase):
         from softsystem97.integrations.historical_ticket_guard import require_write_session
 
         with patch.object(frappe.local, 'request', SimpleNamespace(method='POST'), create=True), \
-                patch.object(frappe.local, 'session', frappe._dict(user='a@example.invalid'), create=True), \
+                patch.dict(frappe.local.session, {'user': 'a@example.invalid'}), \
                 patch.object(frappe.db, 'get_value', return_value=True), \
                 patch.object(frappe.db, 'set_value') as write:
             self.assertTrue(require_write_session())
@@ -200,12 +201,12 @@ class HistoricalSourceTests(unittest.TestCase):
     def workflow(self):
         module = ModuleType('integrations.ss97_tickets.workflow_logic')
         module.next_ss97_ticket_ref = Mock(return_value='SYNTHETIC-REF')
-        module.prepare_new_issue = Mock()
+        module.prepare_new_issue = Mock(side_effect=lambda payload: dict(payload))
         return module
 
-    def test_payment_preparation_failure_prevents_ticket_insert(self):
+    def test_preparation_failure_prevents_ticket_insert(self):
         workflow = self.workflow()
-        workflow.prepare_new_issue.side_effect = Denied('payment not confirmed')
+        workflow.prepare_new_issue.side_effect = Denied('preparation refused')
         client = Mock()
         with patch.dict(sys.modules, {'integrations.ss97_tickets.workflow_logic': workflow}):
             with self.assertRaises(Denied):
@@ -214,13 +215,13 @@ class HistoricalSourceTests(unittest.TestCase):
 
     def test_successful_preparation_is_preserved_before_insert(self):
         workflow = self.workflow()
-        workflow.prepare_new_issue.side_effect = lambda payload: payload.update(ss97_payment_status='synthetic')
+        workflow.prepare_new_issue.side_effect = lambda payload: dict(payload, ss97_source='Synthetic source')
         client = Mock()
         client.insert.return_value = {'name': 'SYNTHETIC-ISSUE'}
         with patch.dict(sys.modules, {'integrations.ss97_tickets.workflow_logic': workflow}):
             result = types.create_typed_ticket(client, customer='Synthetic Customer')
         self.assertTrue(result['ok'])
-        self.assertEqual(client.insert.call_args.args[0]['ss97_payment_status'], 'synthetic')
+        self.assertEqual(client.insert.call_args.args[0]['ss97_source'], 'Synthetic source')
 
     def test_uncertain_insert_is_not_retried_or_exception_disclosed(self):
         workflow = self.workflow()
@@ -231,6 +232,146 @@ class HistoricalSourceTests(unittest.TestCase):
         self.assertFalse(result['ok'])
         client.insert.assert_called_once()
         self.assertNotIn('private remote response', json.dumps(result))
+
+    @contextmanager
+    def received_workflow(self):
+        # Dependency values are synthetic. No deployed mapping/SLA is claimed.
+        specs = ModuleType('integrations.ss97_tickets.specs')
+        specs.DT_ISSUE = 'Issue'
+        specs.PRIORITY_MAP = {'Fixture urgency': 'Fixture Priority'}
+        specs.SLA_HOURS = {'Fixture Priority': 5}
+        specs.STATUS_TO_NATIVE = {'Nouveau': 'Open', 'Fixture complete': 'Resolved'}
+        normalizer = ModuleType('integrations.ss97_tickets.fix_priority')
+        normalizer.normalize_priority = Mock(return_value='Fixture Priority')
+        with patch.dict(sys.modules, {specs.__name__: specs, normalizer.__name__: normalizer}):
+            yield load('integrations/ss97_tickets/workflow_logic.py')
+
+    def test_received_preparation_returns_copy_and_keeps_real_defaults(self):
+        with self.received_workflow() as workflow:
+            original = {'doctype': 'Issue', 'priority': 'Urgent',
+                        'ss97_ticket_status': 'Fixture complete'}
+            prepared = workflow.prepare_new_issue(original)
+        self.assertEqual(original['priority'], 'Urgent')
+        self.assertIsNot(prepared, original)
+        self.assertEqual(prepared['priority'], 'Fixture Priority')
+        self.assertEqual(prepared['status'], 'Resolved')
+        self.assertEqual(prepared['ss97_source'], 'Desk')
+        self.assertTrue(prepared['ss97_sla_deadline'])
+        self.assertTrue(prepared['ss97_public_ref'].startswith('TKT-'))
+        self.assertNotIn('ss97_payment_status', prepared)
+
+    def test_typed_creation_uses_received_workflow_returned_copy(self):
+        client = Mock()
+        client.request.return_value = {'data': [{'ss97_public_ref': 'SS97-TKT-000041'}]}
+        client.list_docs.return_value = []
+        client.insert.return_value = {'data': {'name': 'SYNTHETIC-ISSUE'}}
+        with self.received_workflow() as workflow, patch.dict(sys.modules, {
+                'integrations.ss97_tickets.workflow_logic': workflow}):
+            result = types.create_typed_ticket(client, customer='Synthetic Customer', kind='urgence')
+        payload = client.insert.call_args.args[0]
+        self.assertTrue(result['ok'])
+        self.assertEqual(payload['priority'], 'Fixture Priority')
+        self.assertEqual(result['priority'], payload['priority'])
+        self.assertEqual(payload['ss97_source'], 'Desk')
+        self.assertTrue(payload['ss97_sla_deadline'])
+        self.assertEqual(payload['ss97_public_ref'], 'SS97-TKT-000042')
+        self.assertEqual(payload['customer'], 'Synthetic Customer')
+        self.assertEqual(payload['doctype'], 'Issue')
+        self.assertNotIn('ss97_payment_status', payload)
+
+    def test_invalid_preparation_result_never_inserts(self):
+        workflow = self.workflow()
+        workflow.prepare_new_issue.side_effect = None
+        workflow.prepare_new_issue.return_value = None
+        client = Mock()
+        with patch.dict(sys.modules, {'integrations.ss97_tickets.workflow_logic': workflow}):
+            with self.assertRaisesRegex(ValueError, 'Préparation'):
+                types.create_typed_ticket(client, customer='Synthetic Customer')
+        client.insert.assert_not_called()
+
+    def test_reference_lookup_failure_does_not_claim_availability(self):
+        client = Mock()
+        client.request.return_value = {'data': []}
+        client.list_docs.side_effect = TimeoutError('SENSITIVE_REMOTE_RESPONSE')
+        with self.received_workflow() as workflow, patch.dict(sys.modules, {
+                'integrations.ss97_tickets.workflow_logic': workflow}):
+            with self.assertRaises(RuntimeError) as error:
+                types.create_typed_ticket(client, customer='Synthetic Customer')
+        self.assertNotIn('SENSITIVE_REMOTE_RESPONSE', str(error.exception))
+        client.insert.assert_not_called()
+
+    def test_reference_collisions_never_fall_back_to_unverified_suffix(self):
+        client = Mock()
+        client.request.return_value = {'data': []}
+        client.list_docs.return_value = [{'name': 'SYNTHETIC-COLLISION'}]
+        with self.received_workflow() as workflow:
+            with self.assertRaises(RuntimeError):
+                workflow.next_ss97_ticket_ref(client)
+        self.assertEqual(client.list_docs.call_count, 40)
+
+    def test_comment_uses_native_comment_and_supported_sdk_response_shapes(self):
+        for response in [{'data': {'name': 'COMMENT-TEST'}},
+                         {'message': {'name': 'COMMENT-TEST'}}, {'name': 'COMMENT-TEST'}]:
+            with self.received_workflow() as workflow:
+                client = Mock()
+                client.insert.return_value = response
+                client.request.return_value = {'data': {'name': 'ISSUE-TEST'}}
+                self.assertEqual(workflow.add_comment(client, 'ISSUE-TEST', 'Synthetic note'),
+                                 'COMMENT-TEST')
+            payload = client.insert.call_args.args[0]
+            self.assertEqual(payload['doctype'], 'Comment')
+            self.assertEqual(payload['comment_type'], 'Comment')
+            self.assertEqual(payload['reference_doctype'], 'Issue')
+            self.assertNotIn('communication_type', payload)
+            self.assertNotIn('ignore_permissions', payload)
+
+    def test_comment_read_denial_never_inserts_or_retries(self):
+        with self.received_workflow() as workflow:
+            client = Mock()
+            client.request.side_effect = Denied('SENSITIVE_REMOTE_RESPONSE')
+            self.assertIsNone(workflow.add_comment(client, 'ISSUE-TEST', 'Synthetic note'))
+            client.request.assert_called_once()
+            client.insert.assert_not_called()
+
+    def test_comment_mismatched_issue_never_inserts(self):
+        with self.received_workflow() as workflow:
+            client = Mock()
+            client.request.return_value = {'data': {'name': 'OTHER-ISSUE'}}
+            self.assertIsNone(workflow.add_comment(client, 'ISSUE-TEST', 'Synthetic note'))
+            client.insert.assert_not_called()
+
+    @unittest.skipUnless(NATIVE_RUNTIME, 'Requires initialized isolated Frappe runtime')
+    def test_received_comment_persists_as_native_frappe_comment(self):
+        import frappe
+
+        frappe.set_user('Administrator')  # Guarded disposable laboratory only.
+        issue = frappe.get_doc({'doctype': 'Issue', 'subject': 'Synthetic workflow note test',
+                                'description': 'Fictional data only', 'status': 'Open'}).insert()
+        client = Mock()
+        client.insert.side_effect = lambda payload: {'data': frappe.get_doc(payload).insert().as_dict()}
+        def read_issue(*args):
+            doc = frappe.get_doc('Issue', issue.name)
+            doc.check_permission('read')
+            return {'data': {'name': doc.name}}
+        client.request.side_effect = read_issue
+        with self.received_workflow() as workflow:
+            name = workflow.add_comment(client, issue.name, 'Synthetic technical report')
+        self.assertTrue(name)
+        comment = frappe.get_doc('Comment', name)
+        self.assertEqual(comment.reference_name, issue.name)
+        self.assertEqual(comment.content, 'Synthetic technical report')
+        self.assertNotIn('Comment', frappe.get_meta('Communication').get_field('communication_type').options.splitlines())
+        user = frappe.get_doc({'doctype': 'User', 'email': 'workflow-' + frappe.generate_hash(length=12) + '@example.invalid',
+                               'first_name': 'Fictional', 'user_type': 'Website User', 'send_welcome_email': 0}).insert()
+        old_user = frappe.session.user
+        try:
+            frappe.set_user(user.name)
+            before = frappe.db.count('Comment', {'reference_doctype': 'Issue', 'reference_name': issue.name})
+            with self.received_workflow() as workflow:
+                self.assertIsNone(workflow.add_comment(client, issue.name, 'Forbidden foreign note'))
+            self.assertEqual(before, frappe.db.count('Comment', {'reference_doctype': 'Issue', 'reference_name': issue.name}))
+        finally:
+            frappe.set_user(old_user)
 
     def test_workspace_payment_and_assignment_decisions_in_node(self):
         _, script = workspace.ticket_detail_body_and_js()
@@ -328,6 +469,7 @@ if __name__ == '__main__':
         frappe.connect()
         if not frappe.conf.allow_tests:
             raise SystemExit('allow_tests required')
+        frappe.set_user('Administrator')  # Only the guarded disposable test site.
         from frappe.utils.safe_exec import safe_exec
 
         def restricted_execute(self, facade):
