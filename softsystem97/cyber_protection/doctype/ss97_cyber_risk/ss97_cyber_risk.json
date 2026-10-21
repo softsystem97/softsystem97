@@ -62,6 +62,29 @@
       "label": "Action Required",
       "fieldtype": "Check",
       "default": "1"
+    },
+    {
+      "fieldname": "risk_kind",
+      "label": "Risk Kind",
+      "fieldtype": "Select",
+      "default": "Other",
+      "options": "Other\nConfiguration\nVulnerability"
+    },
+    {
+      "fieldname": "assigned_to",
+      "label": "Assigned To",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "due_date",
+      "label": "Due Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "action_notes",
+      "label": "Action Notes",
+      "fieldtype": "Small Text"
     }
   ],
   "field_order": [
@@ -73,7 +96,11 @@
     "status",
     "finding",
     "recommendation",
-    "action_required"
+    "action_required",
+    "risk_kind",
+    "assigned_to",
+    "due_date",
+    "action_notes"
   ],
   "permissions": [
     {

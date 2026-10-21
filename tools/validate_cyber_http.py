@@ -49,7 +49,29 @@ def main():
         test = TestCyber()
         test.setUp()
         scope = TestCyber.customers
-        test.asset()
+        own_asset = test.asset()
+        own_asset.asset_name = "<script>window.SS97_REPORT_XSS=1</script>"
+        own_asset.save()
+        from softsystem97.cyber import reports
+
+        approved = reports.generate(test.a, frappe.utils.today(), frappe.utils.today())
+        doc = frappe.get_doc("SS97 Cyber Report", approved["name"])
+        reports.approve(doc.name, str(doc.modified))
+        draft = reports.generate(test.a, frappe.utils.today(), frappe.utils.today())
+        foreign_report = reports.generate(
+            test.b, frappe.utils.today(), frappe.utils.today()
+        )
+        doc = frappe.get_doc("SS97 Cyber Report", foreign_report["name"])
+        reports.approve(doc.name, str(doc.modified))
+        frappe.set_user("Administrator")
+        issue = frappe.get_doc(
+            {
+                "doctype": "Issue",
+                "subject": "Synthetic Cyber HTTP assistance",
+                "customer": test.a,
+            }
+        ).insert()
+        issue_name = issue.name
         foreign = test.asset(test.b)
         from frappe.utils.password import update_password
 
@@ -109,6 +131,67 @@ def main():
             == 403
         )
         passed("Client KPIs scoped; other company denied")
+        data = call(
+            "GET",
+            "/api/method/softsystem97.cyber.workspace.load",
+            query_string={"view": "client"},
+        )
+        assert data.status_code == 200
+        assert {row["customer"] for row in data.json["message"]["companies"]} == {
+            test.a
+        }
+        assert (
+            call(
+                "GET",
+                "/api/method/softsystem97.cyber.workspace.load",
+                query_string={"view": "direction"},
+            ).status_code
+            == 403
+        )
+        passed("Role workspace refuses direction access to client")
+        printable = call(
+            "GET", "/ss97-cyber-report", query_string={"name": approved["name"]}
+        )
+        assert printable.status_code == 200, printable.status_code
+        html = printable.get_data(as_text=True)
+        assert "<script>window.SS97_REPORT_XSS=1</script>" not in html
+        # Frappe may already strip the dangerous Data field on save.
+        assert "equipment" in html and "<table>" in html
+        if "window.SS97_REPORT_XSS" in html:
+            assert "&lt;script&gt;" in html
+        (Path(sites).parent / "logs/cyber-report-preview.html").write_text(html)
+        assert (
+            call(
+                "GET", "/ss97-cyber-report", query_string={"name": draft["name"]}
+            ).status_code
+            == 403
+        )
+        assert (
+            call(
+                "GET",
+                "/ss97-cyber-report",
+                query_string={"name": foreign_report["name"]},
+            ).status_code
+            == 403
+        )
+        passed("Printable report is escaped; drafts and other company denied")
+        remote = call(
+            "POST",
+            "/api/method/softsystem97.cyber.remote_requests.request",
+            headers=headers,
+            data={"customer": test.a, "issue": issue_name},
+        )
+        assert remote.status_code == 200, remote.status_code
+        assert remote.json["message"]["remote_engine_connected"] is False
+        passed("Client records an assistance request without starting an engine")
+        denied_sync = call(
+            "POST",
+            "/api/method/softsystem97.cyber.wazuh_sync.sync",
+            headers=headers,
+            data={"configuration": "unavailable", "since": "2026-10-20T00:00:00Z"},
+        )
+        assert denied_sync.status_code == 403
+        passed("Client cannot trigger indexer access")
         response = call(
             "GET",
             "/api/resource/SS97 Cyber Asset",
@@ -233,6 +316,14 @@ def main():
                         frappe.db.delete("SS97 Cyber Check", {"parent": name})
                 if scope:
                     frappe.db.delete(dt, {"customer": ["in", scope]})
+            for issue_name in (
+                frappe.get_all(
+                    "Issue", filters={"customer": ["in", scope]}, pluck="name"
+                )
+                if scope
+                else []
+            ):
+                frappe.delete_doc("Issue", issue_name)
             frappe.db.commit()
             TestCyber.tearDownClass()
             frappe.destroy()

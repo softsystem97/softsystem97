@@ -1,0 +1,31 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Agent Map",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "agent_id",
+      "label": "Agent Id",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "asset",
+      "label": "Asset",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "SS97 Cyber Asset"
+    }
+  ],
+  "field_order": [
+    "agent_id",
+    "asset"
+  ],
+  "permissions": [],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 1,
+  "index_web_pages_for_search": 0
+}

@@ -1,0 +1,89 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Sync Event",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Customer"
+    },
+    {
+      "fieldname": "provider",
+      "label": "Provider",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "event_key",
+      "label": "Event Key",
+      "fieldtype": "Data",
+      "unique": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "asset",
+      "label": "Asset",
+      "fieldtype": "Link",
+      "options": "SS97 Cyber Asset"
+    },
+    {
+      "fieldname": "severity",
+      "label": "Severity",
+      "fieldtype": "Select",
+      "options": "Low\nMedium\nHigh\nCritical"
+    },
+    {
+      "fieldname": "occurred_at",
+      "label": "Occurred At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "incident",
+      "label": "Incident",
+      "fieldtype": "Link",
+      "options": "SS97 Cyber Incident"
+    },
+    {
+      "fieldname": "configuration",
+      "label": "Configuration",
+      "fieldtype": "Link",
+      "options": "SS97 Cyber Wazuh Config"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "provider",
+    "event_key",
+    "asset",
+    "severity",
+    "occurred_at",
+    "incident",
+    "configuration"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1
+    },
+    {
+      "role": "SS97 Cyber Technician",
+      "read": 1
+    },
+    {
+      "role": "SS97 Cyber Client",
+      "read": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}

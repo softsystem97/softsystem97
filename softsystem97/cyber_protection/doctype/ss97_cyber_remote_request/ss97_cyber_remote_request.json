@@ -1,0 +1,128 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Remote Request",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Customer"
+    },
+    {
+      "fieldname": "issue",
+      "label": "Issue",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Issue"
+    },
+    {
+      "fieldname": "technician",
+      "label": "Technician",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "state",
+      "label": "State",
+      "fieldtype": "Select",
+      "default": "Requested",
+      "options": "Requested\nAwaiting consent\nConsented\nDeclined\nRevoked\nClosed"
+    },
+    {
+      "fieldname": "billing_basis",
+      "label": "Billing Basis",
+      "fieldtype": "Select",
+      "options": "\nContract\nInvoice"
+    },
+    {
+      "fieldname": "invoice",
+      "label": "Invoice",
+      "fieldtype": "Link",
+      "options": "Sales Invoice"
+    },
+    {
+      "fieldname": "requested_at",
+      "label": "Requested At",
+      "fieldtype": "Datetime",
+      "read_only": 1
+    },
+    {
+      "fieldname": "consented_at",
+      "label": "Consented At",
+      "fieldtype": "Datetime",
+      "read_only": 1
+    },
+    {
+      "fieldname": "consented_by",
+      "label": "Consented By",
+      "fieldtype": "Link",
+      "read_only": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "closed_at",
+      "label": "Closed At",
+      "fieldtype": "Datetime",
+      "read_only": 1
+    },
+    {
+      "fieldname": "duration_seconds",
+      "label": "Duration Seconds",
+      "fieldtype": "Int",
+      "read_only": 1
+    },
+    {
+      "fieldname": "report",
+      "label": "Report",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "issue",
+    "technician",
+    "state",
+    "billing_basis",
+    "invoice",
+    "requested_at",
+    "consented_at",
+    "consented_by",
+    "closed_at",
+    "duration_seconds",
+    "report"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Technician",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Client",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}

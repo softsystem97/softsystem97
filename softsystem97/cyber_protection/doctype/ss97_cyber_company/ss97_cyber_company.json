@@ -43,6 +43,38 @@
       "label": "Members",
       "fieldtype": "Table",
       "options": "SS97 Cyber Member"
+    },
+    {
+      "fieldname": "plan",
+      "label": "Plan",
+      "fieldtype": "Select",
+      "options": "\nCyber Audit\nCyber Essentiel\nCyber Professionnel\nCyber Entreprise"
+    },
+    {
+      "fieldname": "service_start",
+      "label": "Service Start",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "service_end",
+      "label": "Service End",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "service_scope",
+      "label": "Service Scope",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "included_services",
+      "label": "Included Services",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "remote_included",
+      "label": "Remote Included",
+      "fieldtype": "Check",
+      "default": "0"
     }
   ],
   "field_order": [
@@ -51,7 +83,13 @@
     "contract",
     "authorization_status",
     "authorization_reference",
-    "members"
+    "members",
+    "plan",
+    "service_start",
+    "service_end",
+    "service_scope",
+    "included_services",
+    "remote_included"
   ],
   "permissions": [
     {

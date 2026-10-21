@@ -1,0 +1,17 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<style>@media print { nav,footer,.print-controls {display:none!important} } table {width:100%;border-collapse:collapse} td,th {border:1px solid #ddd;padding:.4rem}</style>
+<div class="print-controls"><button type="button" onclick="window.print()">Imprimer / enregistrer en PDF</button></div>
+<h1>Rapport Cyber Protection — {{ report.data.customer | e }}</h1>
+<p>{{ report.data.from_date | e }} → {{ report.data.to_date | e }} — {{ report.approval | e }}</p>
+<p>État des protections : {{ report.data.known_protection | e }}</p>
+<p>{{ report.data.monitoring | e }}</p>
+{% for section,rows in report.data.sections.items() %}
+<h2>{{ section | e }}</h2>
+{% if rows %}<table><thead><tr>{% for key in rows[0] %}<th>{{ key | e }}</th>{% endfor %}</tr></thead><tbody>
+{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ (value if value is not none else '') | e }}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table>{% else %}<p>Aucun enregistrement dans ce périmètre.</p>{% endif %}
+{% if report.data.truncated[section] %}<p>Liste limitée à 500 éléments — rapport incomplet pour cette section.</p>{% endif %}
+{% endfor %}
+<h2>Limites du périmètre</h2><ul>{% for item in report.data.limits %}<li>{{ item | e }}</li>{% endfor %}</ul>
+{% endblock %}

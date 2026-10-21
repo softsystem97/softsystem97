@@ -55,6 +55,11 @@
       "fieldname": "backup_evidence",
       "label": "Backup Evidence",
       "fieldtype": "Data"
+    },
+    {
+      "fieldname": "hardware_summary",
+      "label": "Hardware Summary",
+      "fieldtype": "Small Text"
     }
   ],
   "field_order": [
@@ -65,7 +70,8 @@
     "maintenance_state",
     "backup_state",
     "backup_checked_at",
-    "backup_evidence"
+    "backup_evidence",
+    "hardware_summary"
   ],
   "permissions": [
     {

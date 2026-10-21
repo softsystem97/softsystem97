@@ -1,5 +1,7 @@
 # Soft System 97 Cyber Protection V1
 
+État initial livré au commit `b117625`. Pour l’extension opérationnelle et ses limites actuelles, voir [cyber-operations-v1.md](cyber-operations-v1.md). Les chiffres ci-dessous restent les preuves de la première livraison.
+
 Version de développement, Frappe 16.52.0 / ERPNext 16.51.1. Branche `feature/cyber-protection-v1`, basée sur `faaa188`. La phase 1 demeure distincte et non validée en production. Aucune dépendance Wazuh/EDR/agent/prise de contrôle n’est installée.
 
 ## Architecture et utilisation

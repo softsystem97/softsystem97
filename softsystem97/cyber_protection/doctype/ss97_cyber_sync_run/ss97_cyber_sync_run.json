@@ -1,0 +1,83 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Sync Run",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Customer"
+    },
+    {
+      "fieldname": "configuration",
+      "label": "Configuration",
+      "fieldtype": "Link",
+      "options": "SS97 Cyber Wazuh Config"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Success\nError"
+    },
+    {
+      "fieldname": "received",
+      "label": "Received",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "accepted",
+      "label": "Accepted",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "duplicates",
+      "label": "Duplicates",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "ignored",
+      "label": "Ignored",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "error_code",
+      "label": "Error Code",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "truncated",
+      "label": "Truncated",
+      "fieldtype": "Check"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "configuration",
+    "status",
+    "received",
+    "accepted",
+    "duplicates",
+    "ignored",
+    "error_code",
+    "truncated"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}

@@ -14,6 +14,11 @@ DOCTYPES = (
     "SS97 Cyber Risk",
     "SS97 Cyber Incident",
     "SS97 Cyber Event",
+    "SS97 Cyber Wazuh Config",
+    "SS97 Cyber Sync Event",
+    "SS97 Cyber Sync Run",
+    "SS97 Cyber Report",
+    "SS97 Cyber Remote Request",
 )
 
 
@@ -89,14 +94,31 @@ def require_customer(customer, write=False):
 def has_permission(doc, user=None, permission_type=None, **kwargs):
     if manager(user):
         return True
+    if doc.doctype in ("SS97 Cyber Wazuh Config", "SS97 Cyber Sync Run"):
+        return False
     if doc.customer not in customers(user):
         return False
     kind = permission_type or kwargs.get("ptype") or "read"
+    if doc.doctype == "SS97 Cyber Report":
+        return kind in ("read", "select") and (
+            doc.approval == "Approved" or doc.customer in technician_customers(user)
+        )
+    if doc.doctype == "SS97 Cyber Remote Request":
+        return kind in ("read", "select", "create", "write")
+    if doc.doctype == "SS97 Cyber Sync Event":
+        return kind in ("read", "select")
     if kind in ("read", "select"):
         return True
     if (
         doc.doctype == "SS97 Cyber Incident"
         and kind == "write"
+        and doc.assigned_to != (user or frappe.session.user)
+    ):
+        return False
+    if (
+        doc.doctype == "SS97 Cyber Risk"
+        and kind == "write"
+        and doc.assigned_to
         and doc.assigned_to != (user or frappe.session.user)
     ):
         return False
@@ -111,16 +133,29 @@ def query_conditions(user=None, doctype=None):
     # Each hook binds a fixed DocType; no table name comes from an HTTP argument.
     if manager(user):
         return ""
+    if doctype in ("SS97 Cyber Wazuh Config", "SS97 Cyber Sync Run"):
+        return "1=0"
     values = customers(user)
     if not values:
         return "1=0"
-    return (
+    clause = (
         "`tab"
         + doctype
         + "`.customer in ("
         + ",".join(frappe.db.escape(v) for v in values)
         + ")"
     )
+    if doctype == "SS97 Cyber Report":
+        tech = technician_customers(user)
+        approved = "`tabSS97 Cyber Report`.approval='Approved'"
+        if tech:
+            approved += (
+                " or `tabSS97 Cyber Report`.customer in ("
+                + ",".join(frappe.db.escape(v) for v in tech)
+                + ")"
+            )
+        clause += " and (" + approved + ")"
+    return clause
 
 
 def company_query(user=None):
@@ -166,3 +201,23 @@ def require_write_session():
         or not hmac.compare_digest(saved, supplied)
     ):
         frappe.throw("Cyber write requires native session CSRF", frappe.PermissionError)
+
+
+def wazuh_config_query(user=None):
+    return query_conditions(user, "SS97 Cyber Wazuh Config")
+
+
+def sync_event_query(user=None):
+    return query_conditions(user, "SS97 Cyber Sync Event")
+
+
+def sync_run_query(user=None):
+    return query_conditions(user, "SS97 Cyber Sync Run")
+
+
+def report_query(user=None):
+    return query_conditions(user, "SS97 Cyber Report")
+
+
+def remote_request_query(user=None):
+    return query_conditions(user, "SS97 Cyber Remote Request")

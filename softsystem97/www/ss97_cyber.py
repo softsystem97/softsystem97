@@ -13,4 +13,7 @@ def get_context(context):
     from frappe.sessions import get_csrf_token
 
     get_csrf_token()  # Persist native CSRF before the first browser mutation.
+    from softsystem97.cyber.workspace import available_views
+
+    context.cyber_views = available_views()
     context.no_cache = 1

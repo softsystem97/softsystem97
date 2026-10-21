@@ -66,6 +66,12 @@ class CyberDocument(Document):
                 and not self.authorization_reference
             ):
                 frappe.throw("Authorization evidence reference required")
+            if (
+                self.service_start
+                and self.service_end
+                and get_datetime(self.service_start) > get_datetime(self.service_end)
+            ):
+                frappe.throw("Ordered service dates required")
             seen = set()
             for row in self.members:
                 if row.user in seen:
@@ -125,6 +131,31 @@ class CyberDocument(Document):
         elif self.doctype == "SS97 Cyber Audit":
             self.completed_at = None
         if self.doctype == "SS97 Cyber Risk":
+            if self.assigned_to and self.customer not in access.technician_customers(
+                self.assigned_to
+            ):
+                frappe.throw(
+                    "Authorized corrective action technician required",
+                    frappe.PermissionError,
+                )
+            if (
+                (old and old.assigned_to != self.assigned_to)
+                or (not old and self.assigned_to)
+            ) and not access.manager():
+                frappe.throw(
+                    "Only cyber management assigns corrective actions",
+                    frappe.PermissionError,
+                )
+            if (
+                old
+                and old.assigned_to
+                and old.assigned_to != frappe.session.user
+                and not access.manager()
+            ):
+                frappe.throw(
+                    "Assigned corrective action technician required",
+                    frappe.PermissionError,
+                )
             if self.severity not in RECOMMENDATIONS:
                 frappe.throw("Unsupported severity")
             self.recommendation = RECOMMENDATIONS[self.severity]

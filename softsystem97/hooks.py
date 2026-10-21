@@ -73,3 +73,18 @@ permission_query_conditions['SS97 Cyber Incident'] = 'softsystem97.cyber.permiss
 has_permission['SS97 Cyber Incident'] = 'softsystem97.cyber.permissions.has_permission'
 permission_query_conditions['SS97 Cyber Event'] = 'softsystem97.cyber.permissions.event_query'
 has_permission['SS97 Cyber Event'] = 'softsystem97.cyber.permissions.has_permission'
+
+permission_query_conditions['SS97 Cyber Wazuh Config'] = 'softsystem97.cyber.permissions.wazuh_config_query'
+has_permission['SS97 Cyber Wazuh Config'] = 'softsystem97.cyber.permissions.has_permission'
+
+permission_query_conditions['SS97 Cyber Sync Event'] = 'softsystem97.cyber.permissions.sync_event_query'
+has_permission['SS97 Cyber Sync Event'] = 'softsystem97.cyber.permissions.has_permission'
+
+permission_query_conditions['SS97 Cyber Sync Run'] = 'softsystem97.cyber.permissions.sync_run_query'
+has_permission['SS97 Cyber Sync Run'] = 'softsystem97.cyber.permissions.has_permission'
+
+permission_query_conditions['SS97 Cyber Report'] = 'softsystem97.cyber.permissions.report_query'
+has_permission['SS97 Cyber Report'] = 'softsystem97.cyber.permissions.has_permission'
+
+permission_query_conditions['SS97 Cyber Remote Request'] = 'softsystem97.cyber.permissions.remote_request_query'
+has_permission['SS97 Cyber Remote Request'] = 'softsystem97.cyber.permissions.has_permission'

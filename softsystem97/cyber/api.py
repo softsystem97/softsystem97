@@ -12,6 +12,7 @@ FIELDS = {
             "asset_name",
             "asset_type",
             "operating_system",
+            "hardware_summary",
             "maintenance_state",
             "backup_state",
             "backup_checked_at",
@@ -29,6 +30,7 @@ FIELDS = {
             "severity",
             "finding",
             "action_required",
+            "risk_kind",
         ),
     ),
     "incident": (
@@ -115,3 +117,16 @@ def dashboard(customer):
         "backups": backups,
         "backup_verification": "manual evidence only; no automated backup provider connected",
     }
+
+
+@frappe.whitelist(methods=["POST"])
+def assign_action(name, technician, expected_modified, due_date=None):
+    access.require_write_session()
+    if not access.manager():
+        frappe.throw("Cyber management required", frappe.PermissionError)
+    doc = frappe.get_doc("SS97 Cyber Risk", name)
+    doc.check_permission("write")
+    doc.modified = expected_modified
+    doc.assigned_to, doc.due_date = technician, due_date
+    doc.save()
+    return {"name": doc.name, "modified": str(doc.modified)}

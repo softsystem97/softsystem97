@@ -1,0 +1,88 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Wazuh Config",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Customer",
+      "unique": 1
+    },
+    {
+      "fieldname": "enabled",
+      "label": "Enabled",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "api_url",
+      "label": "Api Url",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "username",
+      "label": "Username",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "password",
+      "label": "Password",
+      "fieldtype": "Password",
+      "reqd": 1,
+      "hidden": 0
+    },
+    {
+      "fieldname": "minimum_level",
+      "label": "Minimum Level",
+      "fieldtype": "Int",
+      "default": "10"
+    },
+    {
+      "fieldname": "create_incidents",
+      "label": "Create Incidents",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "mappings",
+      "label": "Mappings",
+      "fieldtype": "Table",
+      "options": "SS97 Cyber Agent Map"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "enabled",
+    "api_url",
+    "username",
+    "password",
+    "minimum_level",
+    "create_incidents",
+    "mappings"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}

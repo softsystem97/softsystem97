@@ -367,11 +367,19 @@ class TestCyber(unittest.TestCase):
         self.asset(self.b)
         self.incident()
         frappe.set_user(self.client)
-        for dt in access.DOCTYPES:
+        for dt in (
+            dt
+            for dt in access.DOCTYPES
+            if dt not in ("SS97 Cyber Wazuh Config", "SS97 Cyber Sync Run")
+        ):
             for row in frappe.get_list(dt, fields=["name", "customer"]):
                 self.assertEqual(row.customer, self.a)
         frappe.set_user(self.otherclient)
-        for dt in access.DOCTYPES:
+        for dt in (
+            dt
+            for dt in access.DOCTYPES
+            if dt not in ("SS97 Cyber Wazuh Config", "SS97 Cyber Sync Run")
+        ):
             for row in frappe.get_list(dt, fields=["name", "customer"]):
                 self.assertEqual(row.customer, self.b)
 

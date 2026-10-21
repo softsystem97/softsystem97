@@ -2,31 +2,54 @@
 {% block page_content %}
 <h1>Soft System 97 Cyber Protection</h1>
 <p>Inventaire, audits, risques et incidents. Les vérifications de sauvegarde sont déclarées avec une preuve ; aucune supervision automatique n’est connectée.</p>
-<form id="cyber-scope"><label for="cyber-customer">Référence entreprise ERPNext</label>
-<input id="cyber-customer" required autocomplete="off"><button type="submit">Afficher les indicateurs</button></form>
-<p id="cyber-error" role="alert"></p><dl id="cyber-kpis"></dl>
+<label for="cyber-view">Espace</label><select id="cyber-view">{% for view in cyber_views %}<option value="{{ view | e }}">{{ view | e }}</option>{% endfor %}</select>
+<button id="cyber-load" type="button">Charger l’espace</button>
+<p id="cyber-error" role="alert"></p><dl id="cyber-kpis"></dl><div id="cyber-tables"></div>
+{% if 'direction' in cyber_views or 'manager' in cyber_views %}
+<form id="cyber-report-generate"><h2>Générer un rapport client</h2>
+<label>Entreprise <input name="customer" required></label>
+<label>Début <input name="from_date" type="date" required></label>
+<label>Fin <input name="to_date" type="date" required></label><button>Créer le brouillon</button>
+<p id="cyber-report-result" role="status"></p>
+<p><a href="/app/ss97-cyber-report">Valider les brouillons dans les formulaires autorisés</a></p></form>
+{% endif %}
+<form id="cyber-assistance"><h2>Demander une assistance (préparation uniquement)</h2>
+<label>Référence entreprise <input name="customer" required></label>
+<label>Ticket Issue <input name="issue" required></label><button>Enregistrer la demande</button>
+<p id="cyber-assistance-result" role="status"></p></form>
+<p>Aucun moteur distant connecté. Aucune session ne démarrera depuis cette interface.</p>
 <script>
 (() => {
- let sequence = 0;
- const target = document.getElementById('cyber-kpis');
- document.getElementById('cyber-scope').addEventListener('submit', async event => {
-  event.preventDefault(); const current = ++sequence;
-  target.replaceChildren(); document.getElementById('cyber-error').textContent = '';
-  try {
-   const response = await frappe.call({method: 'softsystem97.cyber.api.dashboard',
-     args: {customer: document.getElementById('cyber-customer').value}});
-   if (current !== sequence) return;
-   const labels = {equipment:'Équipements',completed_audits:'Audits réalisés',open_risks:'Risques ouverts',critical_incidents:'Incidents critiques',pending_actions:'Actions correctives'};
-   for (const [key,label] of Object.entries(labels)) {
-    const dt=document.createElement('dt'),dd=document.createElement('dd');
-    dt.textContent=label;dd.textContent=String(response.message[key]);target.append(dt,dd);
-   }
-   for (const [state,count] of Object.entries(response.message.backups)) {
-    const dt=document.createElement('dt'),dd=document.createElement('dd');
-    dt.textContent='Sauvegarde : '+state;dd.textContent=String(count);target.append(dt,dd);
-   }
-  } catch (_) {if(current===sequence) {target.replaceChildren(); document.getElementById('cyber-error').textContent='Session ou autorisation indisponible.';}}
- });
+ let sequence=0;const target=document.getElementById('cyber-kpis'),tables=document.getElementById('cyber-tables');
+ const error=document.getElementById('cyber-error');
+ const labels={equipment:'Équipements',completed_audits:'Audits réalisés',open_risks:'Risques ouverts',critical_incidents:'Incidents critiques',pending_actions:'Actions correctives',open_incidents:'Incidents ouverts',alerts:'Alertes importées',active_contracts:'Contrats actifs',open_vulnerabilities:'Vulnérabilités déclarées ouvertes',urgent_actions:'Actions urgentes'};
+ async function load(){const current=++sequence;target.replaceChildren();tables.replaceChildren();error.textContent='';
+ try {const response=await frappe.call({method:'softsystem97.cyber.workspace.load',args:{view:document.getElementById('cyber-view').value}});
+ if(current!==sequence)return;const data=response.message;
+ for(const [key,label] of Object.entries(labels)){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=String(data.indicators[key]);target.append(dt,dd);}
+ if(data.scope_truncated)error.textContent='Périmètre limité : ces indicateurs ne couvrent pas toutes les entreprises.';
+ const sections={companies:data.companies,...data.tables};
+ for(const [section,rows] of Object.entries(sections)){const title=document.createElement('h2');title.textContent=section;tables.append(title);
+ if(!rows.length){const empty=document.createElement('p');empty.textContent='Aucun enregistrement dans ce périmètre.';tables.append(empty);continue;}
+ const wrapper=document.createElement('div');wrapper.style.overflowX='auto';const table=document.createElement('table');table.className='table';
+ const thead=document.createElement('thead'),head=document.createElement('tr');for(const key of Object.keys(rows[0])){const th=document.createElement('th');th.textContent=key;head.append(th);}thead.append(head);table.append(thead);
+ const tbody=document.createElement('tbody');for(const row of rows){const tr=document.createElement('tr');for(const [key,value]of Object.entries(row)){const td=document.createElement('td');
+ if(section==='reports'&&key==='name'){const a=document.createElement('a');a.href='/ss97-cyber-report?name='+encodeURIComponent(String(value));a.textContent=String(value);td.append(a);}else td.textContent=value==null?'':String(value);tr.append(td);}
+ if(section==='assistance'&&document.getElementById('cyber-view').value==='client'){
+  const cell=document.createElement('td');const choices=row.state==='Awaiting consent'?[['Consented','Consentir à la préparation'],['Declined','Refuser']]:row.state==='Consented'?[['Revoked','Révoquer']]:[];
+  for(const [state,label]of choices){const button=document.createElement('button');button.type='button';button.textContent=label;button.addEventListener('click',async()=>{button.disabled=true;
+   try{await frappe.call({method:'softsystem97.cyber.remote_requests.transition',type:'POST',args:{name:row.name,state,expected_modified:row.modified}});load();}
+   catch(_){target.replaceChildren();tables.replaceChildren();error.textContent='Action refusée ou session indisponible.';}});cell.append(button);}tr.append(cell);}
+ tbody.append(tr);}table.append(tbody);wrapper.append(table);tables.append(wrapper);
+ if(rows.length>=data.table_limit){const note=document.createElement('p');note.textContent='Affichage limité à 50 éléments ; consulter les listes autorisées pour la suite.';tables.append(note);}}
+ }catch(_){if(current===sequence){target.replaceChildren();tables.replaceChildren();error.textContent='Session ou autorisation indisponible.';}}}
+ document.getElementById('cyber-load').addEventListener('click',load);document.getElementById('cyber-view').addEventListener('change',load);
+ const reportForm=document.getElementById('cyber-report-generate');if(reportForm)reportForm.addEventListener('submit',async event=>{event.preventDefault();const result=document.getElementById('cyber-report-result');result.textContent='';
+ try{const response=await frappe.call({method:'softsystem97.cyber.reports.generate',type:'POST',args:{customer:reportForm.elements.customer.value,from_date:reportForm.elements.from_date.value,to_date:reportForm.elements.to_date.value}});result.textContent='Brouillon généré : '+response.message.name;load();}
+ catch(_){target.replaceChildren();tables.replaceChildren();result.textContent='Génération refusée ou session indisponible.';}});
+ document.getElementById('cyber-assistance').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const result=document.getElementById('cyber-assistance-result');result.textContent='';
+ try{const response=await frappe.call({method:'softsystem97.cyber.remote_requests.request',type:'POST',args:{customer:form.elements.customer.value,issue:form.elements.issue.value}});result.textContent='Demande enregistrée : '+response.message.name+' — aucun accès distant démarré.';}catch(_){result.textContent='Demande refusée ou session indisponible.';}});
+ load();
 })();
 </script>
 {% endblock %}
