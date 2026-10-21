@@ -1,0 +1,10 @@
+{
+  "enabled": false,
+  "provider": "Wazuh Indexer / OpenSearch, not Wazuh Manager",
+  "url": "https://indexer.example.invalid:9200",
+  "allowed_host": "indexer.example.invalid",
+  "since": "2026-10-21T00:00:00Z",
+  "create_incidents": false,
+  "remote_administration": false,
+  "credentials_source": "private process environment; never commit values"
+}
