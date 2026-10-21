@@ -260,3 +260,59 @@ class TestHistoricalLifecycle(unittest.TestCase):
         with self.assertRaises(frappe.PermissionError):
             policy.settings()
         self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
+
+    def test_recovered_cockpit_guard_binds_action_and_requires_current_assignment(self):
+        from types import SimpleNamespace
+        from softsystem97.integrations.historical_ticket_guard import require_cockpit_session
+
+        ticket = self.create()
+        self.assign(ticket['name'])
+        frappe.set_user(self.tech)
+        with patch.object(frappe.local, 'request', SimpleNamespace(method='POST'), create=True):
+            self.assertTrue(require_cockpit_session(ticket['name'], 'start'))
+            self.assertEqual(self.requests[-1].operation, 'cockpit.start')
+            self.assertEqual(self.requests[-1].target_status, 'Intervention en cours')
+            frappe.set_user(self.tech2)
+            with self.assertRaises(frappe.PermissionError):
+                require_cockpit_session(ticket['name'], 'start')
+
+    def test_recovered_cockpit_guard_denies_missing_business_proof_and_admin_action(self):
+        from types import SimpleNamespace
+        from softsystem97.integrations.historical_ticket_guard import require_cockpit_session
+
+        ticket = self.create()
+        self.assign(ticket['name'])
+        frappe.set_user(self.tech)
+        before = {dt: frappe.db.count(dt) for dt in ['Issue', 'ToDo', api.EVENT]}
+        with patch.object(frappe.local, 'request', SimpleNamespace(method='POST'), create=True):
+            self.allowed = False
+            with self.assertRaises(frappe.PermissionError):
+                require_cockpit_session(ticket['name'], 'start')
+            self.allowed = True
+            with self.assertRaises(frappe.PermissionError):
+                require_cockpit_session(ticket['name'], 'admin_clear_security')
+            with self.assertRaises(frappe.PermissionError):
+                require_cockpit_session(ticket['name'], {})
+        self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
+
+    def test_recovered_cockpit_guard_denies_get_guest_disabled_and_unverified_bridge(self):
+        from types import SimpleNamespace
+        from softsystem97.integrations.historical_ticket_guard import require_cockpit_session
+
+        ticket = self.create()
+        for method, user in [('GET', self.tech), ('POST', 'Guest')]:
+            frappe.set_user(user)
+            with patch.object(frappe.local, 'request', SimpleNamespace(method=method), create=True):
+                with self.assertRaises(frappe.PermissionError):
+                    require_cockpit_session(ticket['name'], 'start')
+        frappe.set_user(self.tech)
+        with patch.object(frappe.local, 'request', SimpleNamespace(method='POST'), create=True):
+            frappe.db.set_value('User', self.tech, 'enabled', 0)
+            try:
+                with self.assertRaises(frappe.PermissionError):
+                    require_cockpit_session(ticket['name'], 'start')
+            finally:
+                frappe.db.set_value('User', self.tech, 'enabled', 1)
+            frappe.conf.ss97_ticket_bridge['enabled'] = False
+            with self.assertRaises(frappe.PermissionError):
+                require_cockpit_session(ticket['name'], 'start')
