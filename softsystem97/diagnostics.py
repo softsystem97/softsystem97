@@ -138,3 +138,9 @@ def collect(queue_name=None, user=None):
         filters={'doc_type': 'User', 'field_name': ['in', list(data['user_api_fields'])]},
         fields=['field_name', 'property', 'modified'])
     return data
+
+
+def portal_route_metadata():
+    """Extend the private collector without rendering the live route."""
+    from softsystem97.route_metadata import collect as collect_route_metadata
+    return collect_route_metadata()

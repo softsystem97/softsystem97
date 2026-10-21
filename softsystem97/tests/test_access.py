@@ -283,3 +283,35 @@ class TestAccess(unittest.TestCase):
             self.assertEqual(meta.get_field(field).permlevel, 1)
         self.assertTrue(any(p.role == 'System Manager' and p.permlevel == 1
                             and p.read and p.write for p in meta.permissions))
+
+    def test_portal_metadata_rejects_non_administrator(self):
+        from softsystem97.diagnostics import portal_route_metadata
+        frappe.set_user(self.client)
+        with self.assertRaises(frappe.PermissionError):
+            portal_route_metadata()
+
+    def test_portal_metadata_does_not_execute_routes(self):
+        from softsystem97.diagnostics import portal_route_metadata
+        with patch('frappe.website.path_resolver.PathResolver.resolve',
+                   side_effect=AssertionError('must not execute route')):
+            report = portal_route_metadata()
+        self.assertFalse(report['source_exported'])
+        self.assertFalse(report['executed_route'])
+        self.assertIn('ss97_technician', report['issue_fields'])
+
+    def test_portal_manifest_excludes_symlinks_and_source_text(self):
+        import tempfile
+        from pathlib import Path
+        from softsystem97.route_metadata import _file_manifest
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'app'
+            root.mkdir()
+            secret = Path(directory) / 'private.py'
+            secret.write_text('SECRET_SENTINEL')
+            (root / 'link.py').symlink_to(secret)
+            self.assertIsNone(_file_manifest(root, root / 'link.py'))
+            source = root / 'controller.py'
+            source.write_text('SECRET_SENTINEL')
+            manifest = _file_manifest(root, source)
+            self.assertEqual(set(manifest), {'path', 'sha256'})
+            self.assertNotIn('SECRET_SENTINEL', str(manifest))
