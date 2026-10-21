@@ -315,3 +315,57 @@ class TestAccess(unittest.TestCase):
             manifest = _file_manifest(root, source)
             self.assertEqual(set(manifest), {'path', 'sha256'})
             self.assertNotIn('SECRET_SENTINEL', str(manifest))
+
+    def test_metadata_export_aliases_sensitive_custom_strings_and_keys(self):
+        import json
+        from softsystem97.route_metadata import _expurgate
+
+        sensitive = 'person@example.invalid?token=SENSITIVE_SENTINEL'
+        raw = {'workflows': [{'name': sensitive, 'state': sensitive}],
+               'hooks': {sensitive: sensitive}, 'issue_fields': {
+                   'ss97_technician': {'fieldtype': 'Link', 'options': 'User'}},
+               'apps': [{'app': sensitive, 'version': '16.52.0'}]}
+        exported = _expurgate(raw)
+        self.assertNotIn(sensitive, json.dumps(exported))
+        self.assertNotIn('SENSITIVE_SENTINEL', json.dumps(exported))
+        first = exported['workflows'][0]['name']
+        self.assertEqual(first, exported['workflows'][0]['state'])
+        self.assertNotEqual(first, _expurgate(raw)['workflows'][0]['name'])
+        self.assertEqual(exported['issue_fields']['ss97_technician']['options'], 'User')
+        self.assertEqual(exported['apps'][0]['version'], '16.52.0')
+
+    def test_metadata_export_queries_no_business_records_or_writes(self):
+        from softsystem97.route_metadata import collect
+
+        native_get_all = frappe.get_all
+        native_sql = frappe.db.sql
+        allowed = {'Web Page', 'Custom DocPerm', 'Role', 'Workflow',
+                   'Server Script', 'Client Script', 'DocType Link', 'DocType Action',
+                   'DocType', 'DocField', 'DocPerm', 'DocType State', 'Custom Field', 'Property Setter'}
+
+        def get_all(doctype, *args, **kwargs):
+            self.assertIn(doctype, allowed)
+            self.assertNotIn('script', kwargs.get('fields', []))
+            return native_get_all(doctype, *args, **kwargs)
+
+        def sql(query, *args, **kwargs):
+            self.assertTrue(str(query).lstrip().lower().startswith(('select', 'show', 'describe')),
+                            'Collector must not issue SQL mutations')
+            return native_sql(query, *args, **kwargs)
+
+        with patch('frappe.get_all', side_effect=get_all), \
+             patch.object(frappe.db, 'sql', side_effect=sql), \
+             patch.object(frappe.db, 'commit', side_effect=AssertionError('no commit')):
+            report = collect()
+        self.assertEqual(report['format'], 'ss97-route-metadata-v2')
+        self.assertTrue(report['privacy']['pseudonymized'])
+        self.assertFalse(report['source_exported'])
+        self.assertIn('api_scripts', report)
+        self.assertIn('client_scripts', report)
+        self.assertIn('ss97_stripe_payment_intent', report['invoice_fields'])
+
+    def test_metadata_symbols_ignore_unexpected_hook_types(self):
+        from softsystem97.route_metadata import _symbols
+        self.assertIsNone(_symbols(123))
+        self.assertIsNone(_symbols('https://private.invalid?token=secret'))
+        self.assertEqual(_symbols(['module.controller', None]), ['module.controller', None])
