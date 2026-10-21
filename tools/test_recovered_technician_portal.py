@@ -115,14 +115,15 @@ class TestRecoveredPortal(unittest.TestCase):
             self.assertEqual(build(), "<main>fixture</main>")
         page.assert_called_once_with(portal)
 
-    def test_missing_real_builder_is_not_replaced_by_development_page(self):
+    def test_unreviewed_portal_dependency_is_not_replaced_by_development_page(self):
         build = next(
             builder
             for _, route, builder in registry.deploy_specs()
             if route == "espace-technicien/tickets"
         )
-        with self.assertRaises(ModuleNotFoundError):
+        with self.assertRaises(ModuleNotFoundError) as error:
             build()
+        self.assertEqual(error.exception.name, "integrations.ss97_technician_operations.portals")
 
     def test_generator_preserves_legacy_export_and_stays_disabled(self):
         provider = ModuleType("integrations.ss97_gwen_notifications.wa_block")
