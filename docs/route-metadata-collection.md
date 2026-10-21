@@ -94,7 +94,9 @@ Format **ss97-route-metadata-v2** : routes client/technicien, applications et
 versions disponibles, candidats de fichiers, présence de Web Pages, hooks,
 champs Issue/Sales Invoice/Customer ciblés, DocTypes requis, permissions,
 existence des rôles canoniques, workflows et présence de conditions privées,
-identités pseudonymisées des Server Scripts et Client Scripts, présence des API
+identités pseudonymisées des Server Scripts et Client Scripts, Assignment Rules
+Issue sans utilisateurs ni expressions privées, Property Setters Issue/Sales Invoice/Customer
+sans valeurs ni valeurs par défaut, présence des API
 historiques connues, références de priorité/type et compteurs de personnalisations.
 
 Les valeurs et clés personnalisées non explicitement publiques sont remplacées

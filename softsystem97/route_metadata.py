@@ -129,6 +129,16 @@ PUBLIC_KEYS = frozenset(
         "issue_priority",
         "support_type",
         "property_setter_count",
+        "assignment_rules",
+        "property_setters",
+        "document_type",
+        "rule",
+        "field",
+        "doc_type",
+        "field_name",
+        "doctype_or_field",
+        "property",
+        "property_type",
         "custom_field_count",
         "user_permission_count",
         "privacy",
@@ -203,6 +213,15 @@ PUBLIC_VALUES = frozenset(
         "List",
         "Open\nReplied\nOn Hold\nResolved\nClosed",
         "size_limit",
+        "read_only",
+        "reqd",
+        "hidden",
+        "options",
+        "default",
+        "permlevel",
+        "depends_on",
+        "allow_on_submit",
+        "ignore_user_permissions",
         "unavailable",
     )
 )
@@ -410,6 +429,24 @@ def collect():
         filters={"dt": "Issue"},
         fields=["name", "dt", "view", "enabled"],
     )
+    # Never fetch assignment users, private expressions, setter values or defaults.
+    data["assignment_rules"] = frappe.get_all(
+        "Assignment Rule",
+        filters={"document_type": "Issue"},
+        fields=["name", "document_type", "disabled", "priority", "rule", "field"],
+    )
+    data["property_setters"] = frappe.get_all(
+        "Property Setter",
+        filters={"doc_type": ["in", ["Issue", "Sales Invoice", "Customer"]]},
+        fields=[
+            "name",
+            "doc_type",
+            "doctype_or_field",
+            "field_name",
+            "property",
+            "property_type",
+        ],
+    )
     data["required_doctypes"] = {
         dt: bool(frappe.db.exists("DocType", dt))
         for dt in (
@@ -444,5 +481,6 @@ def collect():
         "Metadata only; no source, business records, accounts, secrets or conditions exported",
         "Custom identities are one-report aliases; administrator must review matching sources privately",
         "Routes, sessions, payment, notifications and business workflow not executed",
+        "Assignment users/expressions and Property Setter values/defaults not collected; effective targeted fields are reported",
     ]
     return result

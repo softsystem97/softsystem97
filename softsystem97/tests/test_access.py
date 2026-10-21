@@ -341,7 +341,8 @@ class TestAccess(unittest.TestCase):
         native_sql = frappe.db.sql
         allowed = {'Web Page', 'Custom DocPerm', 'Role', 'Workflow',
                    'Server Script', 'Client Script', 'DocType Link', 'DocType Action',
-                   'DocType', 'DocField', 'DocPerm', 'DocType State', 'Custom Field', 'Property Setter'}
+                   'DocType', 'DocField', 'DocPerm', 'DocType State', 'Custom Field', 'Property Setter',
+                   'Assignment Rule'}
 
         def get_all(doctype, *args, **kwargs):
             self.assertIn(doctype, allowed)
@@ -369,3 +370,39 @@ class TestAccess(unittest.TestCase):
         self.assertIsNone(_symbols(123))
         self.assertIsNone(_symbols('https://private.invalid?token=secret'))
         self.assertEqual(_symbols(['module.controller', None]), ['module.controller', None])
+
+    def test_rule_and_setter_inventory_excludes_private_values_and_assignees(self):
+        import json
+        from softsystem97.route_metadata import collect
+
+        native_get_all = frappe.get_all
+        forbidden = {'users', 'weighted_users', 'last_user', 'assign_condition',
+                     'unassign_condition', 'close_condition', 'description',
+                     'value', 'default_value'}
+        private = 'person@example.invalid-SENSITIVE_SENTINEL'
+        seen = set()
+
+        def get_all(doctype, *args, **kwargs):
+            if (doctype == 'Assignment Rule' or
+                    (doctype == 'Property Setter' and
+                     'property_type' in kwargs.get('fields', []))):
+                seen.add(doctype)
+                self.assertFalse(forbidden.intersection(kwargs.get('fields', [])))
+                if doctype == 'Assignment Rule':
+                    self.assertEqual(kwargs['filters'], {'document_type': 'Issue'})
+                    return [frappe._dict(name=private, document_type='Issue',
+                                         disabled=0, priority=1, rule=private, field=private)]
+                self.assertEqual(kwargs['filters']['doc_type'],
+                                 ['in', ['Issue', 'Sales Invoice', 'Customer']])
+                return [frappe._dict(name=private, doc_type='Issue',
+                                     doctype_or_field='DocField', field_name='ss97_technician',
+                                     property='read_only', property_type='Check')]
+            return native_get_all(doctype, *args, **kwargs)
+
+        with patch('frappe.get_all', side_effect=get_all):
+            report = collect()
+        self.assertEqual(seen, {'Assignment Rule', 'Property Setter'})
+        self.assertEqual(len(report['assignment_rules']), 1)
+        self.assertEqual(report['property_setters'][0]['property'], 'read_only')
+        self.assertNotIn(private, json.dumps(report))
+        self.assertNotIn('SENSITIVE_SENTINEL', json.dumps(report))
