@@ -12,6 +12,7 @@ def build(output):
     files = {
         "ss97_route_metadata.py": root / "softsystem97/route_metadata.py",
         "INSTRUCTIONS.md": root / "docs/route-metadata-collection.md",
+        "consolidated-release.md": root / "docs/consolidated-release.md",
     }
     payloads = {name: path.read_bytes() for name, path in files.items()}
     manifest = {name: hashlib.sha256(data).hexdigest() for name, data in payloads.items()}

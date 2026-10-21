@@ -17,7 +17,7 @@ class TestCollectionBundle(unittest.TestCase):
             manifest = build(output)
             with ZipFile(output) as archive:
                 self.assertEqual(set(archive.namelist()), {
-                    "ss97_route_metadata.py", "INSTRUCTIONS.md", "SHA256.json"})
+                    "ss97_route_metadata.py", "INSTRUCTIONS.md", "consolidated-release.md", "SHA256.json"})
                 self.assertEqual(json.loads(archive.read("SHA256.json")), manifest)
                 for name, expected in manifest.items():
                     self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(), expected)
