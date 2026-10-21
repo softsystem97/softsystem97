@@ -1,0 +1,72 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Event",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Customer"
+    },
+    {
+      "fieldname": "record_type",
+      "label": "Record Type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "record_name",
+      "label": "Record Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "operation",
+      "label": "Operation",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "actor",
+      "label": "Actor",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "changed_fields",
+      "label": "Changed Fields",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "record_type",
+    "record_name",
+    "operation",
+    "actor",
+    "changed_fields"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1
+    },
+    {
+      "role": "SS97 Cyber Technician",
+      "read": 1
+    },
+    {
+      "role": "SS97 Cyber Client",
+      "read": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}

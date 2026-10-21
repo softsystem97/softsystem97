@@ -29,7 +29,8 @@ def main():
             'softsystem97.tests.test_ticket_bridge',
             'softsystem97.tests.test_historical_lifecycle',
             'softsystem97.tests.test_payment_eligibility',
-            'softsystem97.tests.test_stripe_ledger'])
+            'softsystem97.tests.test_stripe_ledger',
+            'softsystem97.tests.test_cyber'])
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
     finally:

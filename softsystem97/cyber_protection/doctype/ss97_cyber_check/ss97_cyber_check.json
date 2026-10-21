@@ -1,0 +1,38 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Check",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "question",
+      "label": "Question",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "result",
+      "label": "Result",
+      "fieldtype": "Select",
+      "default": "Not checked",
+      "reqd": 1,
+      "options": "Not checked\nPass\nFail\nNot applicable"
+    },
+    {
+      "fieldname": "observation",
+      "label": "Observation",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "field_order": [
+    "question",
+    "result",
+    "observation"
+  ],
+  "permissions": [],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 1,
+  "index_web_pages_for_search": 0
+}

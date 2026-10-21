@@ -1,0 +1,98 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Asset",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Customer"
+    },
+    {
+      "fieldname": "asset_name",
+      "label": "Asset Name",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "asset_type",
+      "label": "Asset Type",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "Computer\nServer\nNetwork\nOther"
+    },
+    {
+      "fieldname": "operating_system",
+      "label": "Operating System",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "maintenance_state",
+      "label": "Maintenance State",
+      "fieldtype": "Select",
+      "default": "Unknown",
+      "reqd": 1,
+      "options": "Unknown\nCurrent\nDue"
+    },
+    {
+      "fieldname": "backup_state",
+      "label": "Backup State",
+      "fieldtype": "Select",
+      "default": "Unknown",
+      "reqd": 1,
+      "options": "Unknown\nVerified\nFailed\nNot applicable"
+    },
+    {
+      "fieldname": "backup_checked_at",
+      "label": "Backup Checked At",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "backup_evidence",
+      "label": "Backup Evidence",
+      "fieldtype": "Data"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "asset_name",
+    "asset_type",
+    "operating_system",
+    "maintenance_state",
+    "backup_state",
+    "backup_checked_at",
+    "backup_evidence"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Technician",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Client",
+      "read": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}

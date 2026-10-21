@@ -59,3 +59,17 @@ doc_events = {
         "on_trash": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
     },
 }
+
+# Cyber Protection permissions are independent of the phase 1 bridge.
+permission_query_conditions['SS97 Cyber Company'] = 'softsystem97.cyber.permissions.company_query'
+has_permission['SS97 Cyber Company'] = 'softsystem97.cyber.permissions.has_permission'
+permission_query_conditions['SS97 Cyber Asset'] = 'softsystem97.cyber.permissions.asset_query'
+has_permission['SS97 Cyber Asset'] = 'softsystem97.cyber.permissions.has_permission'
+permission_query_conditions['SS97 Cyber Audit'] = 'softsystem97.cyber.permissions.audit_query'
+has_permission['SS97 Cyber Audit'] = 'softsystem97.cyber.permissions.has_permission'
+permission_query_conditions['SS97 Cyber Risk'] = 'softsystem97.cyber.permissions.risk_query'
+has_permission['SS97 Cyber Risk'] = 'softsystem97.cyber.permissions.has_permission'
+permission_query_conditions['SS97 Cyber Incident'] = 'softsystem97.cyber.permissions.incident_query'
+has_permission['SS97 Cyber Incident'] = 'softsystem97.cyber.permissions.has_permission'
+permission_query_conditions['SS97 Cyber Event'] = 'softsystem97.cyber.permissions.event_query'
+has_permission['SS97 Cyber Event'] = 'softsystem97.cyber.permissions.has_permission'

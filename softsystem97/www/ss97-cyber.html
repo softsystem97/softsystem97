@@ -1,0 +1,32 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<h1>Soft System 97 Cyber Protection</h1>
+<p>Inventaire, audits, risques et incidents. Les vérifications de sauvegarde sont déclarées avec une preuve ; aucune supervision automatique n’est connectée.</p>
+<form id="cyber-scope"><label for="cyber-customer">Référence entreprise ERPNext</label>
+<input id="cyber-customer" required autocomplete="off"><button type="submit">Afficher les indicateurs</button></form>
+<p id="cyber-error" role="alert"></p><dl id="cyber-kpis"></dl>
+<script>
+(() => {
+ let sequence = 0;
+ const target = document.getElementById('cyber-kpis');
+ document.getElementById('cyber-scope').addEventListener('submit', async event => {
+  event.preventDefault(); const current = ++sequence;
+  target.replaceChildren(); document.getElementById('cyber-error').textContent = '';
+  try {
+   const response = await frappe.call({method: 'softsystem97.cyber.api.dashboard',
+     args: {customer: document.getElementById('cyber-customer').value}});
+   if (current !== sequence) return;
+   const labels = {equipment:'Équipements',completed_audits:'Audits réalisés',open_risks:'Risques ouverts',critical_incidents:'Incidents critiques',pending_actions:'Actions correctives'};
+   for (const [key,label] of Object.entries(labels)) {
+    const dt=document.createElement('dt'),dd=document.createElement('dd');
+    dt.textContent=label;dd.textContent=String(response.message[key]);target.append(dt,dd);
+   }
+   for (const [state,count] of Object.entries(response.message.backups)) {
+    const dt=document.createElement('dt'),dd=document.createElement('dd');
+    dt.textContent='Sauvegarde : '+state;dd.textContent=String(count);target.append(dt,dd);
+   }
+  } catch (_) {if(current===sequence) {target.replaceChildren(); document.getElementById('cyber-error').textContent='Session ou autorisation indisponible.';}}
+ });
+})();
+</script>
+{% endblock %}

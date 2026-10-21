@@ -1,0 +1,32 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Member",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "user",
+      "label": "User",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "responsibility",
+      "label": "Responsibility",
+      "fieldtype": "Select",
+      "reqd": 1,
+      "options": "Technician\nSecurity contact"
+    }
+  ],
+  "field_order": [
+    "user",
+    "responsibility"
+  ],
+  "permissions": [],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 1,
+  "index_web_pages_for_search": 0
+}

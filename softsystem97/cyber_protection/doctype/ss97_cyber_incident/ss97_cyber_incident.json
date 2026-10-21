@@ -1,0 +1,105 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Incident",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Customer"
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "asset",
+      "label": "Asset",
+      "fieldtype": "Link",
+      "options": "SS97 Cyber Asset"
+    },
+    {
+      "fieldname": "issue",
+      "label": "Issue",
+      "fieldtype": "Link",
+      "options": "Issue"
+    },
+    {
+      "fieldname": "severity",
+      "label": "Severity",
+      "fieldtype": "Select",
+      "default": "Medium",
+      "reqd": 1,
+      "options": "Low\nMedium\nHigh\nCritical"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "default": "Open",
+      "reqd": 1,
+      "options": "Open\nInvestigating\nContained\nResolved\nClosed"
+    },
+    {
+      "fieldname": "assigned_to",
+      "label": "Assigned To",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "resolution",
+      "label": "Resolution",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "title",
+    "asset",
+    "issue",
+    "severity",
+    "status",
+    "assigned_to",
+    "description",
+    "resolution"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Technician",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Client",
+      "read": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}

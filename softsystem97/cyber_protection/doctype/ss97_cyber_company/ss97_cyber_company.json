@@ -1,0 +1,82 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Company",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "unique": 1,
+      "options": "Customer"
+    },
+    {
+      "fieldname": "responsible",
+      "label": "Responsible",
+      "fieldtype": "Link",
+      "options": "User"
+    },
+    {
+      "fieldname": "contract",
+      "label": "Contract",
+      "fieldtype": "Link",
+      "options": "Contract"
+    },
+    {
+      "fieldname": "authorization_status",
+      "label": "Authorization Status",
+      "fieldtype": "Select",
+      "default": "Pending",
+      "reqd": 1,
+      "options": "Pending\nGranted\nRevoked"
+    },
+    {
+      "fieldname": "authorization_reference",
+      "label": "Authorization Reference",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "members",
+      "label": "Members",
+      "fieldtype": "Table",
+      "options": "SS97 Cyber Member"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "responsible",
+    "contract",
+    "authorization_status",
+    "authorization_reference",
+    "members"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Technician",
+      "read": 1
+    },
+    {
+      "role": "SS97 Cyber Client",
+      "read": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}

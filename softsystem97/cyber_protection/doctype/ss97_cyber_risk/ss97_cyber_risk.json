@@ -1,0 +1,106 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Risk",
+  "module": "Cyber Protection",
+  "engine": "InnoDB",
+  "autoname": "hash",
+  "fields": [
+    {
+      "fieldname": "customer",
+      "label": "Customer",
+      "fieldtype": "Link",
+      "reqd": 1,
+      "options": "Customer"
+    },
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "audit",
+      "label": "Audit",
+      "fieldtype": "Link",
+      "options": "SS97 Cyber Audit"
+    },
+    {
+      "fieldname": "asset",
+      "label": "Asset",
+      "fieldtype": "Link",
+      "options": "SS97 Cyber Asset"
+    },
+    {
+      "fieldname": "severity",
+      "label": "Severity",
+      "fieldtype": "Select",
+      "default": "Medium",
+      "reqd": 1,
+      "options": "Low\nMedium\nHigh\nCritical"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "default": "Open",
+      "reqd": 1,
+      "options": "Open\nIn progress\nResolved"
+    },
+    {
+      "fieldname": "finding",
+      "label": "Finding",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "recommendation",
+      "label": "Recommendation",
+      "fieldtype": "Small Text",
+      "read_only": 1
+    },
+    {
+      "fieldname": "action_required",
+      "label": "Action Required",
+      "fieldtype": "Check",
+      "default": "1"
+    }
+  ],
+  "field_order": [
+    "customer",
+    "title",
+    "audit",
+    "asset",
+    "severity",
+    "status",
+    "finding",
+    "recommendation",
+    "action_required"
+  ],
+  "permissions": [
+    {
+      "role": "SS97 Cyber Direction",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Manager",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Technician",
+      "read": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "SS97 Cyber Client",
+      "read": 1
+    }
+  ],
+  "track_changes": 0,
+  "allow_rename": 0,
+  "istable": 0,
+  "index_web_pages_for_search": 0
+}
