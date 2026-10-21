@@ -71,6 +71,34 @@ class HistoricalSourceTests(unittest.TestCase):
             self.assertTrue(require_write_session())
             write.assert_not_called()
 
+    def test_deploy_injected_client_does_not_import_private_sdk(self):
+        import builtins
+
+        client = Mock()
+        client.list_docs.return_value = []
+        native_import = builtins.__import__
+
+        def guarded_import(name, *args, **kwargs):
+            if name.startswith('migrate_odoo_erpnext'):
+                raise AssertionError('Private deployment SDK must not be imported')
+            return native_import(name, *args, **kwargs)
+
+        with patch('builtins.__import__', side_effect=guarded_import):
+            self.assertEqual(api.deploy(client), 'created:' + api.SCRIPT_NAME)
+        client.insert.assert_called_once()
+        payload = client.insert.call_args.args[0]
+        self.assertEqual(payload['doctype'], 'Server Script')
+        self.assertEqual(payload['allow_guest'], 0)
+        self.assertEqual(payload['api_method'], api.API_METHOD)
+
+    def test_deploy_preserves_falsey_injected_client(self):
+        client = Mock()
+        client.list_docs.return_value = [{'name': 'Existing API'}]
+        with patch.object(type(client), '__bool__', return_value=False, create=True):
+            self.assertEqual(api.deploy(client), 'updated:Existing API')
+        client.update.assert_called_once()
+        client.insert.assert_not_called()
+
     def facade(self, user='client@example.invalid', enabled=True, **args):
         row = {'name': 'FAKE-1', 'raised_by': 'client@example.invalid',
                'ss97_contact_email': '', 'subject': 'Synthetic'}

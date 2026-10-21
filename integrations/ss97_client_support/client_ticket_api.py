@@ -164,9 +164,11 @@ def ensure_client_ticket_api(client: ERPNextClient) -> str:
 
 
 def deploy(client: ERPNextClient | None = None) -> str:
-    from migrate_odoo_erpnext.erpnext_client import ERPNextClient
+    if client is None:
+        from migrate_odoo_erpnext.erpnext_client import ERPNextClient
 
-    return ensure_client_ticket_api(client or ERPNextClient.from_env())
+        client = ERPNextClient.from_env()
+    return ensure_client_ticket_api(client)
 
 
 if __name__ == "__main__":
