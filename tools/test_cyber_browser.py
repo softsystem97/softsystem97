@@ -51,6 +51,12 @@ def main():
             return {
                 "indicators": {
                     "equipment": value,
+                    "companies": value,
+                    "maintenance_due": 2,
+                    "backups_to_verify": 3,
+                    "pending_audits": 4,
+                    "high_risks": 5,
+                    "urgent_actions": 0,
                     "completed_audits": 1,
                     "open_risks": 1,
                     "critical_incidents": 0,
@@ -140,6 +146,16 @@ def main():
         page.goto("https://cyber.example.invalid/ss97-cyber")
         page.wait_for_selector("#cyber-kpis dd")
         assert page.locator("#cyber-kpis dd").first.inner_text() == "1"
+        assert (
+            page.locator("#cyber-kpis").inner_text().find("Sauvegardes à vérifier") >= 0
+        )
+        assert "undefined" not in page.locator("#cyber-kpis").inner_text()
+        assert (
+            page.locator("#cyber-kpis dt", has_text="Sauvegardes à vérifier").evaluate(
+                "el => el.nextElementSibling.textContent"
+            )
+            == "3"
+        )
         passed("Workspace renders computed indicators and company tables")
         assert page.evaluate("window.SS97_XSS") is None
         assert page.locator("#cyber-tables img").count() == 0

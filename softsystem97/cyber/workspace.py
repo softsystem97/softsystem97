@@ -11,6 +11,10 @@ VIEWS = {
     "client": access.CLIENT,
 }
 TABLES = {
+    "history": (
+        "SS97 Cyber Event",
+        ["name", "customer", "record_type", "record_name", "operation", "creation"],
+    ),
     "assets": (
         "SS97 Cyber Asset",
         [
@@ -125,11 +129,30 @@ def load(view, customer=None):
             "active_contracts",
             "open_vulnerabilities",
             "urgent_actions",
+            "companies",
+            "maintenance_due",
+            "backups_to_verify",
+            "pending_audits",
+            "high_risks",
         )
     }
     if scope:
         specs = {
             "equipment": ("SS97 Cyber Asset", {}),
+            "companies": ("SS97 Cyber Company", {}),
+            "maintenance_due": ("SS97 Cyber Asset", {"maintenance_state": "Due"}),
+            "backups_to_verify": (
+                "SS97 Cyber Asset",
+                {"backup_state": ["in", ["Unknown", "Failed"]]},
+            ),
+            "pending_audits": ("SS97 Cyber Audit", {"status": ["!=", "Completed"]}),
+            "high_risks": (
+                "SS97 Cyber Risk",
+                {
+                    "severity": ["in", ["High", "Critical"]],
+                    "status": ["!=", "Resolved"],
+                },
+            ),
             "completed_audits": ("SS97 Cyber Audit", {"status": "Completed"}),
             "open_risks": ("SS97 Cyber Risk", {"status": ["!=", "Resolved"]}),
             "critical_incidents": (

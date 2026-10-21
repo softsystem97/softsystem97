@@ -22,7 +22,7 @@
 (() => {
  let sequence=0;const target=document.getElementById('cyber-kpis'),tables=document.getElementById('cyber-tables');
  const error=document.getElementById('cyber-error');
- const labels={equipment:'Équipements',completed_audits:'Audits réalisés',open_risks:'Risques ouverts',critical_incidents:'Incidents critiques',pending_actions:'Actions correctives',open_incidents:'Incidents ouverts',alerts:'Alertes importées',active_contracts:'Contrats actifs',open_vulnerabilities:'Vulnérabilités déclarées ouvertes',urgent_actions:'Actions urgentes'};
+ const labels={companies:'Entreprises suivies',maintenance_due:'Maintenance à effectuer',backups_to_verify:'Sauvegardes à vérifier (état déclaré)',pending_audits:'Audits en attente',high_risks:'Risques élevés ouverts',equipment:'Équipements',completed_audits:'Audits réalisés',open_risks:'Risques ouverts',critical_incidents:'Incidents critiques',pending_actions:'Actions correctives',open_incidents:'Incidents ouverts',alerts:'Alertes importées',active_contracts:'Contrats actifs',open_vulnerabilities:'Vulnérabilités déclarées ouvertes',urgent_actions:'Actions urgentes'};
  async function load(){const current=++sequence;target.replaceChildren();tables.replaceChildren();error.textContent='';
  try {const response=await frappe.call({method:'softsystem97.cyber.workspace.load',args:{view:document.getElementById('cyber-view').value}});
  if(current!==sequence)return;const data=response.message;

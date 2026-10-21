@@ -144,6 +144,57 @@ class TestCyberOperations(unittest.TestCase):
             workspace.load("direction", self.b)["indicators"]["equipment"], 1
         )
 
+    def test_workspace_operational_indicators_and_history_are_scoped(self):
+        asset = self.asset()
+        asset.maintenance_state = "Due"
+        asset.backup_state = "Failed"
+        asset.save()
+        foreign = self.asset(self.b)
+        foreign.maintenance_state = "Due"
+        foreign.save()
+        frappe.get_doc(
+            {
+                "doctype": "SS97 Cyber Audit",
+                "customer": self.a,
+                "title": "Fictional pending audit",
+            }
+        ).insert()
+        frappe.get_doc(
+            {
+                "doctype": "SS97 Cyber Risk",
+                "customer": self.a,
+                "title": "Fictional high risk",
+                "severity": "High",
+            }
+        ).insert()
+        frappe.set_user(self.client)
+        data = workspace.load("client")
+        for key in (
+            "companies",
+            "equipment",
+            "maintenance_due",
+            "backups_to_verify",
+            "pending_audits",
+            "high_risks",
+        ):
+            self.assertEqual(data["indicators"][key], 1, key)
+        self.assertTrue(data["tables"]["history"])
+        for event in data["tables"]["history"]:
+            self.assertEqual(event.customer, self.a)
+            self.assertNotIn("actor", event)
+            self.assertNotIn("changed_fields", event)
+        frappe.set_user(self.tech)
+        self.assertEqual(
+            workspace.load("technician")["indicators"]["maintenance_due"], 1
+        )
+        frappe.set_user(self.manager)
+        foreign_data = workspace.load("manager", self.b)
+        self.assertEqual(foreign_data["indicators"]["pending_audits"], 0)
+        self.assertEqual(foreign_data["indicators"]["high_risks"], 0)
+        self.assertTrue(
+            all(row.customer == self.b for row in foreign_data["tables"]["history"])
+        )
+
     def test_action_assignment_and_permissions(self):
         risk = frappe.get_doc(
             {
