@@ -151,6 +151,10 @@ NOTIF_BELL_JS = r"""
       if([401,403].includes(response.status)&&typeof window.ss97ScopedAccessDenied==='function')window.ss97ScopedAccessDenied();
       if(!response.ok)throw new Error('denied');
       var payload=await response.json();
+      if(['PermissionError','AuthenticationError','SessionExpired'].includes(payload.exc_type)){
+        if(typeof window.ss97ScopedAccessDenied==='function')window.ss97ScopedAccessDenied();
+        throw new Error('denied');
+      }
       if(generation!==(window.__ss97AccessEpoch||0))return;
       if(payload.exc||!payload.message||!Array.isArray(payload.message.notifications))throw new Error('invalid');
       payload.message.notifications.forEach(function(item){

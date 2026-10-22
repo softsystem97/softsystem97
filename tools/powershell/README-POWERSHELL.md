@@ -75,3 +75,63 @@ pwsh -NoLogo -NoProfile -File .\tests\Test-SS97Scripts.ps1
 Les tests utilisent un HttpMessageHandler hors ligne et des répertoires temporaires. Aucun identifiant, même fictif, n'est créé ou demandé ; la saisie est neutralisée uniquement dans ce processus de test et aucun appel réseau n'a lieu. Ils vérifient les contrats de réponse, les erreurs, le filtrage et les sorties. Ils ne prouvent pas une authentification par une vraie paire API ni la confiance TLS de Windows. L'exécution a été validée sur PowerShell 7 sous Linux ; le poste Windows et le site choisi restent à tester par leur propriétaire.
 
 Le guide `docs/deployment-review.md` décrit les garde-fous de préproduction, sauvegarde, approbation, déploiement Frappe Cloud et retour arrière. Rien ici n'autorise un déploiement ou une modification de production.
+
+## Export de règles Cloud — lecture seule, site existant
+
+Depuis une copie à jour de `release/technician-last-dependencies` :
+
+```powershell
+pwsh -NoProfile -File "C:\soft-system-97\tools\powershell\Export-SS97CloudRules.ps1"
+```
+
+Le script utilise ses modules voisins `SS97.CloudRules.psm1` et `SS97.ReadOnly.psm1`.
+Les deux invites masquées demandent la paire API d’un compte **déjà autorisé**.
+Ne pas utiliser le mot de passe du technicien, créer des clés automatiquement,
+coller les clés dans cette conversation, les placer dans la ligne de commande ou
+les inscrire dans un fichier. Les en-têtes ne sont conservés qu’en mémoire du
+processus puis supprimés/disposés ; TLS reste vérifié et les redirections refusées.
+Le seul site contacté est `https://app.softsystem97.com`, exclusivement par GET.
+
+Le résultat est écrit atomiquement dans **Documents\SS97_CLOUD_RULES.json**, via
+le dossier Documents Windows officiel (y compris sa redirection éventuelle).
+Une authentification refusée ne crée pas de rapport et laisse un ancien fichier
+inchangé : il ne faut pas transmettre cet ancien fichier comme résultat récent.
+Après une connexion vérifiée, un refus de métadonnées produit un rapport partiel
+avec `http_status`, `result` et `pagination_finished=false` pour la section en
+échec, ainsi qu’un code de sortie 1. Une section vide signifie uniquement qu’aucun
+résultat n’a été visible pour ce compte ; elle ne prouve pas l’absence de règles.
+
+Collecte : Workflow actif lié à Issue, ses enfants avec `parent=Workflow`, Custom
+Field Issue, DocPerm Issue avec `parent=DocType`, Custom DocPerm, Property Setter,
+et inventaires Server Script/Client Script actifs. Les listes sont paginées et
+bornées ; une page répétée, une erreur JSON ou la limite atteinte reste un échec
+explicite. Aucun document Issue, User, e-mail, secret ou corps de script n’est
+sollicité. Les champs sont énumérés précisément, sans `*`, export SQL ou `get_all`.
+
+Le JSON conserve les champs techniques, drapeaux, permissions et termes déjà
+publics du catalogue. Les autres noms/valeurs sont pseudonymisés par HMAC avec une
+clé aléatoire jetable, conservant les liens **dans ce seul rapport** ; ni cette
+clé ni la table de correspondance ne sont exportées. Les propriétaires, labels
+libres, identités de connexion et champs inattendus sont exclus. Les conditions
+Python, corps de scripts et sources de paiement ne sont pas récupérés. Cette
+collecte ne finalise donc pas, à elle seule, un fournisseur métier.
+
+**401 :** l’administrateur vérifie dans Desk le compte propriétaire de la paire,
+son activation et l’emploi conjoint de l’API Key et de l’API Secret correspondants.
+Ne pas renouveler une clé utilisée par d’autres applications sans accord.
+**403 :** il consulte les sections en échec puis exécute lui-même l’export avec
+son compte administratif déjà autorisé à lire Workflow, DocType/DocPerm, Custom
+Field, Custom DocPerm, Property Setter, Server Script et Client Script. Si une
+restriction Cloud persiste, il transmet au support uniquement le DocType et le
+code HTTP, jamais les clés ni la réponse brute. Toute modification de rôles ou
+permissions exige une approbation distincte : ne pas élever le technicien.
+
+Avant transmission, vérifier date/site, états des sections et absence de contenu
+privé résiduel. Le rapport et ses variantes sont ignorés par Git. Ne pas l’ajouter
+avec `git add -f`. Aucun rapport Cloud réel n’est fourni par les tests hors ligne.
+
+Tests ciblés, sans réseau ni identifiants :
+
+```powershell
+pwsh -NoProfile -File .\tools\powershell\tests\Test-SS97CloudRules.ps1
+```

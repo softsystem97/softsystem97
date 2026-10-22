@@ -82,10 +82,10 @@ class Element {
   addEventListener(name,fn){this.listeners[name]=fn;}
   replaceChildren(){this.children=[];this.textContent='';}
 }
-const host=new Element('div');const calls=[];let allowed=true;
-const context={window:{},document:{createElement:t=>new Element(t),querySelector:()=>host},
- fetch:async (url,options)=>{calls.push({url,options});return {ok:allowed,
- json:async()=>({message:{notifications:[{title:'<img src=x onerror=evil()>',reference_name:'SYNTH&x=1'}]}})};}};
+const host=new Element('div');const calls=[];let allowed=true,envelope=false,denials=0;
+const context={window:{ss97ScopedAccessDenied:()=>{denials++;}},document:{createElement:t=>new Element(t),querySelector:()=>host},
+ fetch:async (url,options)=>{calls.push({url,options});return {ok:allowed||envelope,status:allowed||envelope?200:403,
+ json:async()=>envelope?({exc_type:'PermissionError',exc:'denied'}):({message:{notifications:[{title:'<img src=x onerror=evil()>',reference_name:'SYNTH&x=1'}]}})};}};
 vm.runInNewContext(SOURCE,context);
 (async()=>{
  const root=host.children[0],button=root.children[0],list=root.children[1];
@@ -93,7 +93,8 @@ vm.runInNewContext(SOURCE,context);
  await button.listeners.click();
  const first={title:list.children[0].children[0].textContent,href:list.children[0].children[0].href};
  allowed=false;await button.listeners.click();
- console.log(JSON.stringify({first,calls,remaining:list.children.length,error:list.textContent,disabled:button.disabled}));
+ envelope=true;await button.listeners.click();
+ console.log(JSON.stringify({first,calls,denials,remaining:list.children.length,error:list.textContent,disabled:button.disabled}));
 })().catch(e=>{console.error(e);process.exitCode=1;});
 """.replace('SOURCE', json.dumps(script))
         result = subprocess.run(['node', '-e', harness], capture_output=True, text=True, check=True)
@@ -103,7 +104,8 @@ vm.runInNewContext(SOURCE,context);
         self.assertEqual(data['remaining'], 0)
         self.assertFalse(data['disabled'])
         self.assertIn('indisponibles', data['error'])
-        self.assertEqual(len(data['calls']), 2)
+        self.assertEqual(len(data['calls']), 3)
+        self.assertEqual(data['denials'], 2)
         self.assertTrue(all(c['options']['credentials'] == 'same-origin' for c in data['calls']))
 
     def test_legacy_writing_notification_producers_not_imported(self):
