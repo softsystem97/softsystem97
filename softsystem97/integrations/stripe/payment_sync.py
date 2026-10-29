@@ -475,7 +475,21 @@ def process_successful_payment(ctx: dict[str, Any]) -> dict[str, Any]:
 	reference_no = payment_intent or session_id or obj.get("id") or ""
 
 	if invoice_name and is_confirmed_payment(obj, event_type):
+		# Never announce a paid invoice before ERPNext has a submitted
+		# Payment Entry. A provider error must force Stripe to retry.
+		outstanding = frappe.db.get_value("Sales Invoice", invoice_name, "outstanding_amount")
+		if outstanding is None:
+			frappe.throw("État de règlement de la facture indisponible.", frappe.ValidationError)
+		if flt(outstanding) <= 0:
+			# A second Stripe event may arrive after the first event settled this
+			# invoice. Do not create a second entry or send a second receipt.
+			# If it was paid elsewhere, do not claim a Stripe settlement.
+			return {"invoice": invoice_name, "payment_entry": None,
+				"skipped": True, "reason": "Invoice already settled; review if needed"}
 		pe = create_payment_entry_for_invoice(invoice_name, amount, reference_no)
+		if not pe:
+			frappe.throw("Paiement Stripe non comptabilisé : aucune confirmation client.",
+				frappe.ValidationError)
 		result["payment_entry"] = pe
 		update_invoice_stripe_fields(
 			invoice_name,
