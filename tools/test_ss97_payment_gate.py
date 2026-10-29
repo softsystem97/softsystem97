@@ -64,6 +64,44 @@ class PaymentGateTests(unittest.TestCase):
 
 
 
+
+class IssueInvoiceLinkTests(unittest.TestCase):
+    def run_gate(self, invoices, issue=None):
+        import sys
+        import types
+        from unittest.mock import patch
+        frappe = types.ModuleType("frappe")
+        frappe.get_meta = lambda doc: types.SimpleNamespace(
+            has_field=lambda field: field in (
+                ("customer",) if doc == "Issue" else
+                ("ss97_linked_issue", "ss97_payment_status")
+            )
+        )
+        frappe.db = types.SimpleNamespace(
+            get_value=lambda doctype, name, fields, as_dict=False:
+                issue if doctype == "Issue" else None,
+        )
+        frappe.get_all = lambda doctype, **kwargs: invoices if doctype == "Sales Invoice" else []
+        with patch.dict(sys.modules, {"frappe": frappe}):
+            return gate.issue_has_verified_stripe_payment("ISSUE-TEST")
+
+    def test_missing_invoice_link_denied(self):
+        self.assertFalse(self.run_gate([], {"name": "ISSUE-TEST", "customer": "SYNTHETIC"}))
+
+    def test_duplicate_invoice_link_denied(self):
+        rows = [{"name": "INV-A", "ss97_linked_issue": "ISSUE-TEST", "customer": "SYNTHETIC"},
+                {"name": "INV-B", "ss97_linked_issue": "ISSUE-TEST", "customer": "SYNTHETIC"}]
+        self.assertFalse(self.run_gate(rows, {"name": "ISSUE-TEST", "customer": "SYNTHETIC"}))
+
+    def test_wrong_customer_invoice_denied(self):
+        row = {"name": "INV-A", "ss97_linked_issue": "ISSUE-TEST", "customer": "OTHER"}
+        self.assertFalse(self.run_gate([row], {"name": "ISSUE-TEST", "customer": "SYNTHETIC"}))
+
+    def test_wrong_ticket_link_denied(self):
+        row = {"name": "INV-A", "ss97_linked_issue": "ISSUE-OTHER", "customer": "SYNTHETIC"}
+        self.assertFalse(self.run_gate([row], {"name": "ISSUE-TEST", "customer": "SYNTHETIC"}))
+
+
 class OptInGuardTests(unittest.TestCase):
     def setUp(self):
         import sys
