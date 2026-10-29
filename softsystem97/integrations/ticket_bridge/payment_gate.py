@@ -85,19 +85,35 @@ def issue_has_verified_stripe_payment(issue_name):
         return False
     issue_meta = frappe.get_meta('Issue')
     invoice_meta = frappe.get_meta('Sales Invoice')
-    if (not issue_meta.has_field('ss97_invoice_name')
+    if (not issue_meta.has_field('customer')
             or not invoice_meta.has_field('ss97_linked_issue')
             or not invoice_meta.has_field('ss97_payment_status')):
         return False
-    issue = frappe.db.get_value('Issue', issue_name, ['ss97_invoice_name', 'customer'], as_dict=True)
-    invoice_name = _value(issue, 'ss97_invoice_name')
-    if not issue or not isinstance(invoice_name, str) or not invoice_name:
+
+    # Production metadata audit: the confirmed link is on Sales Invoice,
+    # not Issue.ss97_invoice_name. Never assume a missing Issue custom field.
+    issue = frappe.db.get_value('Issue', issue_name, ['name', 'customer'], as_dict=True)
+    customer = _value(issue, 'customer')
+    if _value(issue, 'name') != issue_name or not customer:
         return False
-    invoice = frappe.db.get_value('Sales Invoice', invoice_name,
-        ['name', 'ss97_linked_issue', 'customer', 'currency', 'grand_total',
-         'outstanding_amount', 'docstatus', 'ss97_payment_status'], as_dict=True)
-    if (not invoice or _value(invoice, 'ss97_linked_issue') != issue_name
-            or _value(invoice, 'customer') != _value(issue, 'customer')):
+
+    # A payment must point to ONE unambiguous invoice for this exact ticket.
+    # Two matches are enough to deny, even if one is paid.
+    invoices = frappe.get_all(
+        'Sales Invoice',
+        filters={'ss97_linked_issue': issue_name},
+        fields=['name', 'ss97_linked_issue', 'customer', 'currency',
+                'grand_total', 'outstanding_amount', 'docstatus',
+                'ss97_payment_status'],
+        limit_page_length=2,
+    )
+    if len(invoices) != 1:
+        return False
+    invoice = invoices[0]
+    invoice_name = _value(invoice, 'name')
+    if (not invoice_name
+            or _value(invoice, 'ss97_linked_issue') != issue_name
+            or _value(invoice, 'customer') != customer):
         return False
 
     # Refunds and disputes must be assessed before release; a positive webhook
