@@ -76,6 +76,21 @@ class TestPaymentEligibility(unittest.TestCase):
             notification.assert_not_called()
 
 
+
+    def test_payment_entry_failure_never_marks_invoice_paid(self):
+        ctx = dict(object={'object': 'checkout.session', 'id': 'cs_synthetic',
+                           'payment_status': 'paid'}, event_type='checkout.session.completed',
+                   invoice='INV-TEST', amount=100, currency='EUR', customer='CUSTOMER')
+        with patch.object(payment_sync, 'verify_amount_currency', return_value=(True, '')), \
+             patch.object(payment_sync.frappe.db, 'get_value', return_value=100), \
+             patch.object(payment_sync, 'create_payment_entry_for_invoice', return_value=None), \
+             patch.object(payment_sync, 'update_invoice_stripe_fields') as update, \
+             patch.object(payment_sync, 'create_client_notification') as notify:
+            with self.assertRaises(payment_sync.frappe.ValidationError):
+                payment_sync.process_successful_payment(ctx)
+            update.assert_not_called()
+            notify.assert_not_called()
+
 class TestStripeWebhookAuthentication(unittest.TestCase):
     # Fixed synthetic test material, never site credentials or Stripe network.
     secret = 'ss97-synthetic-test-only'
