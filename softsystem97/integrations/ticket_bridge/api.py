@@ -11,7 +11,7 @@ from html import escape
 import frappe
 from frappe.utils import strip_html
 
-from . import historical, policy
+from . import historical, policy, payment_gate
 
 EVENT = 'SS97 Ticket Bridge Event'
 FIELDS = ['name', 'subject', 'status', 'modified', 'priority']
@@ -206,6 +206,7 @@ def assign_ticket(name, technician, request_id):
     if doc.status == 'Closed':
         frappe.throw('Un ticket clôturé ne peut pas être attribué.')
     previously_approved = policy.assigned(name, technician)
+    payment_gate.require_paid_intervention(doc.name, 'assign')
     business = historical.require_authorization('assign', doc, technician=technician)
     if historical.enabled() and doc.ss97_technician != technician:
         # A single historical assignee replaces prior approvals permanently.
@@ -248,6 +249,7 @@ def update_status(name, status, expected_modified, request_id):
         frappe.throw('Ticket modifié entre-temps. Rechargez avant de réessayer.', frappe.TimestampMismatchError)
     if status not in policy.TRANSITIONS.get(doc.status, []):
         frappe.throw('Transition de statut interdite.')
+    payment_gate.require_paid_intervention(doc.name, 'status')
     business = historical.require_authorization('status', doc,
         technician=frappe.session.user, target_status=status)
     doc.status = status  # The only writable Issue field exposed by this capability.
@@ -275,6 +277,8 @@ def add_intervention(name, content, request_id, audience='technician'):
         return previous  # Current authorization was rechecked before reading the receipt.
     if doc.status == 'Closed':
         frappe.throw('Ticket clôturé : commentaire refusé.')
+    if audience == 'technician':
+        payment_gate.require_paid_intervention(doc.name, 'intervention')
     business = historical.require_authorization('intervention', doc,
         technician=frappe.session.user) if audience == 'technician' else ''
     comment = doc.add_comment('Comment', escape(content))
