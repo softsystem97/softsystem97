@@ -63,5 +63,55 @@ class PaymentGateTests(unittest.TestCase):
         self.assertFalse(self.evaluate(events=[dict(self.event, event_type="invoice.payment_failed")]))
 
 
+
+class OptInGuardTests(unittest.TestCase):
+    def setUp(self):
+        import sys
+        import types
+        from unittest.mock import patch
+        self.sys = sys
+        self.types = types
+        self.patch = patch
+
+    def make_frappe(self, config):
+        module = self.types.ModuleType("frappe")
+        module.conf = {"ss97_ticket_bridge": config}
+        module.PermissionError = type("PermissionError", (Exception,), {})
+        def fail(message, exc):
+            raise exc(message)
+        module.throw = fail
+        return module
+
+    def test_flag_off_does_not_authorize(self):
+        fake = self.make_frappe({"enforce_paid_interventions": False})
+        with self.patch.dict(self.sys.modules, {"frappe": fake}):
+            self.assertFalse(gate.require_paid_intervention("ISSUE-1", "assign"))
+
+    def test_verified_payment_flag_on(self):
+        fake = self.make_frappe({"enforce_paid_interventions": True})
+        with self.patch.dict(self.sys.modules, {"frappe": fake}):
+            with self.patch.object(gate, "issue_has_verified_stripe_payment", return_value=True):
+                self.assertTrue(gate.require_paid_intervention("ISSUE-1", "intervention"))
+
+    def test_unpaid_flag_on_denied(self):
+        fake = self.make_frappe({"enforce_paid_interventions": True})
+        with self.patch.dict(self.sys.modules, {"frappe": fake}):
+            with self.patch.object(gate, "issue_has_verified_stripe_payment", return_value=False):
+                with self.assertRaises(fake.PermissionError):
+                    gate.require_paid_intervention("ISSUE-1", "status")
+
+    def test_exception_during_proof_denied(self):
+        fake = self.make_frappe({"enforce_paid_interventions": True})
+        with self.patch.dict(self.sys.modules, {"frappe": fake}):
+            with self.patch.object(gate, "issue_has_verified_stripe_payment", side_effect=RuntimeError("private")):
+                with self.assertRaises(fake.PermissionError):
+                    gate.require_paid_intervention("ISSUE-1", "assign")
+
+    def test_unknown_operation_denied(self):
+        fake = self.make_frappe({})
+        with self.patch.dict(self.sys.modules, {"frappe": fake}):
+            with self.assertRaises(fake.PermissionError):
+                gate.require_paid_intervention("ISSUE-1", "delete")
+
 if __name__ == "__main__":
     unittest.main()
