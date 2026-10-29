@@ -131,3 +131,37 @@ def issue_has_verified_stripe_payment(issue_name):
                 'parent': pe_name, 'parenttype': 'Payment Entry'},
                 fields=['reference_doctype', 'reference_name', 'allocated_amount'], limit_page_length=100)
     return invoice_is_fully_stripe_paid(invoice, events, payment_entries, allocations)
+
+
+def require_paid_intervention(issue_name, operation):
+    """Enforce paid-before-work only on an explicitly reviewed configuration.
+
+    The bridge is currently an opt-in replacement. The feature flag is OFF
+    unless ss97_ticket_bridge.enforce_paid_interventions is literal True.
+    This guard never grants access and never writes to site data. The caller
+    must independently enforce roles, ownership, workflow and assignment.
+    """
+    import frappe
+
+    if operation not in ('assign', 'status', 'intervention'):
+        frappe.throw('Operation de passerelle inconnue.', frappe.PermissionError)
+
+    config = frappe.conf.get('ss97_ticket_bridge') or {}
+    if not isinstance(config, dict):
+        frappe.throw('Configuration de la passerelle invalide.', frappe.PermissionError)
+    if config.get('enforce_paid_interventions') is not True:
+        return False  # Inactive until the predeployment review explicitly opts in.
+
+    # Authorization must NEVER be decided by an HTTP-supplied "paid" field.
+    # Missing site metadata, payment evidence or database permissions deny.
+    try:
+        verified = issue_has_verified_stripe_payment(issue_name)
+    except Exception:
+        verified = False
+
+    if verified is not True:
+        frappe.throw(
+            'Intervention bloquee : paiement LIVE de la facture non prouve.',
+            frappe.PermissionError,
+        )
+    return True
