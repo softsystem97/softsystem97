@@ -12,6 +12,13 @@ app_version = "1.0.0"
 
 required_apps = ["erpnext"]
 
+permission_query_conditions = {
+	"SS97 Client Notification": "softsystem97.portal.notifications.get_permission_query_conditions",
+}
+has_permission = {
+	"SS97 Client Notification": "softsystem97.portal.notifications.has_permission",
+}
+
 # --- API publique (whitelist) ---
 # Stripe webhook (POST, guest) :
 #   /api/method/softsystem97.integrations.stripe.webhook.stripe_webhook
@@ -44,3 +51,11 @@ fixtures = [
 ]
 
 # Permissions portail : les APIs whitelist filtrent strictement par frappe.session.user.
+
+# Only revokes existing bridge approvals; never creates an assignment/grant.
+doc_events = {
+    "ToDo": {
+        "on_update": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+        "on_trash": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+    },
+}

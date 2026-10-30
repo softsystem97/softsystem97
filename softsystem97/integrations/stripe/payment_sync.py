@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import time
 from typing import Any
 
@@ -13,7 +14,7 @@ from frappe.utils import cint, flt, now_datetime
 
 REPLAY_TOLERANCE_SECONDS = 300
 
-SUCCESS_STATUSES = frozenset({"paid", "no_payment_required", "succeeded"})
+SUCCESS_STATUSES = frozenset({"paid", "no_payment_required"})
 FAILURE_STATUSES = frozenset({"failed", "canceled", "payment_failed"})
 
 HANDLED_EVENT_TYPES = frozenset({
@@ -94,7 +95,7 @@ def verify_stripe_signature(payload: bytes, sig_header: str, secret: str, tolera
 	if timestamp is None or not signatures:
 		return False
 
-	if time.time() - timestamp > tolerance:
+	if abs(time.time() - timestamp) > tolerance:
 		return False
 
 	body = payload.decode("utf-8") if isinstance(payload, bytes) else str(payload)
@@ -165,7 +166,7 @@ def log_stripe_event(
 		doc.insert(ignore_permissions=True)
 		return doc.name
 	except Exception as exc:
-		frappe.log_error(title="SS97 Stripe Event log failed", message=frappe.get_traceback())
+		frappe.log_error(title="SS97 Stripe Event log failed", message=type(exc).__name__)
 		return None
 
 
@@ -230,11 +231,19 @@ def verify_amount_currency(invoice_name: str, amount: float, currency: str | Non
 	if not inv:
 		return False, "Facture introuvable"
 
-	if currency and inv.currency and currency.upper() != (inv.currency or "").upper():
+	if not isinstance(currency, str) or not currency.strip() or not inv.currency:
+		return False, "Devise de paiement ou de facture manquante"
+	if currency.upper() != inv.currency.upper():
 		return False, f"Devise incompatible ({currency} vs {inv.currency})"
 
 	expected = flt(inv.outstanding_amount or inv.grand_total)
-	if amount and expected and abs(amount - expected) > 0.05:
+	try:
+		amount = float(amount)
+	except (TypeError, ValueError, OverflowError):
+		return False, "Montant de paiement invalide"
+	if not math.isfinite(amount) or not math.isfinite(expected):
+		return False, "Montant de paiement ou de facture invalide"
+	if abs(amount - expected) > 0.05:
 		return False, f"Montant divergent ({amount} vs {expected})"
 	return True, ""
 
@@ -299,8 +308,8 @@ def create_payment_entry_for_invoice(invoice_name: str, amount: float, reference
 		if pe.docstatus == 0:
 			pe.submit()
 		return pe.name
-	except Exception:
-		frappe.log_error(title="SS97 Payment Entry failed", message=frappe.get_traceback())
+	except Exception as exc:
+		frappe.log_error(title="SS97 Payment Entry failed", message=type(exc).__name__)
 		return None
 
 
@@ -315,21 +324,19 @@ def add_invoice_comment(invoice_name: str, content: str) -> None:
 			"reference_name": invoice_name,
 			"content": content,
 		}).insert(ignore_permissions=True)
-	except Exception:
-		frappe.log_error(title="SS97 invoice comment failed", message=frappe.get_traceback())
+	except Exception as exc:
+		frappe.log_error(title="SS97 invoice comment failed", message=type(exc).__name__)
 
 
 def get_portal_user_for_customer(customer: str | None) -> str | None:
 	if not customer:
 		return None
-	users = frappe.get_all("Portal User", filters={"parent": customer}, pluck="user", limit=5)
+	from softsystem97.integrations.ticket_bridge.policy import client_customer_for_user
+
+	users = frappe.get_all("Portal User", filters={"parent": customer,
+		"parenttype": "Customer", "parentfield": "portal_users"}, pluck="user")
 	for user in users:
-		if user and user != "Guest":
-			return user
-	email = frappe.db.get_value("Customer", customer, "email_id")
-	if email:
-		user = frappe.db.get_value("User", {"email": email, "enabled": 1}, "name")
-		if user:
+		if client_customer_for_user(user) == customer:
 			return user
 	return None
 
@@ -359,8 +366,8 @@ def create_client_notification(
 				"reference_name": document_name,
 			}).insert(ignore_permissions=True)
 			return
-		except Exception:
-			frappe.log_error(title="SS97 Client Notification failed", message=frappe.get_traceback())
+		except Exception as exc:
+			frappe.log_error(title="SS97 Client Notification failed", message=type(exc).__name__)
 
 	try:
 		frappe.get_doc({
@@ -372,8 +379,8 @@ def create_client_notification(
 			"document_type": document_type or "Sales Invoice",
 			"document_name": document_name or "",
 		}).insert(ignore_permissions=True)
-	except Exception:
-		frappe.log_error(title="SS97 Notification Log failed", message=frappe.get_traceback())
+	except Exception as exc:
+		frappe.log_error(title="SS97 Notification Log failed", message=type(exc).__name__)
 
 
 def extract_event_context(event: dict[str, Any]) -> dict[str, Any]:
@@ -421,11 +428,12 @@ def extract_event_context(event: dict[str, Any]) -> dict[str, Any]:
 
 def is_confirmed_payment(obj: dict[str, Any], event_type: str) -> bool:
 	if event_type == "checkout.session.completed":
-		return obj.get("payment_status") in SUCCESS_STATUSES or obj.get("status") == "complete"
+		# Checkout completion also occurs for delayed methods still awaiting payment.
+		return obj.get("payment_status") in SUCCESS_STATUSES
 	if event_type == "payment_intent.succeeded":
 		return obj.get("status") == "succeeded"
 	if event_type == "invoice.paid":
-		return obj.get("status") == "paid" or flt(obj.get("amount_paid")) > 0
+		return obj.get("status") == "paid"
 	return False
 
 
@@ -452,7 +460,9 @@ def process_successful_payment(ctx: dict[str, Any]) -> dict[str, Any]:
 	if invoice_name:
 		ok, warn = verify_amount_currency(invoice_name, amount, currency)
 		if not ok:
-			result["amount_warning"] = warn
+			# A failed existing check must stop confirmation, not merely annotate it.
+			# Do not include raw invoice/payment values in the public error.
+			frappe.throw("Montant ou devise du paiement incompatible avec la facture.", frappe.ValidationError)
 
 	session_id = obj.get("id") if obj.get("object") == "checkout.session" else obj.get("session") or None
 	payment_intent = obj.get("payment_intent") or (
@@ -465,7 +475,21 @@ def process_successful_payment(ctx: dict[str, Any]) -> dict[str, Any]:
 	reference_no = payment_intent or session_id or obj.get("id") or ""
 
 	if invoice_name and is_confirmed_payment(obj, event_type):
+		# Never announce a paid invoice before ERPNext has a submitted
+		# Payment Entry. A provider error must force Stripe to retry.
+		outstanding = frappe.db.get_value("Sales Invoice", invoice_name, "outstanding_amount")
+		if outstanding is None:
+			frappe.throw("État de règlement de la facture indisponible.", frappe.ValidationError)
+		if flt(outstanding) <= 0:
+			# A second Stripe event may arrive after the first event settled this
+			# invoice. Do not create a second entry or send a second receipt.
+			# If it was paid elsewhere, do not claim a Stripe settlement.
+			return {"invoice": invoice_name, "payment_entry": None,
+				"skipped": True, "reason": "Invoice already settled; review if needed"}
 		pe = create_payment_entry_for_invoice(invoice_name, amount, reference_no)
+		if not pe:
+			frappe.throw("Paiement Stripe non comptabilisé : aucune confirmation client.",
+				frappe.ValidationError)
 		result["payment_entry"] = pe
 		update_invoice_stripe_fields(
 			invoice_name,
