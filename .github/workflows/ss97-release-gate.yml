@@ -1,0 +1,50 @@
+name: SS97 - Gate integrite paiements et techniciens
+
+on:
+  push:
+    branches:
+      - feature/ss97-final-integration
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ss97-release-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-code:
+    name: Validation automatique - sans encaissement
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Recuperer la version GitHub
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compilation des modules du projet
+        run: python -m compileall -q softsystem97/integrations
+
+      - name: Controle facture - ticket - technicien
+        run: python -m unittest discover -s tools -p 'test_ss97_payment_gate.py' -v
+
+      - name: Controle comptable Stripe hors Frappe
+        run: python -m unittest discover -s tools -p 'test_ss97_stripe_accounting_offline.py' -v
+
+      - name: Controle de preconditions de livraison
+        run: python -m unittest discover -s tools -p 'test_ss97_readiness.py' -v
+
+      - name: Etat de livraison
+        run: |
+          echo "Tests statiques/hors ligne executes."
+          echo "Aucun webhook Stripe configure par ce workflow."
+          echo "Aucun paiement LIVE ni deploiement Frappe Cloud effectue."
+          echo "Tests reel ERPNext et configurations LIVE obligatoires avant publication."
