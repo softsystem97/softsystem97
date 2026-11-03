@@ -29,6 +29,9 @@ def main():
     assets=Path('assets');assets.mkdir(exist_ok=True)
     (assets/'assets.json').write_text('{}')
     frappe.init('test_stripe');frappe.connect();frappe.set_user('Administrator')
+    tls=frappe.db.sql("SHOW SESSION STATUS LIKE 'Ssl_cipher'")
+    if not tls or not tls[0][1]:
+        raise RuntimeError('CI database connection must use TLS')
     from erpnext.setup.setup_wizard.operations.install_fixtures import install
     install('France')
     frappe.db.commit();frappe.destroy()

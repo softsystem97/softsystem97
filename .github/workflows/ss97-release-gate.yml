@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 25
     services:
       mariadb:
-        image: mariadb:10.11
+        image: mariadb:11.4
         env:
           MARIADB_ROOT_PASSWORD: ss97-disposable-ci-only
         ports:
