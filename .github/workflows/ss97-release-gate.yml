@@ -61,15 +61,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
-      mariadb:
-        image: mariadb:11.4
-        env:
-          MARIADB_ROOT_PASSWORD: ss97-disposable-ci-only
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=10s --health-timeout=5s --health-retries=10
       redis:
         image: redis:7
         ports:
@@ -98,6 +89,10 @@ jobs:
           python -m pip install uv
           uv venv audit-bench/env
           uv pip install --python audit-bench/env/bin/python -e source/frappe -e source/erpnext -e source/softsystem97
+      - name: Demarrer MariaDB avec TLS verifie
+        env:
+          SS97_CI_DB_PASSWORD: ss97-disposable-ci-only
+        run: source/softsystem97/tools/start_stripe_ci_database.sh
       - name: Preparer le bench jetable
         run: |
           mkdir -p audit-bench/sites audit-bench/apps audit-bench/logs
@@ -105,9 +100,15 @@ jobs:
           ln -s ../../source/erpnext audit-bench/apps/erpnext
           ln -s ../../source/softsystem97 audit-bench/apps/softsystem97
           printf 'frappe\nerpnext\nsoftsystem97\n' > audit-bench/sites/apps.txt
-          cat > audit-bench/sites/common_site_config.json <<'JSON'
-          {"db_host":"127.0.0.1","db_port":3306,"redis_cache":"redis://127.0.0.1:6379/0","redis_queue":"redis://127.0.0.1:6379/1","redis_socketio":"redis://127.0.0.1:6379/2"}
-          JSON
+          python - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          config = {"db_host":"127.0.0.1","db_port":3306,"use_mysqlclient":0,
+              "db_ssl_ca":os.environ["RUNNER_TEMP"]+"/ss97-db-tls/ca.pem","db_ssl_check_hostname":True,
+              "redis_cache":"redis://127.0.0.1:6379/0","redis_queue":"redis://127.0.0.1:6379/1",
+              "redis_socketio":"redis://127.0.0.1:6379/2"}
+          Path("audit-bench/sites/common_site_config.json").write_text(json.dumps(config))
+          PYTHON
       - name: Installer le site et executer les tests Frappe
         working-directory: audit-bench
         env:
@@ -115,3 +116,9 @@ jobs:
         run: |
           env/bin/python ../source/softsystem97/tools/prepare_stripe_ci_site.py
           env/bin/python ../source/softsystem97/tools/run_local_tests.py --site test_stripe
+      - name: Nettoyer la base jetable
+        if: always()
+        run: |
+          docker rm --force ss97-db || true
+          sudo rm -f /etc/mysql/conf.d/ss97-ci-tls.cnf
+          sudo rm -rf "${RUNNER_TEMP}/ss97-db-tls"
