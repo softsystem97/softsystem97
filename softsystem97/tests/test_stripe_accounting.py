@@ -250,3 +250,38 @@ class TestStripeAccounting(unittest.TestCase):
             frappe.set_user('Administrator')
             if old_host is None:frappe.conf.pop('host_name',None)
             else:frappe.conf.host_name=old_host
+
+    def _legacy_confirmation(self, *, user=None, method='POST', ticket=None):
+        from frappe.utils.safe_exec import safe_exec
+        from softsystem97.integrations.stripe.runtime_install import CONFIRM_PAYMENT_SCRIPT
+        frappe.set_user(user or self.client)
+        request = SimpleNamespace(method=method, path='/api/method/ss97_ticket_confirm_payment')
+        response = frappe._dict(http_status_code=200)
+        arguments = frappe._dict(ticket=ticket or self.issue.name,
+            session_id='cs_live_untrusted_browser_value', invoice='UNTRUSTED-INVOICE', amount=1)
+        with patch.object(frappe.local,'request',request,create=True), \
+             patch.object(frappe.local,'response',response,create=True), \
+             patch.object(frappe.local,'form_dict',arguments,create=True):
+            safe_exec(CONFIRM_PAYMENT_SCRIPT, script_filename='SS97 legacy confirmation regression')
+            return response.message
+
+    def test_legacy_redirect_cannot_forge_payment_but_real_posting_confirms(self):
+        # Regression: the deployed old API accepted browser hints and db_set paid.
+        before = frappe.db.count('Payment Entry')
+        self.assertFalse(self._legacy_confirmation()['ok'])
+        self.assertEqual(frappe.db.count('Payment Entry'), before)
+        self.assertEqual(frappe.db.get_value('Sales Invoice',self.invoice.name,'outstanding_amount'),100)
+        self.deliver(self.event())
+        self.assertTrue(self._legacy_confirmation()['ok'])
+        self.assertEqual(frappe.db.count('Payment Entry'), before + 1)
+
+    def test_legacy_confirmation_requires_post_session_and_ticket_ownership(self):
+        with self.assertRaises(frappe.PermissionError):
+            self._legacy_confirmation(method='GET')
+        with self.assertRaises(frappe.PermissionError):
+            self._legacy_confirmation(user='Guest')
+        frappe.set_user('Administrator')
+        foreign = frappe.get_doc(dict(doctype='Issue',subject='Other owner',raised_by=self.service,
+            customer=self.customer,status='Open')).insert()
+        with self.assertRaises(frappe.PermissionError):
+            self._legacy_confirmation(ticket=foreign.name)
