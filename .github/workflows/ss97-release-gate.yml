@@ -49,6 +49,9 @@ jobs:
       - name: Webhooks, configuration et reprises Stripe
         run: python -m unittest discover -s tools -p 'test_stripe_hardening.py' -v
 
+      - name: Paiement du portail sans confiance dans le retour navigateur
+        run: node tools/test_stripe_live_portal.cjs
+
       - name: Etat de livraison
         run: |
           echo "Tests statiques/hors ligne executes."
@@ -109,7 +112,8 @@ jobs:
           config = {"db_host":"127.0.0.1","db_port":3306,"use_mysqlclient":0,
               "db_ssl_ca":os.environ["RUNNER_TEMP"]+"/ss97-db-tls/ca.pem","db_ssl_check_hostname":True,
               "redis_cache":"redis://127.0.0.1:6379/0","redis_queue":"redis://127.0.0.1:6379/1",
-              "redis_socketio":"redis://127.0.0.1:6379/2"}
+              "redis_socketio":"redis://127.0.0.1:6379/2",
+              "server_script_enabled":1}  # Server Script regressions on this disposable bench only.
           Path("audit-bench/sites/common_site_config.json").write_text(json.dumps(config))
           PYTHON
       - name: Installer le site et executer les tests Frappe
