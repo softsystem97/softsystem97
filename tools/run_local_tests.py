@@ -19,6 +19,9 @@ def main():
     frappe.connect()
     if not frappe.conf.allow_tests:
         raise RuntimeError('allow_tests required')
+    frappe.conf.ss97_stripe_test_site = True
+    frappe.conf.STRIPE_MODE = 'test'
+    frappe.conf.PAYMENTS_LIVE_ENABLED = 0
     frappe.flags.in_test = True
     old_in_test = frappe.in_test
     frappe.in_test = True
@@ -29,7 +32,8 @@ def main():
             'softsystem97.tests.test_ticket_bridge',
             'softsystem97.tests.test_historical_lifecycle',
             'softsystem97.tests.test_payment_eligibility',
-            'softsystem97.tests.test_stripe_ledger'])
+            'softsystem97.tests.test_stripe_ledger',
+            'softsystem97.tests.test_stripe_accounting'])
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
     finally:

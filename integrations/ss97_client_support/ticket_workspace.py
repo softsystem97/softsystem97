@@ -297,14 +297,8 @@ def ticket_detail_body_and_js() -> tuple[str, str]:
 
   function stOf(d){ return String(d.ss97_ticket_status||d.status||''); }
   function isReallyPaid(d){
-    /* Ne jamais utiliser le seul montant facturé : ce n'est pas un paiement. */
-    var paid=String(d.ss97_payment_status||'').toLowerCase();
-    var st=stOf(d).toLowerCase();
-    /* A reference or the substring 'confirm' is not payment confirmation. */
-    if(['a_payer','unpaid','pending','failed','cancelled','refunded','non confirmé','non confirme'].indexOf(paid)>=0) return false;
-    if(['paid','payé','paye','confirmed','confirmé','confirme','paiement confirmé','paiement confirme'].indexOf(paid)>=0) return true;
-    if(/^(paiement confirmé|paiement confirme|payé|paye)$/.test(st)) return true;
-    return false;
+    /* Server proof: submitted ERPNext entry + authenticated event + exact ticket. */
+    return !!d && d.ss97_payment_verified===true;
   }
   function isValidated(d){
     var st=stOf(d);
@@ -590,16 +584,23 @@ def ticket_detail_body_and_js() -> tuple[str, str]:
     if(isReallyPaid(DOC)){ setPayStatus(false,'Ce ticket est déjà payé.'); return; }
     if(!isPaymentRequested(DOC)){ setPayStatus(false,'Paiement non encore demandé par l\'administrateur.'); return; }
     var btn=document.getElementById('btn-pay-now');
-    /* Ne jamais appeler les Server Scripts Cloud (get_attr → Message / Not permitted). */
-    var url=buildPayUrl(DOC);
-    if(!url && SS97_PAY_LINK) url=buildPayUrl({});
-    if(url && url.indexOf('http')===0){
-      if(btn){ btn.disabled=true; btn.textContent='Redirection…'; }
-      location.href=url;
-      return;
-    }
-    if(btn){ btn.disabled=false; btn.textContent='Payer maintenant'; }
-    setPayStatus(false,'Lien de paiement indisponible. Contactez le support SoftSystem97.');
+    if(btn){ btn.disabled=true; btn.textContent='Préparation…'; }
+    frappe.call({
+      method:'softsystem97.integrations.stripe.checkout.create_ticket_checkout',
+      type:'POST', args:{issue:name},
+      callback:function(r){
+        var m=(r&&r.message)||{};
+        if(m.checkout_url && /^https:\/\/checkout\.stripe\.com\//.test(m.checkout_url)){
+          location.href=m.checkout_url; return;
+        }
+        if(btn){ btn.disabled=false; btn.textContent='Payer maintenant'; }
+        setPayStatus(false,'Session de paiement indisponible. Contactez le support.');
+      },
+      error:function(){
+        if(btn){ btn.disabled=false; btn.textContent='Payer maintenant'; }
+        setPayStatus(false,'Paiement indisponible : facture ou configuration à vérifier.');
+      }
+    });
   }
 
   function maybeConfirmReturn(){
@@ -614,8 +615,8 @@ def ticket_detail_body_and_js() -> tuple[str, str]:
     if(ticketQ && name && ticketQ!==name) return;
     setPayStatus(true,'Vérification du paiement auprès du serveur…');
     frappe.call({
-      method:'ss97_ticket_confirm_payment',
-      args:{ session_id:sid, ticket:name||ticketQ, invoice:param('invoice') },
+      method:'softsystem97.integrations.stripe.checkout.get_ticket_payment_status',
+      args:{ issue:name||ticketQ },
       callback:function(r){
         var m=(r&&r.message)||{};
         if(m.ok){
@@ -992,6 +993,18 @@ def ticket_detail_body_and_js() -> tuple[str, str]:
   }
 
   function applyTicketDoc(d){
+    if(sessionUser()!=='Guest' && !Object.prototype.hasOwnProperty.call(d,'ss97_payment_verified')){
+      frappe.call({
+        method:'softsystem97.integrations.stripe.checkout.get_ticket_payment_status',
+        args:{issue:name},
+        callback:function(r){
+          d.ss97_payment_verified=!!(r.message&&r.message.ok===true); applyTicketDoc(d);
+        },
+        error:function(){ d.ss97_payment_verified=false; applyTicketDoc(d); }
+      });
+      return;
+    }
+
     if(!canAccess(d)){
       clearTicket('Accès refusé — ce ticket ne vous appartient pas.');
       ['tk-client','tk-tech','tk-msgs','tk-interv','tk-files','tk-pay','tk-report','tk-hist'].forEach(function(id){

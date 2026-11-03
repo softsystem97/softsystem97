@@ -53,6 +53,9 @@ class AccountingWithoutFrappeTests(unittest.TestCase):
             frappe=self.frappe,
             flt=lambda value: float(value or 0),
             verify_amount_currency=Mock(return_value=(True, "")),
+            assert_accounting_environment=lambda live: None,
+            lock_invoice=lambda name: SimpleNamespace(outstanding_amount=self.database.get_value(), ss97_payment_status="pending"),
+            payment_intent_id=lambda obj: "pi_synthetic",
             is_confirmed_payment=lambda obj, kind: (
                 kind == "checkout.session.completed" and obj.get("payment_status") == "paid"),
             generate_receipt_ref=lambda: "SYNTHETIC-RECEIPT",

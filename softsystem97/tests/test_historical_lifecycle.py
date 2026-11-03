@@ -114,9 +114,12 @@ class TestHistoricalLifecycle(unittest.TestCase):
         frappe.set_user(self.tech)
         self.assertEqual(api.list_tickets()['tickets'][0].name, ticket['name'])
         api.add_intervention(ticket['name'], 'Synthetic intervention', 'work')
-        for status in ['Resolved', 'Closed']:
+        for status in ['Replied', 'Resolved']:
             current = api.get_ticket(ticket['name'])['ticket']
             api.update_status(ticket['name'], status, current['modified'], status)
+        with self.assertRaises(frappe.PermissionError): api.get_ticket(ticket['name'])
+        frappe.set_user('Administrator')
+        doc=frappe.get_doc('Issue',ticket['name']);doc.status='Closed';doc.save()
         frappe.set_user(self.client)
         result = api.get_ticket(ticket['name'], 'client')
         self.assertEqual(result['ticket']['status'], 'Closed')

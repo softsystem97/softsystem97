@@ -40,9 +40,16 @@ def get_readiness():
         "production_portal_tested": approvals.get("production_portal_tested") is True,
         "stripe_webhook_delivery_verified": approvals.get("stripe_webhook_delivery_verified") is True,
         "stripe_accounting_reconciled": approvals.get("stripe_accounting_reconciled") is True,
+        "stripe_configuration_valid": False,
+        "support_writer_valid": False,
     }
 
     try:
+        writer = config.get("writer_user")
+        checks["support_writer_valid"] = bool(writer and writer not in ("Administrator", "Guest")
+            and frappe.db.get_value("User", writer, "enabled")
+            and frappe.get_cached_value("User", writer, "user_type") == "System User"
+            and "Support Team" in frappe.get_roles(writer))
         checks["technician_role_exists"] = bool(
             frappe.db.exists("Role", {"name": "SS97 Technician", "disabled": 0})
         )
@@ -86,6 +93,11 @@ def get_readiness():
                 and approvals.get("real_authorizer_verified") is True
             )
 
+        try:
+            checks["stripe_configuration_valid"] = all(_stripe_checks().values())
+        except Exception:
+            checks["stripe_configuration_valid"] = False
+
     except Exception:
         return {
             "state": "BLOCKED",
@@ -108,3 +120,42 @@ def get_readiness():
         "blockers": blockers,
         "note": "Readiness only. Does not deploy, configure Stripe, or authorize payments.",
     }
+
+
+def _stripe_checks():
+    from softsystem97.integrations.stripe import payment_sync
+    from softsystem97.integrations.stripe.settings import config_value, password, accounting_user, is_test_site
+
+    mode = payment_sync.stripe_mode()
+    secret = payment_sync.resolve_webhook_secret(mode == "live")
+    key = password("live_secret_key" if mode == "live" else "test_secret_key",
+        "STRIPE_SECRET_KEY" if mode == "live" else "STRIPE_TEST_SECRET_KEY")
+    result = {
+        "live_mode": mode == "live",
+        "live_enabled": payment_sync.payments_live_enabled(),
+        "test_writes_disabled": not is_test_site(),
+        "webhook_secret_present": bool(secret),
+        "api_key_type_valid": bool(key and key.startswith(("sk_live_", "rk_live_"))),
+        "clearing_account_configured": bool(config_value("clearing_account")),
+        "service_permissions_valid": False,
+        "transaction_field_present": frappe.get_meta("Payment Entry").has_field("ss97_stripe_transaction_id"),
+    }
+    try:
+        with accounting_user():
+            result["service_permissions_valid"] = all(
+                frappe.has_permission("Payment Entry", ptype=permission) for permission in ("create", "submit"))
+    except frappe.PermissionError:
+        pass
+    return result
+
+
+@frappe.whitelist(methods=["GET"])
+def get_stripe_readiness():
+    """No secret, key fragment, arbitrary URL or approval supplied by the caller."""
+    frappe.only_for("System Manager")
+    try:
+        checks = _stripe_checks()
+    except Exception:
+        return {"production_ready": False, "reason": "STRIPE_CONFIGURATION_UNAVAILABLE"}
+    return {"production_ready": all(checks.values()), "checks": checks,
+        "note": "Configuration only; real signed delivery and accounting reconciliation remain required."}

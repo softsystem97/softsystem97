@@ -392,8 +392,9 @@ for (const state of ['non confirmé','unconfirmed','pending','refunded','unpaid'
  assert.equal(isReallyPaid({ss97_payment_status:state,ss97_payment_ref:'checkout-ref'}),false);
 }
 assert.equal(isReallyPaid({ss97_payment_ref:'checkout-ref'}),false);
-assert.equal(isReallyPaid({ss97_payment_status:'paid'}),true);
-assert.equal(isReallyPaid({ss97_ticket_status:'Paiement confirmé'}),true);
+assert.equal(isReallyPaid({ss97_payment_status:'paid'}),false);
+assert.equal(isReallyPaid({ss97_ticket_status:'Paiement confirmé'}),false);
+assert.equal(isReallyPaid({ss97_payment_verified:true}),true);
 assert.equal(isReallyPaid({ss97_ticket_status:'Paiement confirmé puis annulé'}),false);
 '''
         result = subprocess.run(['node', '-e', program], capture_output=True, text=True)

@@ -188,7 +188,8 @@ def create_ticket(subject, description, request_id):
     doc = frappe.get_doc(dict(doctype='Issue', subject=subject, description=escape(description),
                              customer=client, raised_by=user, status='Open'))
     # Client/customer are session-derived. No user-supplied fields, assignment or identity.
-    doc.insert(ignore_permissions=True)
+    with policy.native_issue_writer():
+        doc.insert()
     _notify(doc, [user], 'Confirmation d’ouverture du ticket')
     return _finish(event, doc, 'Ticket ouvert' + business, _result(doc, 'client'))
 
@@ -253,7 +254,8 @@ def update_status(name, status, expected_modified, request_id):
     business = historical.require_authorization('status', doc,
         technician=frappe.session.user, target_status=status)
     doc.status = status  # The only writable Issue field exposed by this capability.
-    doc.save(ignore_permissions=True)
+    with policy.native_issue_writer():
+        doc.save()
     doc.add_comment('Comment', escape(f'Statut : {status}'))
     users = [r.allocated_to for r in frappe.get_all('ToDo', filters={
         'reference_type': 'Issue', 'reference_name': name, 'status': 'Open'}, fields=['allocated_to'])
