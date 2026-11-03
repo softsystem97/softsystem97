@@ -12,12 +12,12 @@ from softsystem97.integrations.stripe import payment_sync, webhook
 
 class TestPaymentEligibility(unittest.TestCase):
     def test_checkout_complete_does_not_mean_paid(self):
-        for payment_status in ['unpaid', 'failed', 'canceled', '', None]:
+        for payment_status in ['unpaid', 'failed', 'canceled', 'no_payment_required', '', None]:
             with self.subTest(payment_status=payment_status):
                 self.assertFalse(payment_sync.is_confirmed_payment(
                     {'status': 'complete', 'payment_status': payment_status},
                     'checkout.session.completed'))
-        for payment_status in ['paid', 'no_payment_required']:
+        for payment_status in ['paid']:
             self.assertTrue(payment_sync.is_confirmed_payment(
                 {'status': 'complete', 'payment_status': payment_status}, 'checkout.session.completed'))
         self.assertFalse(payment_sync.is_confirmed_payment(
@@ -38,7 +38,8 @@ class TestPaymentEligibility(unittest.TestCase):
                     patch.object(payment_sync, 'process_successful_payment') as paid, \
                     patch.object(payment_sync, 'process_failed_payment', return_value={'failed': True}) as failed, \
                     patch.object(payment_sync, 'process_refund', return_value={'refund': True}) as refund:
-                result = payment_sync.dispatch_stripe_event({'type': kind})
+                shape = {'object': {'checkout': 'checkout.session'}.get(kind.split('.')[0], kind.split('.')[0])}
+                result = payment_sync.dispatch_stripe_event({'type': kind, 'data': {'object': shape}})
                 paid.assert_not_called()
                 self.assertEqual(failed.call_count, int(expected == 'failed'))
                 self.assertEqual(refund.call_count, int(expected == 'refund'))
@@ -64,7 +65,8 @@ class TestPaymentEligibility(unittest.TestCase):
         context = dict(object={'object': 'checkout.session', 'id': 'cs_synthetic',
                               'payment_status': 'paid'}, event_type='checkout.session.completed',
                        invoice='SYNTHETIC', amount=10, currency='USD', customer='SYNTHETIC-CUSTOMER')
-        with patch.object(payment_sync, 'verify_amount_currency', return_value=(False, 'private values')), \
+        with patch.object(payment_sync, 'lock_invoice', return_value=frappe._dict(outstanding_amount=100, ss97_payment_status='pending')), \
+                patch.object(payment_sync, 'verify_amount_currency', return_value=(False, 'private values')), \
                 patch.object(payment_sync, 'create_payment_entry_for_invoice') as entry, \
                 patch.object(payment_sync, 'update_invoice_stripe_fields') as update, \
                 patch.object(payment_sync, 'create_client_notification') as notification:
@@ -81,7 +83,9 @@ class TestPaymentEligibility(unittest.TestCase):
         ctx = dict(object={'object': 'checkout.session', 'id': 'cs_synthetic',
                            'payment_status': 'paid'}, event_type='checkout.session.completed',
                    invoice='INV-TEST', amount=100, currency='EUR', customer='CUSTOMER')
-        with patch.object(payment_sync, 'verify_amount_currency', return_value=(True, '')), \
+        with patch.object(payment_sync, 'lock_invoice', return_value=frappe._dict(outstanding_amount=100, ss97_payment_status='pending')), \
+             patch.object(payment_sync, 'payment_intent_id', return_value='pi_synthetic'), \
+             patch.object(payment_sync, 'verify_amount_currency', return_value=(True, '')), \
              patch.object(payment_sync.frappe.db, 'get_value', return_value=100), \
              patch.object(payment_sync, 'create_payment_entry_for_invoice', return_value=None), \
              patch.object(payment_sync, 'update_invoice_stripe_fields') as update, \

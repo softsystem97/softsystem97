@@ -7,7 +7,8 @@ from decimal import Decimal, InvalidOperation
 import json
 
 SUCCESS_EVENT_TYPES = (
-    'checkout.session.completed', 'payment_intent.succeeded', 'invoice.paid',
+    'checkout.session.completed', 'checkout.session.async_payment_succeeded',
+    'payment_intent.succeeded', 'invoice.paid',
 )
 
 
@@ -23,7 +24,7 @@ def _value(row, key, default=None):
     return row.get(key, default) if isinstance(row, dict) else getattr(row, key, default)
 
 
-def invoice_is_fully_stripe_paid(invoice, events, payment_entries, allocations):
+def invoice_is_fully_stripe_paid(invoice, events, payment_entries, allocations, *, livemode=True):
     """No trust in a client flag/redirect; only submitted, linked Stripe PE sums.
 
     Parameters are server-fetched records, never HTTP-supplied evidence.
@@ -31,14 +32,14 @@ def invoice_is_fully_stripe_paid(invoice, events, payment_entries, allocations):
     """
     total = _amount(_value(invoice, 'grand_total'))
     due = _amount(_value(invoice, 'outstanding_amount'))
-    if (total is None or due is None or total <= 0 or due < 0 or due > Decimal('0.01')
+    if (total is None or due is None or total <= 0 or due != 0
             or _value(invoice, 'docstatus') != 1 or not _value(invoice, 'customer')
             or not _value(invoice, 'currency') or _value(invoice, 'ss97_payment_status') != 'paid'):
         return False
     received = Decimal('0')
     used = set()
     for event in events:
-        if (_value(event, 'status') != 'Success' or _value(event, 'livemode') not in (1, True)
+        if (_value(event, 'status') != 'Success' or _value(event, 'livemode') != int(livemode)
                 or _value(event, 'event_type') not in SUCCESS_EVENT_TYPES
                 or str(_value(event, 'currency') or '').upper() != str(_value(invoice, 'currency')).upper()):
             continue
@@ -116,16 +117,22 @@ def issue_has_verified_stripe_payment(issue_name):
             or _value(invoice, 'customer') != customer):
         return False
 
+    from softsystem97.integrations.stripe.settings import is_test_site
+    from softsystem97.integrations.stripe.payment_sync import stripe_mode
+    livemode = stripe_mode() == 'live'
+    if not livemode and not is_test_site():
+        return False
+
     # Refunds and disputes must be assessed before release; a positive webhook
     # followed by a refund cannot justify a future technician intervention.
     canceled = frappe.get_all('SS97 Stripe Event', filters={
-        'invoice': invoice_name, 'status': 'Success', 'livemode': 1,
+        'invoice': invoice_name, 'status': ['in', ['Pending', 'Failed', 'Success']], 'livemode': int(livemode),
         'event_type': ['in', ['charge.refunded', 'charge.dispute.created']],
     }, fields=['name'], limit_page_length=1)
     if canceled:
         return False
     events = frappe.get_all('SS97 Stripe Event', filters={
-        'invoice': invoice_name, 'status': 'Success', 'livemode': 1,
+        'invoice': invoice_name, 'status': 'Success', 'livemode': int(livemode),
         'event_type': ['in', list(SUCCESS_EVENT_TYPES)],
     }, fields=['status', 'livemode', 'event_type', 'currency', 'result'], limit_page_length=100)
     payment_names = set()
@@ -146,7 +153,7 @@ def issue_has_verified_stripe_payment(issue_name):
             allocations[pe_name] = frappe.get_all('Payment Entry Reference', filters={
                 'parent': pe_name, 'parenttype': 'Payment Entry'},
                 fields=['reference_doctype', 'reference_name', 'allocated_amount'], limit_page_length=100)
-    return invoice_is_fully_stripe_paid(invoice, events, payment_entries, allocations)
+    return invoice_is_fully_stripe_paid(invoice, events, payment_entries, allocations, livemode=livemode)
 
 
 def require_paid_intervention(issue_name, operation):
@@ -177,7 +184,34 @@ def require_paid_intervention(issue_name, operation):
 
     if verified is not True:
         frappe.throw(
-            'Intervention bloquee : paiement LIVE de la facture non prouve.',
+            'Intervention bloquee : règlement Stripe de la facture non prouvé.',
             frappe.PermissionError,
         )
     return True
+
+
+def validate_paid_issue(doc, method=None):
+    """Native REST/Desk writes cannot bypass the gate on invoice-linked tickets.
+
+    This only denies changes; native permissions and assignment still apply.
+    Existing unlinked tickets keep their historical workflow.
+    """
+    import frappe
+    config = frappe.conf.get('ss97_ticket_bridge') or {}
+    if not isinstance(config, dict):
+        frappe.throw('Configuration de paiement invalide.', frappe.PermissionError)
+    previous = doc.get_doc_before_save()
+    changed = previous and any(doc.get(field) != previous.get(field)
+        for field in ('status', 'ss97_technician', 'ss97_ticket_status',
+                      'ss97_intervention_status', 'ss97_intervention_started_on'))
+    if not changed:
+        return
+    if not frappe.get_meta('Sales Invoice').has_field('ss97_linked_issue'):
+        return  # Legacy unlinked installations must migrate before enabling Stripe.
+    if frappe.db.exists('Sales Invoice', {'ss97_linked_issue': doc.name}):
+        try:
+            verified = issue_has_verified_stripe_payment(doc.name)
+        except Exception:
+            verified = False
+        if verified is not True:
+            frappe.throw('Intervention bloquée : facture liée non réglée par Stripe.', frappe.PermissionError)

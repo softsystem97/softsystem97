@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/ss97-final-integration
   workflow_dispatch:
 
 permissions:
@@ -30,6 +31,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Refuser les secrets Stripe suivis par Git
+        run: python tools/check_stripe_secrets.py
+
       - name: Compilation des modules du projet
         run: python -m compileall -q softsystem97/integrations
 
@@ -42,9 +46,80 @@ jobs:
       - name: Controle de preconditions de livraison
         run: python -m unittest discover -s tools -p 'test_ss97_readiness.py' -v
 
+      - name: Webhooks, configuration et reprises Stripe
+        run: python -m unittest discover -s tools -p 'test_stripe_hardening.py' -v
+
       - name: Etat de livraison
         run: |
           echo "Tests statiques/hors ligne executes."
           echo "Aucun webhook Stripe configure par ce workflow."
           echo "Aucun paiement LIVE ni deploiement Frappe Cloud effectue."
           echo "Tests reel ERPNext et configurations LIVE obligatoires avant publication."
+
+  native-accounting:
+    name: ERPNext v16 - comptabilite sur site jetable
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: source/softsystem97
+      - uses: actions/checkout@v4
+        with:
+          repository: frappe/frappe
+          ref: 90c8b61afd60ee49f982ca1a9751008e4ae1e24c
+          path: source/frappe
+      - uses: actions/checkout@v4
+        with:
+          repository: frappe/erpnext
+          ref: 9cd11b19575bfc34f092a24f6c8b368c4dd69481
+          path: source/erpnext
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Installer les dependances natives
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libmariadb-dev pkg-config mariadb-client
+          python -m pip install uv
+          uv venv audit-bench/env
+          uv pip install --python audit-bench/env/bin/python -e source/frappe -e source/erpnext -e source/softsystem97
+      - name: Creer un secret de base jetable
+        run: |
+          ss97_ci_db_password=$(openssl rand -hex 32)
+          echo "::add-mask::$ss97_ci_db_password"
+          echo "SS97_CI_DB_PASSWORD=$ss97_ci_db_password" >> "$GITHUB_ENV"
+      - name: Demarrer MariaDB avec TLS verifie
+        run: source/softsystem97/tools/start_stripe_ci_database.sh
+      - name: Preparer le bench jetable
+        run: |
+          mkdir -p audit-bench/sites audit-bench/apps audit-bench/logs
+          ln -s ../../source/frappe audit-bench/apps/frappe
+          ln -s ../../source/erpnext audit-bench/apps/erpnext
+          ln -s ../../source/softsystem97 audit-bench/apps/softsystem97
+          printf 'frappe\nerpnext\nsoftsystem97\n' > audit-bench/sites/apps.txt
+          python - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          config = {"db_host":"127.0.0.1","db_port":3306,"use_mysqlclient":0,
+              "db_ssl_ca":os.environ["RUNNER_TEMP"]+"/ss97-db-tls/ca.pem","db_ssl_check_hostname":True,
+              "redis_cache":"redis://127.0.0.1:6379/0","redis_queue":"redis://127.0.0.1:6379/1",
+              "redis_socketio":"redis://127.0.0.1:6379/2"}
+          Path("audit-bench/sites/common_site_config.json").write_text(json.dumps(config))
+          PYTHON
+      - name: Installer le site et executer les tests Frappe
+        working-directory: audit-bench
+        run: |
+          env/bin/python ../source/softsystem97/tools/prepare_stripe_ci_site.py
+          env/bin/python ../source/softsystem97/tools/run_local_tests.py --site test_stripe
+      - name: Nettoyer la base jetable
+        if: always()
+        run: |
+          docker rm --force ss97-db || true
+          sudo rm -f /etc/mysql/conf.d/ss97-ci-tls.cnf
+          sudo rm -rf "${RUNNER_TEMP}/ss97-db-tls"

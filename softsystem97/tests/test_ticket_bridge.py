@@ -1,5 +1,6 @@
 """Real Frappe v16 integration tests on synthetic users and native Issue records."""
 import copy
+import json
 import unittest
 from unittest.mock import patch
 
@@ -29,6 +30,10 @@ class TestTicketBridge(unittest.TestCase):
                 send_welcome_email=0, user_type='System User', roles=[{'role': r} for r in roles])).insert()
             cls.users.append(email)
         cls.client, cls.other, cls.tech, cls.tech2, cls.none, cls.candidate = cls.users
+        cls.writer = f'bridge-{cls.suffix}-support@example.invalid'
+        frappe.get_doc(dict(doctype='User', email=cls.writer, first_name='Support service',
+            send_welcome_email=0, user_type='System User', roles=[{'role':'Support Team'}])).insert()
+        cls.users.append(cls.writer)
         cls.customers = []
         for label, user in [('Client', cls.client), ('Other', cls.other)]:
             doc = frappe.get_doc(dict(doctype='Customer', customer_name=f'Bridge {label} {cls.suffix}',
@@ -53,7 +58,7 @@ class TestTicketBridge(unittest.TestCase):
         frappe.local.outgoing_email_account = {}
         self.old_conf = copy.deepcopy(frappe.conf.get('ss97_ticket_bridge'))
         frappe.conf.ss97_ticket_bridge = dict(enabled=True, compatibility_confirmed=True,
-            technician_role=self.role, profile_required=False, email_enabled=False)
+            technician_role=self.role, profile_required=False, email_enabled=False, writer_user=self.writer)
 
     def tearDown(self):
         frappe.set_user('Administrator')
@@ -189,16 +194,21 @@ class TestTicketBridge(unittest.TestCase):
         ticket = self.create()
         self.assign(ticket['name'])
         frappe.set_user(self.tech)
-        for index, status in enumerate(['Replied', 'On Hold', 'Resolved', 'Closed']):
+        for index, status in enumerate(['Replied', 'On Hold', 'Resolved']):
             current = api.get_ticket(ticket['name'])['ticket']
             args = (ticket['name'], status, current['modified'], f'status-{index}')
             changed = api.update_status(*args)
-            self.assertEqual(api.update_status(*args), changed)
+            if status == 'Resolved':
+                with self.assertRaises(frappe.PermissionError): api.update_status(*args)
+            else:
+                self.assertEqual(api.update_status(*args), changed)
             self.assertEqual(changed['status'], status)
-        self.assertEqual(frappe.db.count('SS97 Client Notification', {'reference_name': ticket['name']}), 10)
+        self.assertEqual(frappe.db.count('SS97 Client Notification', {'reference_name': ticket['name']}), 7)
+        frappe.set_user('Administrator')
+        doc=frappe.get_doc('Issue',ticket['name']);doc.status='Closed';doc.save()
         frappe.set_user(self.client)
         self.assertEqual(api.get_ticket(ticket['name'], 'client')['ticket']['status'], 'Closed')
-        self.assertEqual(len(api.get_ticket(ticket['name'], 'client')['history']), 6)
+        self.assertEqual(len(api.get_ticket(ticket['name'], 'client')['history']), 5)
 
     def test_stale_and_invalid_status_do_not_mutate_ticket(self):
         ticket = self.create()
@@ -286,9 +296,9 @@ class TestTicketBridge(unittest.TestCase):
             self.assign(ticket['name'])
             frappe.set_user(self.tech)
             current = api.get_ticket(ticket['name'])['ticket']
-            api.update_status(ticket['name'], 'Resolved', current['modified'], 'resolve')
+            api.update_status(ticket['name'], 'Replied', current['modified'], 'reply')
             current = api.get_ticket(ticket['name'])['ticket']
-            api.update_status(ticket['name'], 'Closed', current['modified'], 'close')
+            api.update_status(ticket['name'], 'On Hold', current['modified'], 'hold')
         finally:
             frappe.conf.mute_emails = old_mute
         queued = frappe.get_all('Email Queue', filters={
@@ -445,7 +455,7 @@ class TestTicketBridge(unittest.TestCase):
         self.forged_todo(ticket['name'], self.tech2)
         frappe.set_user(self.tech)
         current = api.get_ticket(ticket['name'])['ticket']
-        api.update_status(ticket['name'], 'Resolved', current['modified'], 'resolve')
+        api.update_status(ticket['name'], 'Replied', current['modified'], 'reply')
         self.assertEqual(frappe.db.count('SS97 Client Notification', {
             'for_user': self.tech2, 'reference_name': ticket['name']}), 0)
 
@@ -520,9 +530,13 @@ class TestTicketBridge(unittest.TestCase):
 
     def close_test_ticket(self, name):
         frappe.set_user(self.tech)
-        for status in ['Resolved', 'Closed']:
-            current = api.get_ticket(name)['ticket']
-            api.update_status(name, status, current['modified'], 'close-flow-' + status)
+        current = api.get_ticket(name)['ticket']
+        api.update_status(name, 'Resolved', current['modified'], 'close-flow-Resolved')
+        # ERPNext v16 closes native assignments on resolution. Closure stays with staff.
+        with self.assertRaises(frappe.PermissionError): api.get_ticket(name)
+        frappe.set_user('Administrator')
+        doc=frappe.get_doc('Issue',name);doc.status='Closed';doc.save()
+        frappe.set_user(self.tech)
 
     def test_comment_retry_after_closure_keeps_receipt_and_checks_revocation(self):
         ticket = self.create()
@@ -532,10 +546,11 @@ class TestTicketBridge(unittest.TestCase):
         original = api.add_intervention(*args)
         self.close_test_ticket(ticket['name'])
         before = {dt: frappe.db.count(dt) for dt in [api.EVENT, 'Comment', 'SS97 Client Notification']}
-        self.assertEqual(api.add_intervention(*args), original)
+        with self.assertRaises(frappe.PermissionError): api.add_intervention(*args)
+        self.assertEqual(json.loads(frappe.db.get_value(api.EVENT, {'issue':ticket['name'],'action':'comment'}, 'response_json')),original)
         self.assertEqual(before, {dt: frappe.db.count(dt) for dt in before})
         frappe.db.savepoint('closed_new_comment')
-        with self.assertRaises(frappe.ValidationError):
+        with self.assertRaises(frappe.PermissionError):
             api.add_intervention(ticket['name'], 'New comment after closure', 'new-closed-comment')
         frappe.db.rollback(save_point='closed_new_comment')
         frappe.set_user('Administrator')
@@ -581,7 +596,7 @@ class TestTicketBridge(unittest.TestCase):
         try:
             frappe.set_user(self.tech)
             current = api.get_ticket(ticket['name'])['ticket']
-            api.update_status(ticket['name'], 'Resolved', current['modified'], 'privacy-status')
+            api.update_status(ticket['name'], 'Replied', current['modified'], 'privacy-status')
         finally:
             frappe.conf.mute_emails = old_mute
         queued = frappe.get_all('Email Queue', filters={

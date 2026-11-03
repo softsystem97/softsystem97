@@ -1,5 +1,6 @@
 """Fail-closed policy for the replacement bridge, not the unknown legacy portal."""
 import frappe
+from contextlib import contextmanager
 from . import historical
 
 FORBIDDEN_ROLES = {'system manager', 'administrator', 'all', 'guest', 'customer', 'candidat ss97'}
@@ -10,6 +11,31 @@ TRANSITIONS = {
     'Resolved': ['Closed'],
     'Closed': [],
 }
+
+
+@contextmanager
+def native_issue_writer():
+    """Honor ERPNext v16's staff-only Issue fields without granting Desk to clients.
+
+    Call only after the bridge's actor, ownership and business checks. A separate
+    configured Support Team account performs the native validated write.
+    """
+    actor = frappe.session.user
+    writer = settings().get('writer_user')
+    if (not writer or writer in ('Administrator', 'Guest')
+            or not frappe.db.get_value('User', writer, 'enabled')
+            or frappe.get_cached_value('User', writer, 'user_type') != 'System User'
+            or 'Support Team' not in frappe.get_roles(writer)):
+        frappe.throw('Utilisateur de service Support Team requis.', frappe.PermissionError)
+    sid, data = frappe.session.get('sid'), frappe.session.get('data')
+    form = frappe.local.form_dict
+    try:
+        frappe.set_user(writer)
+        yield
+    finally:
+        frappe.set_user(actor)
+        frappe.session.sid, frappe.session.data = sid, data
+        frappe.local.form_dict = form
 
 
 def settings():

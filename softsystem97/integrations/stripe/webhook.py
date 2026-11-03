@@ -38,7 +38,8 @@ def _get_raw_body() -> bytes:
 def _reject(message: str, http_status_code: int = 403) -> None:
 	frappe.local.response["http_status_code"] = http_status_code
 	try:
-		frappe.throw(_(message), exc=frappe.PermissionError)
+		error_type = type("StripeWebhookError", (frappe.PermissionError,), {"http_status_code": http_status_code})
+		frappe.throw(_(message), exc=error_type)
 	except frappe.PermissionError as rejection:
 		raise rejection from None  # Do not chain a sensitive upstream exception.
 
@@ -65,6 +66,8 @@ def _handle_stripe_webhook() -> dict:
 	raw = _get_raw_body()
 	if not raw:
 		_reject("Corps de requête vide", 400)
+	if len(raw) > 1024 * 1024:
+		_reject("Événement Stripe trop volumineux", 413)
 
 	sig_header = ""
 	request = frappe.local.request
@@ -80,17 +83,21 @@ def _handle_stripe_webhook() -> dict:
 
 	stripe_event_id = event.get("id") or ""
 	event_type = event.get("type") or ""
-	livemode = bool(event.get("livemode"))
+	livemode = event.get("livemode")
 	if (not isinstance(stripe_event_id, str) or not stripe_event_id
 			or len(stripe_event_id) > 140 or not isinstance(event_type, str)
-			or not event_type or len(event_type) > 140):
+			or not event_type or len(event_type) > 140 or type(livemode) is not bool
+			or not isinstance(event.get("data"), dict)
+			or not isinstance(event["data"].get("object"), dict)):
 		_reject("Identité événement Stripe invalide", 400)
 
 	secret = resolve_webhook_secret(livemode)
 	if not secret:
 		_reject("Secret webhook Stripe non configuré", 403)
 
-	if not verify_stripe_signature(raw, sig_header, secret):
+	signature_valid = verify_stripe_signature(raw, sig_header, secret)
+	del secret  # Frappe error tracebacks may include request-frame local variables.
+	if not signature_valid:
 		_reject("Signature Stripe invalide", 403)
 
 	# Even a replay must be authenticated before revealing/acknowledging an event.
@@ -137,6 +144,7 @@ def _handle_stripe_webhook() -> dict:
 
 	try:
 		result = dispatch_stripe_event(event)
+		status = "Skipped" if result.get("skipped") else "Success"
 		completed_log = log_stripe_event(
 			stripe_event_id,
 			event_type,
@@ -144,7 +152,7 @@ def _handle_stripe_webhook() -> dict:
 			invoice=ctx_preview.get("invoice") or result.get("invoice"),
 			amount=ctx_preview.get("amount"),
 			currency=ctx_preview.get("currency"),
-			status="Success",
+			status=status,
 			result=frappe.as_json(result) if result else "OK",
 			livemode=livemode,
 		)
@@ -153,6 +161,8 @@ def _handle_stripe_webhook() -> dict:
 		frappe.db.commit()
 		return {"ok": True, "event_id": stripe_event_id, "type": event_type, "result": result, "log": log_name}
 	except Exception as exc:
+		exception_type = type(exc).__name__
+		del exc
 		frappe.db.rollback()
 		# Reclaim after rollback: a concurrent successful retry must never be
 		# overwritten by this request's failure receipt.
@@ -166,11 +176,11 @@ def _handle_stripe_webhook() -> dict:
 				amount=ctx_preview.get("amount"),
 				currency=ctx_preview.get("currency"),
 				status="Failed",
-				error=type(exc).__name__,
+				error=exception_type,
 				livemode=livemode,
 			)
 		frappe.db.commit()
-		frappe.log_error(title="SS97 Stripe webhook failed", message=type(exc).__name__)
+		frappe.log_error(title="SS97 Stripe webhook failed", message=exception_type)
 		_reject("Erreur traitement webhook", 500)
 
 
