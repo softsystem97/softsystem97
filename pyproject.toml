@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
+	"stripe>=16.0.0,<17",
 	# Installed and managed by bench / Frappe Cloud.
 ]
 

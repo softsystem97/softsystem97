@@ -8,6 +8,21 @@ from frappe import _
 from softsystem97.portal.customer import resolve_customer_for_user
 
 
+def get_permission_query_conditions(user: str | None = None) -> str:
+	user = user or frappe.session.user
+	if user == "Administrator" or "System Manager" in frappe.get_roles(user):
+		return ""
+	return "`tabSS97 Client Notification`.`for_user` = " + frappe.db.escape(user)
+
+
+def has_permission(doc, ptype: str | None = "read", user: str | None = None) -> bool:
+	"""Restrict native document permissions to the recipient, not the producer."""
+	user = user or frappe.session.user
+	if user == "Administrator" or "System Manager" in frappe.get_roles(user):
+		return True
+	return user != "Guest" and doc.for_user == user and ptype in {None, "read", "write", "delete"}
+
+
 def _uses_ss97_notifications() -> bool:
 	return bool(frappe.db.exists("DocType", "SS97 Client Notification"))
 
@@ -57,7 +72,7 @@ def get_my_notifications(limit: int = 50, offset: int = 0, unread_only: int = 0)
 	if customer and doctype == "SS97 Client Notification":
 		filters["customer"] = customer
 
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		doctype,
 		filters=filters,
 		fields=_notification_fields(),
@@ -78,7 +93,7 @@ def get_my_notifications(limit: int = 50, offset: int = 0, unread_only: int = 0)
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def mark_read(name: str) -> dict:
 	user = frappe.session.user
 	if not user or user == "Guest":
@@ -92,40 +107,49 @@ def mark_read(name: str) -> dict:
 	if owner != user:
 		frappe.throw(_("Accès refusé."), frappe.PermissionError)
 
-	field = "is_read" if doctype == "SS97 Client Notification" else "read"
-	frappe.db.set_value(doctype, name, field, 1, update_modified=True)
-	frappe.db.commit()
+	if doctype == "SS97 Client Notification":
+		doc = frappe.get_doc(doctype, name)
+		doc.is_read = 1
+		doc.save()
+	else:
+		from frappe.desk.doctype.notification_log.notification_log import mark_as_read
+		mark_as_read(name)
 	return {"ok": True, "name": name}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def mark_all_read() -> dict:
 	user = frappe.session.user
 	if not user or user == "Guest":
 		frappe.throw(_("Connexion requise."), frappe.PermissionError)
 
 	if _uses_ss97_notifications():
-		names = frappe.get_all(
+		names = frappe.get_list(
 			"SS97 Client Notification",
 			filters={"for_user": user, "is_read": 0},
 			pluck="name",
+			limit_page_length=0,
 		)
 		for n in names:
-			frappe.db.set_value("SS97 Client Notification", n, "is_read", 1, update_modified=False)
+			doc = frappe.get_doc("SS97 Client Notification", n)
+			doc.is_read = 1
+			doc.save()
 	else:
-		names = frappe.get_all(
+		from frappe.desk.doctype.notification_log.notification_log import mark_as_read
+
+		names = frappe.get_list(
 			"Notification Log",
 			filters={"for_user": user, "read": 0},
 			pluck="name",
+			limit_page_length=0,
 		)
 		for n in names:
-			frappe.db.set_value("Notification Log", n, "read", 1, update_modified=False)
+			mark_as_read(n)
 
-	frappe.db.commit()
 	return {"ok": True, "updated": len(names)}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def delete_notification(name: str) -> dict:
 	user = frappe.session.user
 	if not user or user == "Guest":
@@ -138,6 +162,5 @@ def delete_notification(name: str) -> dict:
 	if owner != user:
 		frappe.throw(_("Accès refusé."), frappe.PermissionError)
 
-	frappe.delete_doc("SS97 Client Notification", name, ignore_permissions=True)
-	frappe.db.commit()
+	frappe.delete_doc("SS97 Client Notification", name)
 	return {"ok": True, "name": name}

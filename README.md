@@ -145,3 +145,9 @@ bench --site <site> migrate
 ## Licence
 
 MIT — SoftSystem97
+
+### Pont client–technicien en développement
+
+Un [module de remplacement désactivé par défaut](docs/ticket-bridge-development.md)
+utilise les Issue et ToDo natifs ERPNext. Il est testé sur un site isolé et ne
+remplace ni n’active automatiquement le portail de production.
