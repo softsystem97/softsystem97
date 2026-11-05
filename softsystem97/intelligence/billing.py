@@ -84,9 +84,14 @@ def _copy_taxes(invoice, template):
 def ensure_submitted_invoice(order_name, customer, requested_by):
     """One transaction, row-locked order; call only after customer ownership check."""
     from softsystem97.integrations.stripe.payment_sync import stripe_mode
-    from softsystem97.integrations.stripe.settings import accounting_user
+    from softsystem97.integrations.stripe.settings import (
+        accounting_user, assert_accounting_environment, stripe_client,
+    )
 
     config = _settings()
+    # Refuse to create an invoice when Stripe cannot accept this site/mode.
+    assert_accounting_environment(stripe_mode() == "live")
+    stripe_client()  # Checks keys and LIVE enablement, but does not charge anyone.
     # Exclusive DB row lock prevents two invoices for simultaneous clicks.
     order = frappe.db.get_value("SS97 Intelligence Order", order_name,
         ["name", "customer", "requested_by", "company_name", "tier", "track",
