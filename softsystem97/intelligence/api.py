@@ -192,6 +192,20 @@ def link_submitted_invoice(order_name, invoice_name):
 
 
 @frappe.whitelist(methods=["POST"])
+def prepare_invoice(order_name):
+    """Create one submitted, tax-validated ERPNext invoice for an owned order.
+
+    This deliberately does NOT accept amount, Item, Company or tax parameters.
+    A failed validation rolls back the entire request, including the invoice.
+    """
+    _enabled()
+    order = _owned(order_name)
+    from .billing import ensure_submitted_invoice
+    name = ensure_submitted_invoice(order.name, order.customer, order.requested_by)
+    return {"name": order.name, "invoice": name, "status": "Checkout"}
+
+
+@frappe.whitelist(methods=["POST"])
 def start_checkout(order_name):
     _enabled()
     order = _owned(order_name)
