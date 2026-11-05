@@ -1,0 +1,34 @@
+name: SS97 Intelligence 360 - Contrôles hors production
+
+on:
+  pull_request:
+    branches:
+      - feature/ss97-final-integration
+      - main
+  push:
+    branches:
+      - feature/ss97-intelligence-360-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-intelligence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compiler le code Intelligence
+        run: python -m compileall -q softsystem97/intelligence softsystem97/www/ss97_intelligence.py softsystem97/tests/test_intelligence_engine.py
+      - name: Vérifier les 15 offres et le moteur transversal
+        run: python -m unittest discover -s softsystem97/tests -p test_intelligence_engine.py -v
+      - name: Vérifier les secrets suivis
+        run: python tools/check_stripe_secrets.py
+      - name: Avertissement explicite
+        run: |
+          echo "Aucun test natif ERPNext, facture, webhook LIVE, PDF Chromium ni déploiement."
+          echo "La fonctionnalité est désactivée par défaut jusqu'à sa recette de production."
