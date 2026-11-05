@@ -118,6 +118,33 @@
            card.append(section);details.remove();
          }catch(_){error.textContent="Dossier inaccessible.";details.disabled=false;}});
          card.append(details);
+         const mission=el("button","Demander un expert / un devis","btn btn-default");
+         mission.style.marginLeft="0.5rem";
+         mission.addEventListener("click",()=>{
+           if(card.querySelector("form"))return;
+           const form=el("form");
+           const kind=el("select",undefined,"form-control");
+           ["Expert","Business","Cyber","Assistance","Transformation","Autre"].forEach(value=>{
+             const option=el("option",value);option.value=value;kind.append(option);
+           });
+           const subject=el("input",undefined,"form-control");
+           subject.required=true;subject.maxLength=150;subject.placeholder="Objet de la mission";
+           const details=el("textarea",undefined,"form-control");
+           details.required=true;details.maxLength=2000;details.placeholder="Décrivez les travaux souhaités";
+           const send=el("button","Envoyer la demande","btn btn-primary");send.type="submit";
+           form.append(kind,subject,details,send);
+           form.addEventListener("submit",async event=>{
+             event.preventDefault();send.disabled=true;
+             try{const res=await frappe.call({method:"softsystem97.intelligence.missions.request_mission",
+               type:"POST",args:{order_name:order.name,mission_type:kind.value,
+                 title:subject.value,description:details.value}});
+               error.textContent="Demande "+res.message.name+" enregistrée pour étude et devis.";
+               form.remove();
+             }catch(_){error.textContent="Impossible d'enregistrer la mission.";send.disabled=false;}
+           });
+           card.append(form);
+         });
+         card.append(mission);
        }
        list.append(card);
      }
