@@ -138,3 +138,15 @@ site_config.json de production n'a été effectué.
 
 L'annuaire d'experts, l'intégration cyber, le monitoring actif, l'accès distant
 et les abonnements sont des chantiers distincts, pas des capacités déjà en production.
+
+## Diagnostic de préparation sans modification (5 novembre 2026)
+
+Commande uniquement sur un site où l'application est déjà installée :
+
+```bash
+bench --site <SITE-DE-RECETTE> execute softsystem97.intelligence.preflight.inspect
+```
+
+Ce contrôle inspecte la présence des DocTypes, du mode Stripe, des paramètres fiscaux et des drapeaux d'activation. Il ne montre aucun secret. Le champ `ready_for_live` reste volontairement faux : **le diagnostic ne remplace pas les paiements signés, les essais HTTP, ni les tests de confidentialité réels**.
+
+**Ordre recommandé :** sauvegarder le site, établir un bench/site isolé, installer les branches sous revue, migrer uniquement le site isolé, exécuter le diagnostic, tester un paiement en mode TEST, vérifier les écritures comptables et l'isolation des comptes, puis seulement planifier une mise en production validée. Ne jamais lancer de migration sur le site LIVE avant recette complète.
