@@ -1,0 +1,100 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Intelligence Mission",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "format:SS97-MIS-{#####}",
+  "allow_rename": 0,
+  "index_web_pages_for_search": 0,
+  "field_order": [
+    "order",
+    "customer",
+    "requested_by",
+    "mission_type",
+    "title",
+    "description",
+    "state",
+    "assigned_to",
+    "quotation"
+  ],
+  "fields": [
+    {
+      "fieldname": "order",
+      "fieldtype": "Link",
+      "label": "Étude d'origine",
+      "options": "SS97 Intelligence Order",
+      "reqd": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Client",
+      "options": "Customer",
+      "reqd": 1
+    },
+    {
+      "fieldname": "requested_by",
+      "fieldtype": "Link",
+      "label": "Demandeur",
+      "options": "User",
+      "reqd": 1
+    },
+    {
+      "fieldname": "mission_type",
+      "fieldtype": "Select",
+      "label": "Type de mission",
+      "options": "Expert\nBusiness\nCyber\nAssistance\nTransformation\nAutre",
+      "reqd": 1
+    },
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "label": "Objet de la mission",
+      "reqd": 1
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Text",
+      "label": "Précisions",
+      "reqd": 1
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Select",
+      "label": "Statut",
+      "options": "Requested\nUnder review\nQuoted\nAccepted\nIn progress\nCompleted\nCanceled",
+      "reqd": 1,
+      "default": "Requested"
+    },
+    {
+      "fieldname": "assigned_to",
+      "fieldtype": "Link",
+      "label": "Intervenant interne",
+      "options": "User"
+    },
+    {
+      "fieldname": "quotation",
+      "fieldtype": "Link",
+      "label": "Devis",
+      "options": "Quotation"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "report": 1
+    },
+    {
+      "role": "Accounts Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "track_changes": 1,
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}
