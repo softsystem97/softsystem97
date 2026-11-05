@@ -23,9 +23,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Compiler le code Intelligence
-        run: python -m compileall -q softsystem97/intelligence softsystem97/www/ss97_intelligence.py softsystem97/tests/test_intelligence_engine.py
+        run: python -m compileall -q softsystem97/intelligence softsystem97/www/ss97_intelligence.py softsystem97/tests/test_intelligence_engine.py softsystem97/tests/test_intelligence_billing_rules.py
       - name: Vérifier les 15 offres et le moteur transversal
         run: python -m unittest discover -s softsystem97/tests -p test_intelligence_engine.py -v
+      - name: Valider les règles fiscales hors Frappe
+        run: python -m unittest discover -s softsystem97/tests -p test_intelligence_billing_rules.py -v
       - name: Vérifier les secrets suivis
         run: python tools/check_stripe_secrets.py
       - name: Avertissement explicite
