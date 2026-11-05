@@ -76,6 +76,13 @@
        card.append(el("h3",order.company_name+" — "+order.tier));
        card.append(el("p","Référence : "+order.name+" · "+order.sector));
        card.append(el("p","Statut : "+order.status+" · "+order.price_eur+" €"));
+       if(order.status==="Draft" && !order.invoice){
+         const prepare=el("button","Préparer ma facture","btn btn-primary");
+         prepare.addEventListener("click",async()=>{prepare.disabled=true;error.textContent="";try{
+           await api("prepare_invoice",{order_name:order.name},true);await load();
+         }catch(_){error.textContent="Facturation non disponible : contactez SS97 pour vérification des paramètres comptables.";prepare.disabled=false;}});
+         card.append(prepare);
+       }
        if(order.invoice && !order.payment_verified){
          const pay=el("button","Payer ma facture","btn btn-primary");
          pay.addEventListener("click",async()=>{pay.disabled=true;try{
