@@ -83,3 +83,58 @@ Toutes sous softsystem97.intelligence.api.
 4. Sessions distantes avec consentement et moteur externe isolé.
 5. Réseau d'experts, devis projets et abonnements de transformation avec leurs
    propres conditions contractuelles et indicateurs de suivi.
+
+## Extension de facturation autonome — 5 novembre 2026
+
+- **Nouvelle API POST** `softsystem97.intelligence.api.prepare_invoice`.
+- Le client commande, puis clique **Préparer ma facture** avant l'étape Checkout.
+- Verrou transactionnel sur la commande : un même dossier ne doit pas créer deux factures.
+- Prix final TTC contrôlé exactement en EUR sur le catalogue côté serveur.
+- L'article de vente ERPNext doit être un service actif et non un stock.
+- Le compte de service comptable Stripe est réutilisé pour créer/soumettre la facture.
+- Une TVA ou une exonération n'est **jamais déduite du secteur** par le logiciel.
+
+**Configuration obligatoire en site_config.json, exemple de structure uniquement (identifiants fictifs) :**
+
+```json
+{
+  "ss97_intelligence_enabled": true,
+  "ss97_intelligence_auto_invoice": true,
+  "ss97_intelligence_billing": {
+    "company": "NOM-EXACT-COMPANY-ERPNext",
+    "item_code": "REFERENCE-SERVICE-SS97",
+    "tax_template": "TEMPLATE-TTC-VERIFIE"
+  }
+}
+```
+
+Pour un dossier effectivement exempté, utiliser `"tax_exempt": true` et omettre
+`tax_template`, mais uniquement après validation du régime fiscal et des paramètres
+ERPNext par le comptable. L'exemple ci-dessus n'est **pas** une configuration
+à copier tel quel : chaque valeur doit être vérifiée sur le vrai site.
+
+Les modèles de taxes autorisés par cette V1 doivent être simples, inclus dans le prix
+et appliqués au total net. Les règles complexes, la remise, les commissions facturées
+au client et les taxes supplémentaires sont bloquées par contrôle du total.
+Le rapprochement Stripe vers ERPNext reste celui de la branche existante.
+
+**Attention :** le compte Stripe réel n'est pas configuré ou activé par cette
+extension ; aucun paiement n'a été déclenché. Contrôles et paiements TEST
+sur bench isolé avant le moindre basculement LIVE. Aucun changement de
+site_config.json de production n'a été effectué.
+
+### Recette restante avant activation
+
+1. Confirmer Company, Item non-stock, compte de revenus, centre de coûts et
+   Sales Taxes and Charges Template en production.
+2. Tester double-clics, demandes parallèles, échec de soumission de facture,
+   facture d'un autre client et désactivation du compte de service.
+3. Tester la facture TTC exacte, les écritures ERPNext et les événements Stripe
+   réellement signés sur un site de test indépendant.
+4. Vérifier le PDF, sa confidentialité, la revue Expert, les remboursements et
+   le téléchargement après litige.
+5. Installer la branche sur le site Frappe Cloud via procédure validée,
+   puis activer les deux feature flags uniquement après recette complète.
+
+L'annuaire d'experts, l'intégration cyber, le monitoring actif, l'accès distant
+et les abonnements sont des chantiers distincts, pas des capacités déjà en production.
