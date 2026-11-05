@@ -1,0 +1,180 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<section class="container" style="max-width:920px">
+  <h1>Soft System 97 — Intelligence 360</h1>
+  <p>Diagnostiquez votre activité, choisissez votre formule et suivez votre plan de transformation.</p>
+  <p>Les rapports reposent sur vos déclarations. Un audit technique ou une analyse réglementaire exigent un spécialiste.</p>
+  <div id="ss97-int-error" role="alert"></div>
+  {% if is_guest %}
+    <p>Connectez-vous à votre espace client pour commander.</p><a href="/login?redirect-to=/ss97-intelligence">Se connecter</a>
+  {% else %}
+    <form id="ss97-int-order">
+      <div class="form-group"><label>Nom de la société <input class="form-control" name="company_name" maxlength="150" required></label></div>
+      <div class="form-group"><label>Secteur d'activité (tous secteurs acceptés)
+        <input class="form-control" name="sector" maxlength="200" placeholder="Ex. Artisanat, agriculture, industrie..." required></label></div>
+      <div class="form-group"><label>Spécialité <select class="form-control" name="track">
+        <option value="business">Développement d'entreprise</option><option value="cyber">Cybersécurité</option>
+        <option value="digital">Transformation numérique</option><option value="operations">Organisation</option>
+        <option value="transformation">Transformation 360</option></select></label></div>
+      <div class="form-group"><label>Formule <select class="form-control" name="tier">
+        <option value="basic">Basique</option><option value="advanced">Avancé</option>
+        <option value="expert">Expert avec revue humaine</option></select></label></div>
+      <p id="ss97-int-price" aria-live="polite"></p>
+      <div class="form-group"><label>Activité <textarea class="form-control" name="activity" maxlength="2400"></textarea></label></div>
+      <div class="form-group"><label>Objectif <textarea class="form-control" name="objective" maxlength="2400" required></textarea></label></div>
+      <div class="form-group"><label>Difficultés rencontrées <textarea class="form-control" name="challenges" maxlength="2400" required></textarea></label></div>
+      <div class="form-group"><label>Points forts connus <textarea class="form-control" name="strengths" maxlength="2400"></textarea></label></div>
+      <div class="form-group"><label>Logiciels et outils actuels <textarea class="form-control" name="tools" maxlength="2400"></textarea></label></div>
+      <div class="form-group"><label>Pratiques de cybersécurité déclarées <textarea class="form-control" name="cyber_practices" maxlength="2400"></textarea></label></div>
+      <div class="form-group"><label>Effectif <input class="form-control" type="number" min="0" max="1000000" name="employees"></label></div>
+      <div class="form-group"><label>Chiffre d'affaires annuel (€) — facultatif <input class="form-control" type="number" min="0" step="0.01" name="revenue_eur"></label></div>
+      <div class="form-group"><label>Charges annuelles (€) — facultatif <input class="form-control" type="number" min="0" step="0.01" name="costs_eur"></label></div>
+      <p>Vous paierez après préparation d'une facture correspondant à la formule choisie. Aucune étude n'est délivrée gratuitement.</p>
+      <button type="submit" class="btn btn-primary">Enregistrer ma demande</button>
+    </form>
+    <hr><h2>Mes dossiers</h2><div id="ss97-int-orders" aria-live="polite">Chargement…</div>
+  {% endif %}
+</section>
+{% if not is_guest %}
+<script>
+(() => {
+ const root = document.getElementById("ss97-int-order");
+ const error = document.getElementById("ss97-int-error");
+ const list = document.getElementById("ss97-int-orders");
+ const price = document.getElementById("ss97-int-price");
+ const prices = {
+   business:{basic:149,advanced:499,expert:1490},
+   cyber:{basic:129,advanced:399,expert:1490},
+   digital:{basic:149,advanced:499,expert:1490},
+   operations:{basic:149,advanced:499,expert:1490},
+   transformation:{basic:149,advanced:499,expert:1490}
+ };
+ function refreshPrice(){price.textContent = "Tarif indicatif du catalogue : " +
+   prices[root.elements.track.value][root.elements.tier.value].toLocaleString("fr-FR") +
+   " € — facture confirmée par SS97"; }
+ root.elements.track.addEventListener("change",refreshPrice);
+ root.elements.tier.addEventListener("change",refreshPrice); refreshPrice();
+ async function api(method, args={}, post=false){
+   const reply=await frappe.call({method:"softsystem97.intelligence.api."+method,
+      type:post?"POST":"GET",args});
+   return reply.message;
+ }
+ function el(tag,text,cls){
+   const node=document.createElement(tag);
+   if(text!==undefined) node.textContent=String(text);
+   if(cls)node.className=cls;
+   return node;
+ }
+ async function load(){
+   list.replaceChildren();
+   try{
+     const orders=await api("my_orders");
+     if(!orders.length){list.append(el("p","Aucune demande pour le moment."));return;}
+     for(const order of orders){
+       const card=el("article",undefined,"card");
+       card.style.padding="1rem";card.style.marginBottom="1rem";
+       card.append(el("h3",order.company_name+" — "+order.tier));
+       card.append(el("p","Référence : "+order.name+" · "+order.sector));
+       card.append(el("p","Statut : "+order.status+" · "+order.price_eur+" €"));
+       if(order.status==="Draft" && !order.invoice){
+         const prepare=el("button","Préparer ma facture","btn btn-primary");
+         prepare.addEventListener("click",async()=>{prepare.disabled=true;error.textContent="";try{
+           await api("prepare_invoice",{order_name:order.name},true);await load();
+         }catch(_){error.textContent="Facturation non disponible : contactez SS97 pour vérification des paramètres comptables.";prepare.disabled=false;}});
+         card.append(prepare);
+       }
+       if(order.invoice && !order.payment_verified){
+         const pay=el("button","Payer ma facture","btn btn-primary");
+         pay.addEventListener("click",async()=>{pay.disabled=true;try{
+           const result=await api("start_checkout",{order_name:order.name},true);
+           if(result.checkout_url){
+             const u=new URL(result.checkout_url);
+             if(u.protocol!=="https:"||!(u.hostname==="checkout.stripe.com"||u.hostname.endsWith(".checkout.stripe.com")))throw Error("URL de paiement invalide");
+             window.location.assign(u.href);
+           }else await load();
+         }catch(_){error.textContent="Paiement indisponible : contactez le support.";pay.disabled=false;}});
+         card.append(pay);
+       } else if (order.payment_verified && order.status==="Checkout"){
+         const make=el("button","Générer mon étude","btn btn-primary");
+         make.addEventListener("click",async()=>{make.disabled=true;try{
+           await api("generate_report",{order_name:order.name},true);await load();
+         }catch(_){error.textContent="Impossible de générer l'étude.";make.disabled=false;}});
+         card.append(make);
+       } else if(order.payment_verified && order.status==="Delivered"){
+         const down=el("a","Télécharger le PDF","btn btn-primary");
+         down.href="/api/method/softsystem97.intelligence.api.download_pdf?order_name="+encodeURIComponent(order.name);
+         card.append(down);
+         const details=el("button","Voir / suivre les actions","btn btn-default");
+         details.style.marginLeft="0.5rem";
+         details.addEventListener("click",async()=>{details.disabled=true;try{
+           const data=await api("report_detail",{order_name:order.name});
+           const section=el("div");
+           for(const action of data.actions){
+             const row=el("div");row.style.padding="0.5rem";
+             row.append(el("p",action.theme+" : "+action.action));
+             const select=el("select",undefined,"form-control");
+             ["À faire","En cours","Terminée"].forEach(value=>{
+               const option=el("option",value);option.value=value;
+               option.selected=(value===action.status);select.append(option);
+             });
+             select.addEventListener("change",async()=>{select.disabled=true;try{
+               await api("update_action",{order_name:order.name,action_id:action.id,status:select.value},true);
+             }catch(_){error.textContent="Modification refusée.";}select.disabled=false;});
+             row.append(select);section.append(row);
+           }
+           card.append(section);details.remove();
+         }catch(_){error.textContent="Dossier inaccessible.";details.disabled=false;}});
+         card.append(details);
+         const mission=el("button","Demander un expert / un devis","btn btn-default");
+         mission.style.marginLeft="0.5rem";
+         mission.addEventListener("click",()=>{
+           if(card.querySelector("form"))return;
+           const form=el("form");
+           const kind=el("select",undefined,"form-control");
+           ["Expert","Business","Cyber","Assistance","Transformation","Autre"].forEach(value=>{
+             const option=el("option",value);option.value=value;kind.append(option);
+           });
+           const subject=el("input",undefined,"form-control");
+           subject.required=true;subject.maxLength=150;subject.placeholder="Objet de la mission";
+           const details=el("textarea",undefined,"form-control");
+           details.required=true;details.maxLength=2000;details.placeholder="Décrivez les travaux souhaités";
+           const send=el("button","Envoyer la demande","btn btn-primary");send.type="submit";
+           form.append(kind,subject,details,send);
+           form.addEventListener("submit",async event=>{
+             event.preventDefault();send.disabled=true;
+             try{const res=await frappe.call({method:"softsystem97.intelligence.missions.request_mission",
+               type:"POST",args:{order_name:order.name,mission_type:kind.value,
+                 title:subject.value,description:details.value}});
+               error.textContent="Demande "+res.message.name+" enregistrée pour étude et devis.";
+               form.remove();
+             }catch(_){error.textContent="Impossible d'enregistrer la mission.";send.disabled=false;}
+           });
+           card.append(form);
+         });
+         card.append(mission);
+       }
+       list.append(card);
+     }
+   }catch(_){list.textContent="Accès aux dossiers indisponible. Vérifiez votre compte client.";}
+ }
+ root.addEventListener("submit",async event=>{
+   event.preventDefault();error.textContent="";
+   const submit=root.querySelector("button[type=submit]");submit.disabled=true;
+   const answers={};
+   ["activity","objective","challenges","strengths","tools","cyber_practices",
+     "employees","revenue_eur","costs_eur"].forEach(key=>answers[key]=root.elements[key].value);
+   try{
+     const result=await api("create_order",{
+       company_name:root.elements.company_name.value,sector:root.elements.sector.value,
+       track:root.elements.track.value,tier:root.elements.tier.value,
+       answers:JSON.stringify(answers)},true);
+     error.textContent="Demande "+result.name+" enregistrée. SS97 préparera la facture avant paiement.";
+     root.reset();refreshPrice();await load();
+   }catch(_){error.textContent="Demande refusée. Vérifiez les champs et votre accès client.";}
+   submit.disabled=false;
+ });
+ load();
+})();
+</script>
+{% endif %}
+{% endblock %}
