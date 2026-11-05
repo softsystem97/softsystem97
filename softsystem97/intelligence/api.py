@@ -153,7 +153,7 @@ def my_orders():
     user, customer = _client()
     rows = frappe.get_all("SS97 Intelligence Order",
         filters={"customer": customer, "requested_by": user},
-        fields=["name", "company_name", "sector", "track", "tier",
+        fields=["name", "customer", "company_name", "sector", "track", "tier",
                 "price_eur", "status", "invoice", "generated_on"],
         order_by="creation desc", limit_page_length=50)
     for row in rows:
@@ -175,9 +175,10 @@ def link_submitted_invoice(order_name, invoice_name):
     if order.status != "Draft":
         frappe.throw("Dossier non modifiable.", frappe.ValidationError)
     invoice = frappe.db.get_value("Sales Invoice", invoice_name,
-        ["customer", "docstatus", "currency", "grand_total", "ss97_payment_status"],
+        ["customer", "docstatus", "currency", "grand_total", "ss97_payment_status", "ss97_linked_issue"],
         as_dict=True)
     if (not invoice or invoice.customer != order.customer or invoice.docstatus != 1
+            or invoice.ss97_linked_issue
             or invoice.currency != "EUR" or invoice.ss97_payment_status in
             ("paid", "refunded", "refund_pending_review", "disputed")
             or Decimal(str(invoice.grand_total)) != Decimal(str(order.price_eur))
