@@ -119,6 +119,84 @@ class TechnicianWorkflowV2Tests(unittest.TestCase):
         self.assertIn('if not _mail_enabled():', source)
         self.assertIn('if notice.state not in {"HELD", "ERROR"}:', source)
 
+    def test_verified_identity_and_diploma_stay_private_until_activation(self):
+        fake_frappe = types.ModuleType("frappe")
+        fake_frappe.__path__ = []
+        fake_frappe.whitelist = lambda **_kw: lambda func: func
+        fake_utils = types.ModuleType("frappe.utils")
+        fake_utils.now_datetime = lambda: None
+        fake_frappe.utils = fake_utils
+        documents = [types.SimpleNamespace(
+            category=category, candidate_user="candidate@test.invalid",
+            state="VERIFIED", file=category.lower(),
+        ) for category in ("IDENTITY", "DIPLOMA")]
+        files = {category.lower(): {
+            "owner": "candidate@test.invalid", "is_private": 1,
+            "file_url": f"/private/files/{category.lower()}.pdf",
+            "file_name": f"{category.lower()}.pdf", "file_size": 1000,
+            "attached_to_doctype": "", "attached_to_name": "",
+        } for category in ("IDENTITY", "DIPLOMA")}
+        fake_frappe.get_all = lambda *_args, **_kwargs: documents
+        fake_frappe.db = types.SimpleNamespace(
+            get_value=lambda _doctype, filename, *_args, **_kwargs: files.get(filename)
+        )
+        with patch.dict(sys.modules, {"frappe": fake_frappe, "frappe.utils": fake_utils}):
+            module = importlib.import_module("softsystem97.technician_os.api")
+            try:
+                profile = types.SimpleNamespace(name="profile-1", candidate_user="candidate@test.invalid")
+                self.assertTrue(module._documents_verified(profile))
+                files["identity"]["is_private"] = 0
+                self.assertFalse(module._documents_verified(profile))
+                files["identity"]["is_private"] = 1
+                files["identity"]["file_url"] = "https://elsewhere.test/identity.pdf"
+                self.assertFalse(module._documents_verified(profile))
+                files["identity"]["file_url"] = "/private/files/identity.pdf"
+                files["diploma"]["owner"] = "another-user@test.invalid"
+                self.assertFalse(module._documents_verified(profile))
+                files["diploma"]["owner"] = "candidate@test.invalid"
+                documents.pop()
+                self.assertFalse(module._documents_verified(profile))
+            finally:
+                sys.modules.pop("softsystem97.technician_os.api", None)
+                sys.modules.pop("softsystem97.technician_os.notices", None)
+
+    def test_sensitive_mission_second_approval_rechecks_live_assignment(self):
+        fake_frappe = types.ModuleType("frappe")
+        fake_frappe.__path__ = []
+        fake_frappe.PermissionError = PermissionError
+        fake_frappe.throw = lambda msg, kind=PermissionError: (_ for _ in ()).throw(kind(msg))
+        fake_frappe.whitelist = lambda **_kw: lambda fn: fn
+        fake_utils = types.ModuleType("frappe.utils")
+        fake_utils.now_datetime = lambda: None
+        fake_frappe.utils = fake_utils
+        with patch.dict(sys.modules, {"frappe": fake_frappe, "frappe.utils": fake_utils}):
+            module = importlib.import_module("softsystem97.technician_os.api")
+            try:
+                mission = types.SimpleNamespace(
+                    name="m" * 36, track="CYBER", state="PENDING_APPROVAL",
+                    created_by_user="manager1@test.invalid", technician="tech@test.invalid",
+                    authorization_reference="AUTH-CYBER-WRITTEN", save=lambda **_kw: None,
+                )
+                module._enabled = lambda: None
+                module._manager = lambda: "manager2@test.invalid"
+                module._mission_by_id = lambda *_args, **_kw: mission
+                module._log = lambda *_args: None
+                module._active_assignment_ticket = lambda _mission: (_ for _ in ()).throw(
+                    PermissionError("Affectation révoquée")
+                )
+                with self.assertRaises(PermissionError):
+                    module.approve_sensitive_mission(mission.name)
+                self.assertEqual(mission.state, "PENDING_APPROVAL")
+                module._active_assignment_ticket = lambda _mission: types.SimpleNamespace(
+                    raised_by="manager2@test.invalid"
+                )
+                with self.assertRaises(PermissionError):
+                    module.approve_sensitive_mission(mission.name)
+                self.assertEqual(mission.state, "PENDING_APPROVAL")
+            finally:
+                sys.modules.pop("softsystem97.technician_os.api", None)
+                sys.modules.pop("softsystem97.technician_os.notices", None)
+
 
 if __name__ == "__main__":
     unittest.main()

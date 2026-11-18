@@ -122,8 +122,36 @@ def _documents_for_profile(profile):
             for category, label in REQUIRED_DOCUMENTS.items()]
 
 
+def _private_document_still_valid(document, candidate_user):
+    """Fail closed if an uploaded credential was removed or made public later."""
+    if document.candidate_user != candidate_user or not document.file:
+        return False
+    file_data = frappe.db.get_value(
+        "File", document.file,
+        ["name", "owner", "is_private", "file_url", "file_name", "file_size",
+         "attached_to_doctype", "attached_to_name"], as_dict=True,
+    )
+    try:
+        check_private_upload(file_data, candidate_user)
+    except (ValueError, TypeError):
+        return False
+    return True
+
+
 def _documents_verified(profile):
-    return all(item["state"] == "VERIFIED" for item in _documents_for_profile(profile))
+    documents = frappe.get_all(
+        DOCUMENT, filters={"profile": profile.name, "candidate_user": profile.candidate_user},
+        fields=["category", "candidate_user", "state", "file"], limit_page_length=10,
+    )
+    verified = {}
+    for document in documents:
+        if document.category not in REQUIRED_DOCUMENTS or document.category in verified:
+            return False
+        verified[document.category] = (
+            document.state == "VERIFIED"
+            and _private_document_still_valid(document, profile.candidate_user)
+        )
+    return set(verified) == set(REQUIRED_DOCUMENTS) and all(verified.values())
 
 
 def _mission_view(mission, as_client=False):
@@ -283,6 +311,8 @@ def review_document(document_id, decision, evidence_reference=""):
         proof = reference(evidence_reference, "Preuve du contrôle humain")
     except ValueError as exc:
         frappe.throw(str(exc), frappe.PermissionError)
+    if decision == "VERIFIED" and not _private_document_still_valid(doc, profile.candidate_user):
+        frappe.throw("Justificatif devenu inaccessible ou non privé.", frappe.PermissionError)
     doc.state = decision
     doc.reviewed_by = reviewer
     doc.reviewed_at = now_datetime()
@@ -363,8 +393,9 @@ def review_profile(profile_id, state, evidence_reference=""):
         if (not profile.verification_reference or not profile.contract_reference
                 or not profile.contract_signed_at or not frappe.db.get_value(
                     "User", profile.candidate_user, "enabled")
+                or not _documents_verified(profile)
                 or not exact_track_role(frappe.get_roles(profile.candidate_user), profile.track)):
-            frappe.throw("Contrat, contrôle et rôle N2/N3/N4 requis.", frappe.PermissionError)
+            frappe.throw("Contrat, pièces privées et rôle N2/N3/N4 requis.", frappe.PermissionError)
         if profile.track in SENSITIVE_TRACKS and profile.documents_validated_by == reviewer:
             frappe.throw("Double validation indépendante requise pour N3/N4.", frappe.PermissionError)
         if profile.track in SENSITIVE_TRACKS and frappe.db.exists(DOCUMENT, {
@@ -434,10 +465,9 @@ def approve_sensitive_mission(mission_id):
             or mission.created_by_user == approver or mission.technician == approver
             or not mission.authorization_reference):
         frappe.throw("Deuxième validation ou autorisation manquante.", frappe.PermissionError)
-    from softsystem97.integrations.ticket_bridge import policy
-    policy.settings()
-    if not policy.assigned(mission.ticket_name, mission.technician):
-        frappe.throw("Affectation révoquée.", frappe.PermissionError)
+    ticket = _active_assignment_ticket(mission)
+    if approver == ticket.raised_by:
+        frappe.throw("Le client ne peut pas approuver sa propre mission.", frappe.PermissionError)
     mission.approved_by = approver
     mission.state = "OFFERED"
     mission.save(ignore_permissions=True)
@@ -500,8 +530,8 @@ def review_client_report(mission_id, decision, dispute_reason=""):
     return _mission_view(mission, as_client=True)
 
 
-def _rework_ticket(mission):
-    """A past assignment or inactive technician never authorizes resumed work."""
+def _active_assignment_ticket(mission):
+    """Live assignment, customer and credential checks before sensitive work."""
     from softsystem97.integrations.ticket_bridge import policy
 
     policy.settings()
@@ -527,7 +557,7 @@ def request_dispute_rework(mission_id, evidence_reference, authorization_referen
     mission = _mission_by_id(mission_id, lock=True)
     if mission.state != "DISPUTED":
         frappe.throw("Seule une mission contestée peut être reprise.", frappe.PermissionError)
-    ticket = _rework_ticket(mission)
+    ticket = _active_assignment_ticket(mission)
     if manager in {mission.technician, ticket.raised_by}:
         frappe.throw("Contrôle indépendant obligatoire.", frappe.PermissionError)
     try:
@@ -565,7 +595,7 @@ def approve_sensitive_rework(mission_id):
             or not mission.rework_authorization_reference
             or manager in {mission.rework_requested_by, mission.technician}):
         frappe.throw("Deuxième contrôle de reprise insuffisant.", frappe.PermissionError)
-    ticket = _rework_ticket(mission)
+    ticket = _active_assignment_ticket(mission)
     if manager == ticket.raised_by:
         frappe.throw("Le client ne peut pas approuver sa propre reprise.", frappe.PermissionError)
     mission.rework_approved_by = manager
