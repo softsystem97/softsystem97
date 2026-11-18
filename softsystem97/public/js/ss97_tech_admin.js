@@ -65,6 +65,8 @@
   }
   async function refresh() {
     const data = await api("get_admin_overview");
+    // Never show administrative controls before server-side manager admission.
+    $("admin-protected").hidden = false;
     const summary = $("admin-summary");
     summary.replaceChildren();
     for (const track of ["L2", "BANK", "CYBER"]) {
