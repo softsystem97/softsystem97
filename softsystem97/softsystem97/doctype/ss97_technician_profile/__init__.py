@@ -1,0 +1,1 @@
+"""Private technician onboarding record."""

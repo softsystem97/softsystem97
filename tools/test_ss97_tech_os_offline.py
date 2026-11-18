@@ -1,0 +1,124 @@
+"""Offline contract/security regression tests; no Frappe site, Stripe or client accessed."""
+
+import ast
+import importlib
+import json
+import sys
+import types
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from softsystem97.technician_os.rules import (
+    MISSION_TRANSITIONS, PROFILE_TRANSITIONS, TRACKS, exact_track_role,
+    fee_eur, next_mission_state, next_profile_state, reference, short_note,
+    track_settings,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class TechnicianOSRulesTests(unittest.TestCase):
+    def test_exact_three_specialties(self):
+        self.assertEqual(set(TRACKS), {"L2", "BANK", "CYBER"})
+        self.assertEqual(len({item["role"] for item in TRACKS.values()}), 3)
+
+    def test_must_have_one_and_only_one_track_role(self):
+        self.assertTrue(exact_track_role(["SS97 Technicien N2", "Customer"], "L2"))
+        for roles in ([], ["Candidat SS97"], ["SS97 Technicien N3"],
+                      ["SS97 Technicien N2", "SS97 Technicien N4"]):
+            with self.subTest(roles=roles):
+                self.assertFalse(exact_track_role(roles, "L2"))
+
+    def test_unknown_track_fails_closed(self):
+        for bad in ("N4", "ALL", "", None):
+            with self.subTest(track=bad), self.assertRaises(ValueError):
+                track_settings(bad)
+
+    def test_profile_no_skip_to_active(self):
+        self.assertFalse(next_profile_state("APPLIED", "ACTIVE"))
+        self.assertFalse(next_profile_state("IN_REVIEW", "CONTRACT_SIGNED"))
+        self.assertTrue(next_profile_state("CONTRACT_SIGNED", "ACTIVE"))
+        self.assertTrue(next_profile_state("ACTIVE", "SUSPENDED"))
+        self.assertFalse(next_profile_state("REJECTED", "ACTIVE"))
+        self.assertEqual(set(PROFILE_TRANSITIONS["REJECTED"]), set())
+
+    def test_mission_requires_risk_approval_and_report(self):
+        self.assertFalse(next_mission_state("PENDING_APPROVAL", "ACCEPTED"))
+        self.assertTrue(next_mission_state("PENDING_APPROVAL", "OFFERED"))
+        self.assertFalse(next_mission_state("OFFERED", "CLIENT_ACCEPTED"))
+        self.assertFalse(next_mission_state("IN_PROGRESS", "CLIENT_ACCEPTED"))
+        self.assertTrue(next_mission_state("REPORT_SUBMITTED", "CLIENT_ACCEPTED"))
+        self.assertFalse(next_mission_state("CLIENT_ACCEPTED", "IN_PROGRESS"))
+        self.assertEqual(set(MISSION_TRANSITIONS["DISPUTED"]), set())
+
+    def test_fee_is_positive_rounded_eur_string_not_float(self):
+        self.assertEqual(fee_eur("12"), "12.00")
+        self.assertEqual(fee_eur("12.50"), "12.50")
+        for bad in (0, 1.5, -2, "0", "-1", "1.234", "1e3", "100001", "NaN", "", None):
+            with self.subTest(value=bad), self.assertRaises(ValueError):
+                fee_eur(bad)
+
+    def test_external_references_are_human_verified(self):
+        self.assertEqual(reference(" REFERENCE-12345 "), "REFERENCE-12345")
+        for bad in ("", "123", "\nref99999", "a" * 121):
+            with self.subTest(value=bad), self.assertRaises(ValueError):
+                reference(bad)
+
+    def test_report_text_length(self):
+        self.assertEqual(short_note(" intervention "), "intervention")
+        for bad in ("", 4, "x" * 2001):
+            with self.subTest(value=bad), self.assertRaises(ValueError):
+                short_note(bad)
+
+    def test_only_admin_can_read_private_doctypes_directly(self):
+        names = ("ss97_technician_profile", "ss97_technician_mission",
+                 "ss97_technician_os_event")
+        for name in names:
+            path = (ROOT / "softsystem97" / "softsystem97" / "doctype" / name / f"{name}.json")
+            with self.subTest(doctype=name):
+                doc = json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(doc["permissions"], [{"role": "System Manager", "read": 1, "report": 1}])
+                self.assertFalse(any(field.get("fieldname") in {"rib", "iban", "bank_account", "password"}
+                                     for field in doc["fields"]))
+
+    def test_server_api_no_guest_writes_or_money_transfer(self):
+        api = (ROOT / "softsystem97" / "technician_os" / "api.py").read_text(encoding="utf-8")
+        tree = ast.parse(api)
+        self.assertNotIn("allow_guest=True", api)
+        self.assertNotIn("stripe.Transfer.create", api)
+        self.assertNotIn("payouts.create", api)
+        self.assertNotIn("frappe.sendmail", api)
+        names = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
+        self.assertTrue({"apply", "review_profile", "offer_mission", "approve_sensitive_mission",
+                         "transition_my_mission", "review_client_report", "get_my_workspace"} <= names)
+
+    def test_client_view_never_exposes_technician_pay_or_private_authorization(self):
+        fake_frappe = types.ModuleType("frappe")
+        fake_frappe.__path__ = []
+        fake_frappe.whitelist = lambda **_kw: lambda func: func
+        fake_utils = types.ModuleType("frappe.utils")
+        fake_utils.now_datetime = lambda: None
+        fake_frappe.utils = fake_utils
+        with patch.dict(sys.modules, {"frappe": fake_frappe, "frappe.utils": fake_utils}):
+            module = importlib.import_module("softsystem97.technician_os.api")
+            try:
+                mission = types.SimpleNamespace(
+                    name="mission-1", ticket_name="ISS-001", track="CYBER",
+                    state="REPORT_SUBMITTED", offered_fee_eur="900.00",
+                    route_instructions="Confidentiel", report_summary="Intervention terminée",
+                    authorization_reference="AUTH-CYBER-PRIVATE",
+                )
+                customer = module._mission_view(mission, as_client=True)
+                technician = module._mission_view(mission, as_client=False)
+                self.assertNotIn("offered_fee_eur", customer)
+                self.assertNotIn("route_instructions", customer)
+                self.assertNotIn("authorization_reference", customer)
+                self.assertEqual(technician["offered_fee_eur"], "900.00")
+            finally:
+                sys.modules.pop("softsystem97.technician_os.api", None)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,66 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<style>
+.ss97-tech{max-width:75rem;margin:1rem auto;padding:1.25rem;color:#17293b}
+.ss97-tech h1{font-size:clamp(2rem,4vw,2.7rem);margin:0 0 .4rem}
+.ss97-tech .intro{color:#43576c;max-width:55rem}
+.ss97-tech .tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:1rem;margin:1.5rem 0}
+.ss97-tech .track{border:2px solid #dae1e8;background:#fff;padding:1rem;border-radius:14px}
+.ss97-tech .track.l2{border-left:6px solid #1976b8}
+.ss97-tech .track.bank{border-left:6px solid #8056b6}
+.ss97-tech .track.cyber{border-left:6px solid #b43b43}
+.ss97-tech .panel{background:#fff;border:1px solid #cbd8e5;border-radius:14px;padding:1.25rem;margin:1rem 0}
+.ss97-tech .mission{border-top:1px solid #dce4ec;padding:.9rem 0}
+.ss97-tech button,.ss97-tech select,.ss97-tech textarea{font:inherit;border-radius:7px;padding:.65rem}
+.ss97-tech button{background:#155b80;color:white;border:0;cursor:pointer;margin:.35rem .4rem .35rem 0}
+.ss97-tech button:disabled{opacity:.5;cursor:default}
+.ss97-tech select,.ss97-tech textarea{border:1px solid #adbfcf;max-width:100%;width:100%}
+.ss97-tech .warning{background:#fff5e3;border-left:4px solid #a76e22;padding:.9rem}
+.ss97-tech #tech-status{font-weight:600;min-height:1.5rem}
+.ss97-tech [hidden]{display:none!important}
+</style>
+<main class="ss97-tech">
+<h1>SS97 TECH OS</h1>
+<p class="intro">Votre espace professionnel Soft System 97 : habilitation, fiches de route, rapports et missions. Trois spécialités séparées. Les contrats sont vérifiés par l'administration et aucun virement n'est initié depuis ce portail.</p>
+<div class="tracks" aria-label="Spécialités des techniciens">
+  <div class="track l2"><strong>N2 — Généraliste</strong><p>Assistance PC, logiciels et réseaux.</p></div>
+  <div class="track bank"><strong>N3 — Bancaire</strong><p>Interventions bancaires soumises à autorisation supplémentaire.</p></div>
+  <div class="track cyber"><strong>N4 — Cybersécurité</strong><p>Missions sensibles et deuxième validation indépendante.</p></div>
+</div>
+{% if is_guest %}
+<p class="warning">Connectez-vous pour consulter votre propre dossier.</p>
+<a href="/login?redirect-to=%2Fss97-tech-os">Se connecter</a>
+{% else %}
+<p id="tech-status" aria-live="polite" role="status">Chargement de votre espace privé…</p>
+<section id="tech-apply" class="panel" hidden>
+  <h2>Candidature freelance</h2>
+  <p>Votre choix de spécialité est soumis à examen et à une vérification humaine. Il ne donne aucun droit d'intervention.</p>
+  <form id="tech-apply-form">
+    <label for="tech-track">Votre spécialité</label>
+    <select id="tech-track" required></select>
+    <button type="submit">Déposer ma candidature</button>
+  </form>
+</section>
+<section id="tech-profile" class="panel" hidden>
+  <h2>Mon dossier professionnel</h2>
+  <p id="tech-track-label"></p>
+  <p>Statut : <strong id="tech-profile-state"></strong></p>
+  <p id="tech-profile-help"></p>
+</section>
+<section id="tech-exam" class="panel" hidden>
+  <h2>Examen de présélection</h2>
+  <p>Vous ne pouvez passer que l'examen correspondant à votre candidature. Le temps est contrôlé par le serveur et ne recommence pas en actualisant la page.</p>
+  <button id="tech-exam-start" type="button">Démarrer ou reprendre mon examen</button>
+  <p id="tech-exam-progress" aria-live="polite"></p>
+  <div id="tech-exam-questions"></div>
+  <button id="tech-exam-submit" type="button" hidden>Terminer et envoyer les réponses</button>
+</section>
+<section id="tech-missions" class="panel" hidden>
+  <h2>Mes missions attribuées</h2>
+  <p>Seules les missions de votre filière et de vos tickets autorisés sont affichées.</p>
+  <div id="tech-mission-list" aria-live="polite"></div>
+</section>
+{% endif %}
+</main>
+{% if not is_guest %}<script src="/assets/softsystem97/js/ss97_tech_os.js" defer></script>{% endif %}
+{% endblock %}
