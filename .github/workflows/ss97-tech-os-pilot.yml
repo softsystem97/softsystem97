@@ -1,0 +1,31 @@
+name: SS97 TECH OS - vérifications hors production
+
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/technician_os/**'
+      - 'softsystem97/technician_exams/**'
+      - 'softsystem97/softsystem97/doctype/ss97_technician_*/**'
+      - 'softsystem97/www/ss97-tech-os*'
+      - 'softsystem97/public/js/ss97_tech_os.js'
+      - 'tools/test_ss97_tech_os_offline.py'
+      - 'tools/test_ss97_technician_exams_offline.py'
+      - '.github/workflows/ss97-tech-os-pilot.yml'
+  workflow_dispatch:
+
+jobs:
+  offline-security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: API, filières et examinateur - tests sans compte client
+        run: python -m unittest -q tools.test_ss97_tech_os_offline tools.test_ss97_technician_exams_offline
+      - name: JavaScript navigateur - syntaxe
+        run: node --check softsystem97/public/js/ss97_tech_os.js
+      - name: Modules Python - compilation
+        run: python -m compileall -q softsystem97/technician_os softsystem97/technician_exams
