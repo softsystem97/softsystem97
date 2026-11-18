@@ -78,6 +78,12 @@ sécurité et juridique, par un responsable disposant des permissions Frappe.
    d'identification, le compte bancaire et les webhooks en sandbox isolée.
    **Aucun virement automatique n'est prévu dans cette version** :
    `Settlement` stocke uniquement `REVIEW_REQUIRED` ou `APPROVED`.
+   Le contrôle financier vérifie de nouveau le règlement Stripe/ERPNext des
+   factures liées avant la préparation **et** avant la deuxième approbation.
+   Si aucun justificatif de facture n'existe, la mission peut être étudiée
+   en interne, mais ne devient jamais éligible à un transfert automatique.
+   Le responsable dispose d'un diagnostic en lecture seule par rémunération ;
+   les comptes bénéficiaires et l'ordre de virement ne sont ni créés ni simulés.
 10. Exécuter les tests d'intégration sur la même version Frappe/ERPNext que la
     production, avec sauvegarde, restauration et surveillance SMTP/queues.
 

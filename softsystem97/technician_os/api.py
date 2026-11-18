@@ -12,6 +12,7 @@ from frappe.utils import now_datetime
 
 from .documents import REQUIRED_DOCUMENTS, check_private_upload, safe_private_file_url
 from .notices import stage_notice, _mail_enabled
+from .settlement_controls import amounts_match_eur, internal_financial_review_allowed, ticket_payment_evidence
 from .training import course_for_track
 from .rules import (
     SENSITIVE_TRACKS, TRACKS, TRACK_ROLES, exact_track_role, fee_eur,
@@ -686,6 +687,8 @@ def prepare_settlement(mission_id):
     if (mission.state != "CLIENT_ACCEPTED" or mission.technician == manager
             or not mission.client_accepted_at):
         frappe.throw("Mission non éligible à la vérification financière.", frappe.PermissionError)
+    if not internal_financial_review_allowed(ticket_payment_evidence(mission)):
+        frappe.throw("Facture liée non réglée ou preuve Stripe indisponible.", frappe.PermissionError)
     if frappe.db.exists(SETTLEMENT, {"mission": mission.name}):
         frappe.throw("Rémunération déjà préparée.", frappe.PermissionError)
     settlement = frappe.get_doc({
@@ -715,6 +718,10 @@ def approve_settlement(settlement_id, evidence_reference):
             or settlement.technician != mission.technician
             or manager in {settlement.prepared_by, mission.technician, mission.created_by_user}):
         frappe.throw("Double contrôle financier insuffisant.", frappe.PermissionError)
+    # Recheck now: a refund, a dispute or an invoice re-link may have happened
+    # after the first manager prepared the settlement.
+    if not internal_financial_review_allowed(ticket_payment_evidence(mission)):
+        frappe.throw("Règlement client non confirmé au moment de l'approbation.", frappe.PermissionError)
     try:
         proof = reference(evidence_reference, "Preuve d'approbation financière")
     except ValueError as exc:
@@ -727,6 +734,45 @@ def approve_settlement(settlement_id, evidence_reference):
     _log("MISSION", mission.name, "SETTLEMENT_APPROVED_NO_PAYOUT", manager)
     return {"settlement_id": settlement.name, "state": settlement.state,
             "notice": "Approbation interne seulement. Aucun paiement effectué."}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_settlement_readiness(settlement_id):
+    """Manager-only, no credential or RIB exposure and no provider side effects."""
+    _enabled()
+    _manager()
+    if not isinstance(settlement_id, str) or len(settlement_id) != 36:
+        frappe.throw("Rémunération invalide.", frappe.PermissionError)
+    settlement = frappe.get_doc(SETTLEMENT, settlement_id)
+    mission = _mission_by_id(settlement.mission)
+    profile = _profile_for_user(settlement.technician)
+    proof = ticket_payment_evidence(mission)
+    ticket_customer = frappe.db.get_value("Issue", mission.ticket_name, "customer")
+    checks = {
+        "client_report_accepted": bool(mission.state == "CLIENT_ACCEPTED" and mission.client_accepted_at),
+        "financial_second_approval": bool(settlement.state == "APPROVED" and settlement.approved_by),
+        "ticket_customer_consistent": bool(ticket_customer and ticket_customer == mission.customer),
+        "freelance_active": bool(profile and profile.state == "ACTIVE" and profile.engagement == "FREELANCE"
+                                 and profile.candidate_user == settlement.technician
+                                 and profile.track == mission.track
+                                 and exact_track_role(frappe.get_roles(settlement.technician), mission.track)),
+        "private_documents_intact": bool(profile and _documents_verified(profile)),
+        "contract_reference_recorded": bool(profile and profile.contract_reference
+                                            and profile.contract_signed_at),
+        "amount_and_beneficiary_consistent": bool(settlement.technician == mission.technician
+                                                   and settlement.currency == "EUR"
+                                                   and amounts_match_eur(settlement.amount_eur,
+                                                                         mission.offered_fee_eur)),
+        "client_payment_verified": proof == "VERIFIED_PAID",
+        "recipient_provider_verified": False,
+        "transfer_release_authorized": False,
+    }
+    # A signed contract, payment proof and two reviews are necessary but not
+    # sufficient. Stripe Connect onboarding and explicit release governance are
+    # intentionally separate and NOT implemented by this read-only check.
+    return {"settlement_id": settlement.name, "payment_evidence": proof,
+            "checks": checks, "ready_for_transfer": False,
+            "note": "Contrôle d'éligibilité uniquement ; aucun versement déclenché."}
 
 
 @frappe.whitelist(methods=["POST"])
