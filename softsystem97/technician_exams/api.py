@@ -25,12 +25,20 @@ ALLOWED_CANDIDATE_ROLES = frozenset({"Candidat SS97", "System Manager"})
 
 def _candidate():
     user = frappe.session.user
-    if not user or user == "Guest" or not (
-        set(frappe.get_roles(user)) & ALLOWED_CANDIDATE_ROLES
-    ):
+    if not user or user == "Guest":
         frappe.throw("Compte candidat autorisé requis.", frappe.PermissionError)
     if not frappe.db.get_value("User", user, "enabled"):
         frappe.throw("Compte désactivé.", frappe.PermissionError)
+    config = frappe.conf.get("ss97_tech_os") or {}
+    if isinstance(config, dict) and config.get("enabled") is True:
+        # A separately registered website applicant needs no privileged role.
+        # The track and IN_REVIEW gate are enforced by _require_selected_track.
+        from softsystem97.technician_os.api import _can_apply
+        if not (_can_apply(user) and frappe.db.exists(
+                "SS97 Technician Profile", {"candidate_user": user})):
+            frappe.throw("Candidature SS97 vérifiée requise.", frappe.PermissionError)
+    elif not (set(frappe.get_roles(user)) & ALLOWED_CANDIDATE_ROLES):
+        frappe.throw("Compte candidat autorisé requis.", frappe.PermissionError)
     return user
 
 

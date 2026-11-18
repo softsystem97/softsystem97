@@ -1,0 +1,25 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Technician Document",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:document_id",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": ["document_id", "profile", "candidate_user", "category", "file", "state", "submitted_at", "reviewed_by", "reviewed_at", "verification_reference"],
+  "fields": [
+    {"fieldname": "document_id", "fieldtype": "Data", "label": "Identifiant", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "profile", "fieldtype": "Link", "options": "SS97 Technician Profile", "label": "Dossier", "reqd": 1, "search_index": 1, "read_only": 1},
+    {"fieldname": "candidate_user", "fieldtype": "Link", "options": "User", "label": "Candidat", "reqd": 1, "read_only": 1},
+    {"fieldname": "category", "fieldtype": "Select", "options": "IDENTITY\nDIPLOMA", "label": "Type de pièce", "reqd": 1, "read_only": 1},
+    {"fieldname": "file", "fieldtype": "Link", "options": "File", "label": "Fichier privé", "reqd": 1, "hidden": 1, "read_only": 1},
+    {"fieldname": "state", "fieldtype": "Select", "options": "SUBMITTED\nVERIFIED\nREJECTED", "label": "Contrôle", "reqd": 1, "read_only": 1},
+    {"fieldname": "submitted_at", "fieldtype": "Datetime", "label": "Reçu le", "reqd": 1, "read_only": 1},
+    {"fieldname": "reviewed_by", "fieldtype": "Link", "options": "User", "label": "Contrôlé par", "read_only": 1},
+    {"fieldname": "reviewed_at", "fieldtype": "Datetime", "label": "Contrôlé le", "read_only": 1},
+    {"fieldname": "verification_reference", "fieldtype": "Data", "label": "Preuve du contrôle humain", "hidden": 1, "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}
