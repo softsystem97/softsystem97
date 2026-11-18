@@ -26,10 +26,11 @@ MISSION_TRANSITIONS = {
     "ACCEPTED": frozenset({"IN_PROGRESS", "CANCELLED"}),
     "IN_PROGRESS": frozenset({"REPORT_SUBMITTED", "CANCELLED"}),
     "REPORT_SUBMITTED": frozenset({"CLIENT_ACCEPTED", "DISPUTED"}),
+    "REWORK_PENDING_APPROVAL": frozenset({"CANCELLED"}),
     "CLIENT_ACCEPTED": frozenset(),
     "DECLINED": frozenset(),
     "CANCELLED": frozenset(),
-    "DISPUTED": frozenset(),
+    "DISPUTED": frozenset({"CANCELLED"}),
 }
 
 

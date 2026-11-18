@@ -51,7 +51,9 @@ class TechnicianOSRulesTests(unittest.TestCase):
         self.assertFalse(next_mission_state("IN_PROGRESS", "CLIENT_ACCEPTED"))
         self.assertTrue(next_mission_state("REPORT_SUBMITTED", "CLIENT_ACCEPTED"))
         self.assertFalse(next_mission_state("CLIENT_ACCEPTED", "IN_PROGRESS"))
-        self.assertEqual(set(MISSION_TRANSITIONS["DISPUTED"]), set())
+        self.assertFalse(next_mission_state("DISPUTED", "IN_PROGRESS"))
+        self.assertFalse(next_mission_state("REWORK_PENDING_APPROVAL", "IN_PROGRESS"))
+        self.assertTrue(next_mission_state("DISPUTED", "CANCELLED"))
 
     def test_fee_is_positive_rounded_eur_string_not_float(self):
         self.assertEqual(fee_eur("12"), "12.00")
@@ -173,6 +175,7 @@ class TechnicianOSRulesTests(unittest.TestCase):
         fake_frappe.PermissionError = PermissionError
         fake_frappe.whitelist = lambda **_kwargs: lambda fn: fn
         fake_frappe.get_roles = lambda user: ["Customer"]
+        fake_frappe.throw = lambda msg, kind=PermissionError: (_ for _ in ()).throw(kind(msg))
         fake_utils = types.ModuleType("frappe.utils")
         fake_utils.now_datetime = lambda: "2026-11-18 12:00:00"
         fake_frappe.utils = fake_utils
@@ -200,6 +203,57 @@ class TechnicianOSRulesTests(unittest.TestCase):
                 self.assertNotIn("offered_fee_eur", result)
                 self.assertNotIn("payment_status", result)
                 self.assertEqual(mission.client_accepted_at, "2026-11-18 12:00:00")
+                mission.state = "REPORT_SUBMITTED"
+                with self.assertRaises(PermissionError):
+                    module.review_client_report(mission.name, "DISPUTED")
+                self.assertEqual(mission.state, "REPORT_SUBMITTED")
+                result = module.review_client_report(mission.name, "DISPUTED", "Travail non terminé")
+                self.assertEqual(result["dispute_reason"], "Travail non terminé")
+                self.assertNotIn("offered_fee_eur", result)
+            finally:
+                sys.modules.pop("softsystem97.technician_os.api", None)
+
+    def test_sensitive_dispute_rework_demands_fresh_mandate_and_second_manager(self):
+        fake_frappe = types.ModuleType("frappe")
+        fake_frappe.__path__ = []
+        fake_frappe.PermissionError = PermissionError
+        fake_frappe.whitelist = lambda **_kwargs: lambda fn: fn
+        fake_frappe.throw = lambda msg, kind=PermissionError: (_ for _ in ()).throw(kind(msg))
+        fake_utils = types.ModuleType("frappe.utils")
+        fake_utils.now_datetime = lambda: "2026-11-18 13:00:00"
+        fake_frappe.utils = fake_utils
+        with patch.dict(sys.modules, {"frappe": fake_frappe, "frappe.utils": fake_utils}):
+            module = importlib.import_module("softsystem97.technician_os.api")
+            try:
+                mission = types.SimpleNamespace(
+                    name="a" * 36, ticket_name="ISS-001", customer="CUST-1",
+                    technician="worker@test.invalid", track="CYBER", state="DISPUTED",
+                    dispute_reason="Résultat non conforme", rework_count=0,
+                    offered_fee_eur="100.00", route_instructions="Aucun secret",
+                    report_summary="Premier compte rendu", report_submitted_at="2026-11-18",
+                    created_by_user="coord@test.invalid", approved_by="second@test.invalid",
+                    save=lambda **kwargs: None,
+                )
+                module._enabled = lambda: None
+                module._manager = lambda: "manager_a@test.invalid"
+                module._mission_by_id = lambda *args, **kwargs: mission
+                module._rework_ticket = lambda m: types.SimpleNamespace(raised_by="client@test.invalid")
+                module._log = lambda *args: None
+                with self.assertRaises(PermissionError):
+                    module.request_dispute_rework(mission.name, "REWORK-DECISION")
+                self.assertEqual(mission.state, "DISPUTED")
+                requested = module.request_dispute_rework(
+                    mission.name, "REWORK-DECISION", "NEW-MANDATE-1234")
+                self.assertEqual(requested["state"], "REWORK_PENDING_APPROVAL")
+                self.assertEqual(mission.rework_count, 0)
+                with self.assertRaises(PermissionError):
+                    module.approve_sensitive_rework(mission.name)
+                module._manager = lambda: "manager_b@test.invalid"
+                approved = module.approve_sensitive_rework(mission.name)
+                self.assertEqual(approved["state"], "IN_PROGRESS")
+                self.assertEqual(mission.rework_count, 1)
+                self.assertEqual(mission.report_summary, "")
+                self.assertEqual(mission.rework_approved_by, "manager_b@test.invalid")
             finally:
                 sys.modules.pop("softsystem97.technician_os.api", None)
 

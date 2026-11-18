@@ -104,6 +104,42 @@
       row.className = "mission";
       line(row, "strong", `${mission.ticket_name} — ${mission.track} — ${mission.technician}`);
       line(row, "p", "État : " + mission.state);
+      if (mission.dispute_reason) line(row, "p", "Motif de contestation : " + mission.dispute_reason);
+      if (mission.state === "DISPUTED") {
+        const rework = document.createElement("button");
+        rework.type = "button";
+        rework.textContent = "Préparer une reprise après contestation";
+        rework.addEventListener("click", async () => {
+          const proof = window.prompt("Référence de la décision humaine motivée :", "") || "";
+          if (!proof.trim()) return;
+          const sensitive = ["BANK", "CYBER"].includes(mission.track);
+          let mandate = "";
+          if (sensitive) {
+            mandate = window.prompt("Référence du nouveau mandat écrit pour cette reprise :", "") || "";
+            if (!mandate.trim()) return;
+          }
+          if (!window.confirm("Reprendre sous contrôle administratif ? Pour N3/N4, un second responsable doit approuver avant l'intervention.")) return;
+          rework.disabled = true;
+          try {
+            await api("request_dispute_rework", {mission_id: mission.name,
+              evidence_reference: proof.trim(), authorization_reference: mandate.trim()}, true);
+            await refresh();
+          } catch (error) {status(error.message);rework.disabled = false;}
+        });
+        row.append(rework);
+      }
+      if (mission.state === "REWORK_PENDING_APPROVAL") {
+        const approve = document.createElement("button");
+        approve.type = "button";
+        approve.textContent = "Autoriser la reprise sensible (deuxième responsable)";
+        approve.addEventListener("click", async () => {
+          if (!window.confirm("Confirmez-vous le mandat écrit distinct et votre indépendance du premier responsable ?")) return;
+          approve.disabled = true;
+          try {await api("approve_sensitive_rework", {mission_id: mission.name}, true);await refresh();}
+          catch (error) {status(error.message);approve.disabled = false;}
+        });
+        row.append(approve);
+      }
       if (mission.state === "PENDING_APPROVAL") {
         const approve = document.createElement("button");
         approve.type = "button";
@@ -116,7 +152,7 @@
         });
         row.append(approve);
       }
-      if (["PENDING_APPROVAL", "OFFERED", "ACCEPTED", "IN_PROGRESS"].includes(mission.state)) {
+      if (["PENDING_APPROVAL", "OFFERED", "ACCEPTED", "IN_PROGRESS", "DISPUTED", "REWORK_PENDING_APPROVAL"].includes(mission.state)) {
         const cancel = document.createElement("button");
         cancel.type = "button";
         cancel.textContent = "Suspendre / annuler cette mission";

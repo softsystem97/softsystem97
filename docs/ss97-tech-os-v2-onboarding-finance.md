@@ -56,6 +56,19 @@ sécurité et juridique, par un responsable disposant des permissions Frappe.
 8. Tester le ticket client, les affectations, le mandat de sécurité, la double
    validation N3/N4, les rapports, la clôture client et la révocation en cours
    de mission, avec trois comptes de test distincts.
+
+### Gestion d'un rapport contesté
+
+- Le client lié au ticket fournit un motif de contestation (500 caractères au
+  maximum), sans divulguer de secret ni de mot de passe.
+- Une mission `DISPUTED` ne peut pas être relancée directement par le
+  technicien : un responsable vérifie à nouveau le ticket, l'affectation et
+  l'habilitation freelance. Il peut aussi annuler la mission.
+- Pour N2, la reprise est une décision explicite du responsable, journalisée.
+- Pour N3 et N4, la reprise attend un **nouveau mandat écrit** et une
+  **deuxième validation indépendante** avant le retour à `IN_PROGRESS`.
+- Le technicien doit soumettre un nouveau compte rendu ; le client décide de
+  nouveau de son acceptation. Une contestation ne déclenche jamais de paiement.
 9. Choisir et confirmer les responsabilités Stripe Connect (accès des
    prestataires, frais, soldes négatifs et flux). Vérifier les obligations
    d'identification, le compte bancaire et les webhooks en sandbox isolée.
