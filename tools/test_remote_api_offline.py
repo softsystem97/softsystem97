@@ -72,6 +72,16 @@ class TestRemoteApiAuthorizations(unittest.TestCase):
                 api.get_session("some-id", "anonymous")
             lookup.assert_not_called()
 
+    def test_successful_join_consumes_code_hash(self):
+        session = SimpleNamespace(state="CREATED", code_digest="old-hash", name="s1",
+                                  ticket_name="ISS-1", technician="tech@ss97.invalid",
+                                  expires_at="2026-11-17 11:00:00", consented_at=None,
+                                  ended_at=None, save=lambda **kwargs: None)
+        with patch.object(api, "_event"):
+            api._transition(session, "CLIENT_READY", "client@a.invalid")
+        self.assertIsNone(session.code_digest)
+        self.assertEqual(session.state, "CLIENT_READY")
+
 
 if __name__ == "__main__":
     unittest.main()
