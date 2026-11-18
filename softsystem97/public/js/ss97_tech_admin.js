@@ -25,6 +25,44 @@
     parent.append(element);
     return element;
   }
+  async function showDocuments(profileId) {
+    const target = $("admin-documents");
+    target.replaceChildren();
+    const data = await api("get_admin_documents", {profile_id: profileId});
+    if (!data.documents.length) line(target, "p", "Aucun justificatif reçu.");
+    data.documents.forEach((doc) => {
+      const row = document.createElement("article");
+      row.className = "mission";
+      line(row, "strong", `${doc.category} — ${doc.state}`);
+      const link = document.createElement("a");
+      link.href = doc.private_url;
+      link.textContent = "Ouvrir le fichier privé : " + doc.file_name;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      row.append(link);
+      if (doc.state === "SUBMITTED") {
+        for (const decision of ["VERIFIED", "REJECTED"]) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = decision === "VERIFIED" ? "Vérification humaine confirmée" : "Refuser ce document";
+          button.addEventListener("click", async () => {
+            const proof = window.prompt("Référence de contrôle ou motif de refus (5 caractères minimum) :", "") || "";
+            if (!proof.trim()) return;
+            if (!window.confirm("Confirmer cette décision après examen du document privé ?")) return;
+            button.disabled = true;
+            try {
+              await api("review_document", {document_id: doc.document_id, decision,
+                evidence_reference: proof.trim()}, true);
+              await showDocuments(profileId);
+              await refresh();
+            } catch (error) {status(error.message);button.disabled = false;}
+          });
+          row.append(button);
+        }
+      }
+      target.append(row);
+    });
+  }
   async function refresh() {
     const data = await api("get_admin_overview");
     const summary = $("admin-summary");
@@ -51,6 +89,7 @@
       button.addEventListener("click", () => {
         $("admin-profile-id").value = profile.name;
         $("admin-profile-next").focus();
+        showDocuments(profile.name).catch((error) => status(error.message));
       });
       row.append(button);
       profiles.append(row);
@@ -89,7 +128,70 @@
         });
         row.append(cancel);
       }
+      if (mission.state === "CLIENT_ACCEPTED" && !data.settlements.some((s) => s.mission === mission.name)) {
+        const prepare = document.createElement("button");
+        prepare.type = "button";
+        prepare.textContent = "Préparer la rémunération (sans versement)";
+        prepare.addEventListener("click", async () => {
+          if (!window.confirm("Préparer la vérification financière de cette mission acceptée ? Aucun paiement ne sera effectué.")) return;
+          prepare.disabled = true;
+          try {await api("prepare_settlement", {mission_id: mission.name}, true);await refresh();}
+          catch (error) {status(error.message);prepare.disabled = false;}
+        });
+        row.append(prepare);
+      }
       missions.append(row);
+    });
+    const settlements = $("admin-settlements");
+    settlements.replaceChildren();
+    if (!data.settlements.length) line(settlements, "p", "Aucune rémunération préparée.");
+    data.settlements.forEach((settlement) => {
+      const row = document.createElement("article");
+      row.className = "mission";
+      line(row, "strong", `${settlement.technician} — ${settlement.amount_eur} EUR`);
+      line(row, "p", "État de contrôle : " + settlement.state + " — aucun versement initié.");
+      if (settlement.state === "REVIEW_REQUIRED") {
+        const approve = document.createElement("button");
+        approve.type = "button";
+        approve.textContent = "Deuxième validation comptable";
+        approve.addEventListener("click", async () => {
+          const proof = window.prompt("Référence du contrôle financier indépendant :", "") || "";
+          if (!proof.trim()) return;
+          if (!window.confirm("Confirmez-vous la vérification indépendante ? Aucun paiement ne sera effectué.")) return;
+          approve.disabled = true;
+          try {await api("approve_settlement", {settlement_id: settlement.name,
+            evidence_reference: proof.trim()}, true);await refresh();}
+          catch (error) {status(error.message);approve.disabled = false;}
+        });
+        row.append(approve);
+      }
+      settlements.append(row);
+    });
+    const notices = $("admin-notices");
+    notices.replaceChildren();
+    line(notices, "p", data.email_enabled
+      ? "L'envoi a été activé sur le site ; vérifier la file Email Queue."
+      : "L'envoi est désactivé sur ce site (mode sécurisé). ");
+    for (const [key, count] of Object.entries(data.notice_counts || {})) {
+      line(notices, "p", key + " : " + count + " notification(s)");
+    }
+    (data.latest_notices || []).forEach((notice) => {
+      const row = document.createElement("article");
+      row.className = "mission";
+      line(row, "p", `${notice.candidate_user} — ${notice.kind} — ${notice.state}`);
+      if (data.email_enabled && ["HELD", "ERROR"].includes(notice.state)) {
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.textContent = "Relancer via Email Queue";
+        retry.addEventListener("click", async () => {
+          if (!window.confirm("Relancer cet email après validation SMTP ?")) return;
+          retry.disabled = true;
+          try {await api("retry_candidate_notice", {notice_id: notice.name}, true);await refresh();}
+          catch (error) {status(error.message);retry.disabled = false;}
+        });
+        row.append(retry);
+      }
+      notices.append(row);
     });
     status("Supervision chargée (maximum " + data.limit + " dossiers par catégorie).");
   }

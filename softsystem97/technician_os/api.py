@@ -10,6 +10,9 @@ from uuid import uuid4
 import frappe
 from frappe.utils import now_datetime
 
+from .documents import REQUIRED_DOCUMENTS, check_private_upload
+from .notices import stage_notice, _mail_enabled
+from .training import course_for_track
 from .rules import (
     SENSITIVE_TRACKS, TRACKS, TRACK_ROLES, exact_track_role, fee_eur,
     next_mission_state, next_profile_state, reference, short_note, track_settings,
@@ -19,16 +22,20 @@ from .rules import (
 PROFILE = "SS97 Technician Profile"
 MISSION = "SS97 Technician Mission"
 EVENT = "SS97 Technician OS Event"
+DOCUMENT = "SS97 Technician Document"
+NOTICE = "SS97 Technician Notice"
+SETTLEMENT = "SS97 Technician Settlement"
 EXAM_ATTEMPT = "SS97 Technician Exam Attempt"
 SYSTEM_ROLE = "System Manager"
 CANDIDATE_ROLE = "Candidat SS97"
+SAFE_CANDIDATE_ROLES = frozenset({"All", "Guest", "Website User", CANDIDATE_ROLE})
 
 
 def _enabled():
     config = frappe.conf.get("ss97_tech_os") or {}
     if not isinstance(config, dict) or config.get("enabled") is not True:
         frappe.throw("SS97 TECH OS non activé.", frappe.PermissionError)
-    for table in (PROFILE, MISSION, EVENT):
+    for table in (PROFILE, MISSION, EVENT, DOCUMENT, NOTICE, SETTLEMENT):
         if not frappe.db.table_exists(table):
             frappe.throw("Migration SS97 TECH OS manquante.", frappe.PermissionError)
 
@@ -45,6 +52,13 @@ def _manager():
     if SYSTEM_ROLE not in frappe.get_roles(user):
         frappe.throw("Responsable SS97 requis.", frappe.PermissionError)
     return user
+
+
+def _can_apply(user):
+    """Self-service only for ordinary website accounts, never ERPNext clients/staff."""
+    roles = set(frappe.get_roles(user))
+    return (frappe.db.get_value("User", user, "user_type") == "Website User"
+            and roles <= SAFE_CANDIDATE_ROLES)
 
 
 def _profile_for_user(user, lock=False):
@@ -71,11 +85,13 @@ def _mission_by_id(mission_id, lock=False):
 
 
 def _log(entity_type, entity_id, action, actor):
+    event_id = str(uuid4())
     frappe.get_doc({
-        "doctype": EVENT, "event_id": str(uuid4()),
+        "doctype": EVENT, "event_id": event_id,
         "entity_type": entity_type, "entity_id": entity_id,
         "action": action, "actor": actor, "occurred_at": now_datetime(),
     }).insert(ignore_permissions=True)
+    return event_id
 
 
 def _my_active_profile():
@@ -93,6 +109,21 @@ def _profile_view(profile):
     return {"profile_id": profile.name, "track": profile.track,
             "track_label": track_settings(profile.track)["label"],
             "state": profile.state, "engagement": profile.engagement}
+
+
+def _documents_for_profile(profile):
+    rows = frappe.get_all(
+        DOCUMENT, filters={"profile": profile.name, "candidate_user": profile.candidate_user},
+        fields=["category", "state"], limit_page_length=10,
+    )
+    states = {item.category: item.state for item in rows}
+    return [{"category": category, "label": label,
+             "state": states.get(category, "MISSING")}
+            for category, label in REQUIRED_DOCUMENTS.items()]
+
+
+def _documents_verified(profile):
+    return all(item["state"] == "VERIFIED" for item in _documents_for_profile(profile))
 
 
 def _mission_view(mission, as_client=False):
@@ -124,12 +155,10 @@ def _authorized_ticket(mission, audience):
 
 @frappe.whitelist(methods=["POST"])
 def apply(track):
-    """An invited candidate selects a track; selection grants no worker role."""
+    """A signed-in website user selects one track; selection grants no role."""
     _enabled()
     user = _user()
-    roles = set(frappe.get_roles(user))
-    if (CANDIDATE_ROLE not in roles or roles & TRACK_ROLES
-            or SYSTEM_ROLE in roles or "Customer" in roles):
+    if not _can_apply(user):
         frappe.throw("Compte candidat SS97 distinct requis.", frappe.PermissionError)
     try:
         track_settings(track)
@@ -145,8 +174,120 @@ def apply(track):
         "candidate_user": user, "track": track, "state": "APPLIED",
         "engagement": "FREELANCE", "applied_at": now_datetime(),
     }).insert(ignore_permissions=True)
-    _log("PROFILE", profile.name, "APPLIED", user)
+    event_id = _log("PROFILE", profile.name, "APPLIED", user)
+    stage_notice(profile, "APPLIED", event_id)
     return _profile_view(profile)
+
+
+@frappe.whitelist(methods=["POST"])
+def submit_private_document(category, file_id):
+    """Link an already-private, candidate-owned Frappe File to this dossier.
+
+    Bytes are uploaded through Frappe's native /api/method/upload_file route.
+    No document bytes or URLs are returned by this endpoint.
+    """
+    _enabled()
+    user = _user()
+    profile = _profile_for_user(user, lock=True)
+    if (not profile or profile.state not in {"APPLIED", "IN_REVIEW", "EXAM_VALIDATED"}
+            or category not in REQUIRED_DOCUMENTS):
+        frappe.throw("Dossier ou type de pièce indisponible.", frappe.PermissionError)
+    if not isinstance(file_id, str) or len(file_id) > 140:
+        frappe.throw("Fichier invalide.", frappe.PermissionError)
+    file_data = frappe.db.get_value(
+        "File", file_id,
+        ["name", "owner", "is_private", "file_url", "file_name", "file_size",
+         "attached_to_doctype", "attached_to_name"], as_dict=True,
+    )
+    try:
+        check_private_upload(file_data, user)
+    except ValueError as exc:
+        frappe.throw(str(exc), frappe.PermissionError)
+    # Profile row lock serializes two simultaneous submissions for one category.
+    existing = frappe.db.get_value(
+        DOCUMENT, {"profile": profile.name, "category": category}, "name"
+    )
+    if existing:
+        doc = frappe.get_doc(DOCUMENT, existing, for_update=True)
+        if doc.state != "REJECTED":
+            frappe.throw("Pièce déjà soumise : attendez le contrôle.", frappe.PermissionError)
+        doc.file = file_id
+        doc.state = "SUBMITTED"
+        doc.reviewed_by = ""
+        doc.reviewed_at = None
+        doc.verification_reference = ""
+        doc.submitted_at = now_datetime()
+        doc.save(ignore_permissions=True)
+    else:
+        doc = frappe.get_doc({
+            "doctype": DOCUMENT, "document_id": str(uuid4()),
+            "profile": profile.name, "candidate_user": user,
+            "category": category, "file": file_id,
+            "state": "SUBMITTED", "submitted_at": now_datetime(),
+        }).insert(ignore_permissions=True)
+    _log("PROFILE", profile.name, f"DOCUMENT_{category}_SUBMITTED", user)
+    return {"category": category, "state": doc.state}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_admin_documents(profile_id):
+    """Only a System Manager receives private download links for review."""
+    _enabled()
+    _manager()
+    profile = _profile_by_id(profile_id)
+    rows = frappe.get_all(
+        DOCUMENT, filters={"profile": profile.name},
+        fields=["name", "candidate_user", "category", "state", "file"],
+        limit_page_length=10,
+    )
+    result = []
+    for row in rows:
+        if row.candidate_user != profile.candidate_user:
+            continue
+        file_data = frappe.db.get_value(
+            "File", row.file, ["is_private", "file_url", "file_name", "owner"], as_dict=True,
+        )
+        # Even staff cannot get an unverified public/external URL from this API.
+        if (not file_data or int(file_data.is_private or 0) != 1
+                or file_data.owner != profile.candidate_user
+                or not str(file_data.file_url or "").startswith("/private/files/")):
+            continue
+        result.append({"document_id": row.name, "category": row.category,
+                       "state": row.state, "file_name": file_data.file_name,
+                       "private_url": file_data.file_url})
+    return {"documents": result}
+
+
+@frappe.whitelist(methods=["POST"])
+def review_document(document_id, decision, evidence_reference=""):
+    """Independent, explicit human verification; never AI-verified or auto-approved."""
+    _enabled()
+    reviewer = _manager()
+    if not isinstance(document_id, str) or len(document_id) != 36:
+        frappe.throw("Pièce invalide.", frappe.PermissionError)
+    # Always lock profile first: same order as submit_private_document.
+    profile_id = frappe.db.get_value(DOCUMENT, document_id, "profile")
+    if not profile_id:
+        frappe.throw("Pièce introuvable.", frappe.PermissionError)
+    profile = _profile_by_id(profile_id, lock=True)
+    doc = frappe.get_doc(DOCUMENT, document_id, for_update=True)
+    if (reviewer == doc.candidate_user or doc.state != "SUBMITTED"
+            or decision not in {"VERIFIED", "REJECTED"}):
+        frappe.throw("Contrôle documentaire interdit.", frappe.PermissionError)
+    if (profile.candidate_user != doc.candidate_user
+            or profile.state not in {"APPLIED", "IN_REVIEW", "EXAM_VALIDATED"}):
+        frappe.throw("Dossier documentaire non vérifiable.", frappe.PermissionError)
+    try:
+        proof = reference(evidence_reference, "Preuve du contrôle humain")
+    except ValueError as exc:
+        frappe.throw(str(exc), frappe.PermissionError)
+    doc.state = decision
+    doc.reviewed_by = reviewer
+    doc.reviewed_at = now_datetime()
+    doc.verification_reference = proof
+    doc.save(ignore_permissions=True)
+    _log("PROFILE", profile.name, f"DOCUMENT_{doc.category}_{decision}", reviewer)
+    return {"category": doc.category, "state": decision}
 
 
 @frappe.whitelist(methods=["GET"])
@@ -155,12 +296,14 @@ def get_my_workspace():
     user = _user()
     profile = _profile_for_user(user)
     if not profile:
-        if CANDIDATE_ROLE not in frappe.get_roles(user):
+        if not _can_apply(user):
             frappe.throw("Candidature ou habilitation requise.", frappe.PermissionError)
         return {"profile": None, "tracks": [
             {"code": code, "label": item["label"]} for code, item in TRACKS.items()
         ], "missions": []}
-    data = {"profile": _profile_view(profile), "missions": []}
+    data = {"profile": _profile_view(profile), "training": course_for_track(profile.track),
+            "missions": [],
+            "documents": _documents_for_profile(profile)}
     if profile.state != "ACTIVE":
         if user != profile.candidate_user:
             frappe.throw("Profil inaccessible.", frappe.PermissionError)
@@ -175,7 +318,13 @@ def get_my_workspace():
             _authorized_ticket(mission, "technician")
         except frappe.PermissionError:
             continue
-        data["missions"].append(_mission_view(mission))
+        view = _mission_view(mission)
+        settlement_state = frappe.db.get_value(
+            SETTLEMENT, {"mission": mission.name}, "state"
+        )
+        if settlement_state:
+            view["payment_status"] = "APPROVAL_ONLY_" + settlement_state
+        data["missions"].append(view)
     return data
 
 
@@ -195,6 +344,8 @@ def review_profile(profile_id, state, evidence_reference=""):
         }):
             frappe.throw("Examen de la filière non validé.", frappe.PermissionError)
     if state == "DOCUMENTS_VALIDATED":
+        if not _documents_verified(profile):
+            frappe.throw("Pièce d'identité et diplôme vérifiés requis.", frappe.PermissionError)
         try:
             profile.verification_reference = reference(evidence_reference, "Preuve de vérification")
         except ValueError as exc:
@@ -214,10 +365,14 @@ def review_profile(profile_id, state, evidence_reference=""):
             frappe.throw("Contrat, contrôle et rôle N2/N3/N4 requis.", frappe.PermissionError)
         if profile.track in SENSITIVE_TRACKS and profile.documents_validated_by == reviewer:
             frappe.throw("Double validation indépendante requise pour N3/N4.", frappe.PermissionError)
+        if profile.track in SENSITIVE_TRACKS and frappe.db.exists(DOCUMENT, {
+                "profile": profile.name, "reviewed_by": reviewer, "state": "VERIFIED"}):
+            frappe.throw("Le validateur final N3/N4 doit être distinct du contrôleur des pièces.", frappe.PermissionError)
         profile.activated_by = reviewer
     profile.state = state
     profile.save(ignore_permissions=True)
-    _log("PROFILE", profile.name, state, reviewer)
+    event_id = _log("PROFILE", profile.name, state, reviewer)
+    stage_notice(profile, state, event_id)
     return _profile_view(profile)
 
 
@@ -365,9 +520,96 @@ def get_admin_overview():
     missions = frappe.get_all(MISSION, fields=["name", "ticket_name", "technician",
                                               "track", "state", "created_by_user"],
                               order_by="creation desc", limit_page_length=100)
+    settlements = frappe.get_all(SETTLEMENT, fields=["name", "mission", "state",
+                                                  "technician", "amount_eur"],
+                                 order_by="creation desc", limit_page_length=100)
+    notices = frappe.get_all(NOTICE, fields=["state"], limit_page_length=1000)
+    latest_notices = frappe.get_all(
+        NOTICE, fields=["name", "kind", "state", "candidate_user"],
+        order_by="creation desc", limit_page_length=50,
+    )
     return {"profiles": [dict(row) for row in profiles],
-            "missions": [dict(row) for row in missions], "limit": 100,
-            "notice": "Aucun versement bancaire ni signature électronique dans ce module."}
+            "missions": [dict(row) for row in missions],
+            "settlements": [dict(row) for row in settlements],
+            "notice_counts": {state: sum(1 for row in notices if row.state == state)
+                              for state in ("HELD", "PENDING", "QUEUED", "ERROR")},
+            "latest_notices": [dict(row) for row in latest_notices],
+            "email_enabled": _mail_enabled(),
+            "limit": 100,
+            "notice": "Validation comptable uniquement : aucun virement bancaire dans ce module."}
+
+
+@frappe.whitelist(methods=["POST"])
+def retry_candidate_notice(notice_id):
+    """A manager may release a held/failed notice only after SMTP validation."""
+    _enabled()
+    manager = _manager()
+    if not _mail_enabled():
+        frappe.throw("Envoi des courriels non activé.", frappe.PermissionError)
+    if not isinstance(notice_id, str) or len(notice_id) != 36:
+        frappe.throw("Notification invalide.", frappe.PermissionError)
+    notice = frappe.get_doc(NOTICE, notice_id, for_update=True)
+    if notice.state not in {"HELD", "ERROR"}:
+        frappe.throw("Notification non relançable.", frappe.PermissionError)
+    notice.state = "PENDING"
+    notice.save(ignore_permissions=True)
+    _log("PROFILE", notice.profile, "NOTIFICATION_RETRY", manager)
+    frappe.enqueue("softsystem97.technician_os.notices.deliver_notice", queue="short",
+                   enqueue_after_commit=True, notice_id=notice.name)
+    return {"notice_id": notice.name, "state": "PENDING",
+            "info": "Envoi à traiter par la file Frappe, pas encore livré."}
+
+
+@frappe.whitelist(methods=["POST"])
+def prepare_settlement(mission_id):
+    """A distinct financial dossier follows client acceptance, never a payout."""
+    _enabled()
+    manager = _manager()
+    mission = _mission_by_id(mission_id, lock=True)
+    if (mission.state != "CLIENT_ACCEPTED" or mission.technician == manager
+            or not mission.client_accepted_at):
+        frappe.throw("Mission non éligible à la vérification financière.", frappe.PermissionError)
+    if frappe.db.exists(SETTLEMENT, {"mission": mission.name}):
+        frappe.throw("Rémunération déjà préparée.", frappe.PermissionError)
+    settlement = frappe.get_doc({
+        "doctype": SETTLEMENT, "settlement_id": str(uuid4()),
+        "mission": mission.name, "technician": mission.technician,
+        "currency": "EUR", "amount_eur": mission.offered_fee_eur,
+        "state": "REVIEW_REQUIRED", "prepared_by": manager,
+    }).insert(ignore_permissions=True)
+    _log("MISSION", mission.name, "SETTLEMENT_REVIEW_REQUIRED", manager)
+    return {"settlement_id": settlement.name, "state": settlement.state,
+            "notice": "Aucun versement exécuté."}
+
+
+@frappe.whitelist(methods=["POST"])
+def approve_settlement(settlement_id, evidence_reference):
+    """Second internal check; bank-transfer instructions are intentionally absent."""
+    _enabled()
+    manager = _manager()
+    if not isinstance(settlement_id, str) or len(settlement_id) != 36:
+        frappe.throw("Rémunération invalide.", frappe.PermissionError)
+    mission_id = frappe.db.get_value(SETTLEMENT, settlement_id, "mission")
+    if not mission_id:
+        frappe.throw("Rémunération introuvable.", frappe.PermissionError)
+    mission = _mission_by_id(mission_id, lock=True)
+    settlement = frappe.get_doc(SETTLEMENT, settlement_id, for_update=True)
+    if (settlement.state != "REVIEW_REQUIRED" or mission.state != "CLIENT_ACCEPTED"
+            or settlement.technician != mission.technician
+            or manager in {settlement.prepared_by, mission.technician, mission.created_by_user}):
+        frappe.throw("Double contrôle financier insuffisant.", frappe.PermissionError)
+    try:
+        proof = reference(evidence_reference, "Preuve d'approbation financière")
+    except ValueError as exc:
+        frappe.throw(str(exc), frappe.PermissionError)
+    settlement.state = "APPROVED"
+    settlement.approved_by = manager
+    settlement.approved_at = now_datetime()
+    settlement.approval_reference = proof
+    settlement.save(ignore_permissions=True)
+    _log("MISSION", mission.name, "SETTLEMENT_APPROVED_NO_PAYOUT", manager)
+    return {"settlement_id": settlement.name, "state": settlement.state,
+            "notice": "Approbation interne seulement. Aucun paiement effectué."}
 
 
 @frappe.whitelist(methods=["POST"])

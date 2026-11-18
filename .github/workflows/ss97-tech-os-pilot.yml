@@ -11,6 +11,8 @@ on:
       - 'softsystem97/public/css/ss97_tech_*.css'
       - 'tools/test_ss97_tech_os_offline.py'
       - 'tools/test_ss97_technician_exams_offline.py'
+      - 'tools/test_ss97_technician_documents_offline.py'
+      - 'tools/test_ss97_technician_workflow_v2_offline.py'
       - '.github/workflows/ss97-tech-os-pilot.yml'
   workflow_dispatch:
 
@@ -24,8 +26,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: API, filières et examinateur - tests sans compte client
-        run: python -m unittest -q tools.test_ss97_tech_os_offline tools.test_ss97_technician_exams_offline
+      - name: API, filières, justificatifs, notifications et rémunération - tests hors production
+        run: python -m unittest -q tools.test_ss97_tech_os_offline tools.test_ss97_technician_exams_offline tools.test_ss97_technician_documents_offline tools.test_ss97_technician_workflow_v2_offline
       - name: JavaScript navigateur - syntaxe
         run: |
           node --check softsystem97/public/js/ss97_tech_os.js

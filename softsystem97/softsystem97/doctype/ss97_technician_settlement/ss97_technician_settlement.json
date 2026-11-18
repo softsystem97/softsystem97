@@ -1,0 +1,25 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Technician Settlement",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:settlement_id",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": ["settlement_id", "mission", "technician", "currency", "amount_eur", "state", "prepared_by", "approved_by", "approved_at", "approval_reference"],
+  "fields": [
+    {"fieldname": "settlement_id", "fieldtype": "Data", "label": "Identifiant", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "mission", "fieldtype": "Link", "options": "SS97 Technician Mission", "label": "Mission acceptée", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "technician", "fieldtype": "Link", "options": "User", "label": "Bénéficiaire", "reqd": 1, "read_only": 1},
+    {"fieldname": "currency", "fieldtype": "Link", "options": "Currency", "label": "Devise", "reqd": 1, "default": "EUR", "read_only": 1},
+    {"fieldname": "amount_eur", "fieldtype": "Currency", "options": "currency", "label": "Montant autorisé EUR", "reqd": 1, "read_only": 1},
+    {"fieldname": "state", "fieldtype": "Select", "options": "REVIEW_REQUIRED\nAPPROVED", "label": "Contrôle financier", "reqd": 1, "read_only": 1},
+    {"fieldname": "prepared_by", "fieldtype": "Link", "options": "User", "label": "Préparé par", "reqd": 1, "read_only": 1},
+    {"fieldname": "approved_by", "fieldtype": "Link", "options": "User", "label": "Validé par", "read_only": 1},
+    {"fieldname": "approved_at", "fieldtype": "Datetime", "label": "Validé le", "read_only": 1},
+    {"fieldname": "approval_reference", "fieldtype": "Data", "label": "Preuve de contrôle financier", "hidden": 1, "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

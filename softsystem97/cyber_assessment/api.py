@@ -17,7 +17,7 @@ def _manager():
         frappe.throw("Supervision réservée à la direction.", frappe.PermissionError)
 
 
-@frappe.whitelist(methods=["GET"])
+@frappe.whitelist(allow_guest=True, methods=["GET"])
 def get_catalog():
     """The information-only service catalog can be read without authenticating."""
     return {"tiers": [{"code": key, **value} for key, value in TIERS.items()],

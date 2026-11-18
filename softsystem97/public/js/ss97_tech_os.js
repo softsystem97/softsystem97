@@ -12,6 +12,8 @@
     REPORT_SUBMITTED: "Rapport transmis", CLIENT_ACCEPTED: "Rapport validé par le client",
     DECLINED: "Déclinée", CANCELLED: "Annulée", DISPUTED: "En discussion",
   };
+  const documentStates = {MISSING: "À fournir", SUBMITTED: "En cours de contrôle",
+    VERIFIED: "Vérifié", REJECTED: "Refusé — déposer une nouvelle version"};
   let activeExam = null;
   let countdown = null;
 
@@ -81,6 +83,28 @@
         actionButton(section, "Envoyer mon rapport", mission.mission_id, "REPORT_SUBMITTED");
       }
       container.append(section);
+    });
+  }
+
+  function renderDocuments(documents, profileState) {
+    const root = $("tech-document-list");
+    root.replaceChildren();
+    documents.forEach((item) => {
+      addText(root, "p", `${item.label} : ${documentStates[item.state] || "À vérifier"}`);
+    });
+    const form = $("tech-document-form");
+    const canSubmit = ["APPLIED", "IN_REVIEW", "EXAM_VALIDATED"].includes(profileState);
+    form.hidden = !canSubmit || documents.every((item) =>
+      item.state !== "MISSING" && item.state !== "REJECTED");
+  }
+  function renderTraining(modules) {
+    const root = $("tech-training-list");
+    root.replaceChildren();
+    modules.forEach((item) => {
+      const li = document.createElement("li");
+      addText(li, "strong", item.title);
+      addText(li, "p", item.objective);
+      root.append(li);
     });
   }
 
@@ -188,6 +212,8 @@
     });
     $("tech-apply").hidden = !!data.profile;
     $("tech-profile").hidden = !data.profile;
+    $("tech-documents").hidden = !data.profile;
+    $("tech-training").hidden = !data.profile;
     $("tech-exam").hidden = !data.profile || data.profile.state !== "IN_REVIEW";
     $("tech-missions").hidden = !data.profile || data.profile.state !== "ACTIVE";
     if (!data.profile) {
@@ -215,8 +241,41 @@
       universe.textContent = "Ouvrir mon espace " + data.profile.track_label;
     }
     renderMissions(data.missions || []);
+    renderDocuments(data.documents || [], data.profile.state);
+    renderTraining(data.training || []);
     status("Espace personnel chargé.");
   }
+
+  $("tech-document-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector("button");
+    const file = $("tech-document-file").files?.[0];
+    if (!file || file.size === 0 || file.size > 8 * 1024 * 1024) {
+      status("Choisissez un fichier PDF, JPG ou PNG de 8 Mo maximum.");
+      return;
+    }
+    button.disabled = true;
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("is_private", "1");
+      const upload = await fetch("/api/method/upload_file", {
+        method: "POST", credentials: "same-origin",
+        headers: {"X-Frappe-CSRF-Token": window.frappe?.csrf_token || ""},
+        body: form,
+      });
+      const payload = await upload.json().catch(() => ({}));
+      if (!upload.ok || !payload.message?.name) throw new Error("Envoi privé impossible.");
+      await api("submit_private_document", {
+        category: $("tech-document-category").value,
+        file_id: payload.message.name,
+      }, true);
+      $("tech-document-file").value = "";
+      await refresh();
+      status("Justificatif reçu et transmis pour vérification humaine.");
+    } catch (error) {status("Document non enregistré : " + error.message);}
+    finally {button.disabled = false;}
+  });
 
   $("tech-apply-form").addEventListener("submit", async (event) => {
     event.preventDefault();

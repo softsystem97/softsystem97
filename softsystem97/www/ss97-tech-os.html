@@ -33,6 +33,7 @@
 {% if is_guest %}
 <p class="warning">Connectez-vous pour consulter votre propre dossier.</p>
 <a href="/login?redirect-to=%2Fss97-tech-os">Se connecter</a>
+<p>Vous n'avez pas encore de compte professionnel ? <a href="/signup?redirect-to=%2Fss97-tech-os">Créer un compte puis confirmer votre adresse email</a>. Un compte client existant ne peut pas devenir un compte technicien.</p>
 {% else %}
 <p id="tech-status" aria-live="polite" role="status">Chargement de votre espace privé…</p>
 <section id="tech-apply" class="panel" hidden>
@@ -50,6 +51,27 @@
   <p>Statut : <strong id="tech-profile-state"></strong></p>
   <p id="tech-profile-help"></p>
   <p><a id="tech-universe-link" href="#" hidden>Ouvrir mon espace spécialisé</a></p>
+</section>
+<section id="tech-documents" class="panel" hidden>
+  <h2>Mes justificatifs professionnels</h2>
+  <p>Déposez votre pièce d'identité et votre diplôme ou justificatif de compétence. PDF, JPG ou PNG, 8 Mo maximum par pièce. Les fichiers sont privés, consultables par le candidat et les responsables autorisés.</p>
+  <p class="warning">Ne déposez jamais votre RIB, vos codes d'accès ou un mot de passe ici. Les justificatifs sont examinés par un responsable ; le dépôt ne vaut pas validation.</p>
+  <div id="tech-document-list" aria-live="polite"></div>
+  <form id="tech-document-form" enctype="multipart/form-data">
+    <label for="tech-document-category">Type de justificatif</label>
+    <select id="tech-document-category" required>
+      <option value="IDENTITY">Pièce d'identité</option>
+      <option value="DIPLOMA">Diplôme ou attestation</option>
+    </select>
+    <label for="tech-document-file">Fichier privé</label>
+    <input id="tech-document-file" type="file" accept=".pdf,.png,.jpg,.jpeg" required>
+    <button type="submit">Transmettre pour vérification</button>
+  </form>
+</section>
+<section id="tech-training" class="panel" hidden>
+  <h2>Mon parcours de préparation</h2>
+  <p>Ces modules sont spécifiques à votre filière. Ils préparent l'examen, mais ne remplacent pas une formation certifiante ni les contrôles d'habilitation.</p>
+  <ol id="tech-training-list"></ol>
 </section>
 <section id="tech-exam" class="panel" hidden>
   <h2>Examen de présélection</h2>
