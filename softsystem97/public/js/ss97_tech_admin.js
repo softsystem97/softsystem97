@@ -188,6 +188,38 @@
       row.className = "mission";
       line(row, "strong", `${settlement.technician} — ${settlement.amount_eur} EUR`);
       line(row, "p", "État de contrôle : " + settlement.state + " — aucun versement initié.");
+      const proofButton = document.createElement("button");
+      proofButton.type = "button";
+      proofButton.textContent = "Vérifier l'éligibilité au versement";
+      proofButton.addEventListener("click", async () => {
+        proofButton.disabled = true;
+        try {
+          const result = await api("get_settlement_readiness", {settlement_id: settlement.name});
+          const details = document.createElement("div");
+          const names = {
+            client_report_accepted: "Rapport accepté par le client",
+            financial_second_approval: "Deuxième validation financière",
+            ticket_customer_consistent: "Ticket et client cohérents",
+            freelance_active: "Habilitation freelance active",
+            private_documents_intact: "Pièce d'identité et diplôme toujours privés et vérifiés",
+            contract_reference_recorded: "Contrat vérifié",
+            amount_and_beneficiary_consistent: "Montant et bénéficiaire cohérents",
+            client_payment_verified: "Règlement client vérifié par Stripe et ERPNext",
+            recipient_provider_verified: "Compte bénéficiaire vérifié chez Stripe",
+            transfer_release_authorized: "Autorisation de transfert",
+          };
+          line(details, "p", "Preuve de paiement : " + result.payment_evidence);
+          Object.entries(result.checks || {}).forEach(([key, value]) => {
+            line(details, "p", (value === true ? "✓ " : "À vérifier — ") + (names[key] || key));
+          });
+          line(details, "p", "Aucun transfert initié. Ce contrôle ne constitue pas un ordre de paiement.");
+          row.querySelector(".settlement-readiness")?.remove();
+          details.className = "settlement-readiness";
+          row.append(details);
+        } catch (error) {status(error.message);}
+        finally {proofButton.disabled = false;}
+      });
+      row.append(proofButton);
       if (settlement.state === "REVIEW_REQUIRED") {
         const approve = document.createElement("button");
         approve.type = "button";

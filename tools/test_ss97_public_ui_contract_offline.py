@@ -53,7 +53,7 @@ class PublicUiContracts(unittest.TestCase):
         ):
             with self.subTest(file=file):
                 self.assertIn("ss97_tech_universe.css?v=20261118-r2", source(file))
-        self.assertIn("ss97_tech_admin.js?v=20261118-r4", source("www/ss97-tech-admin.html"))
+        self.assertIn("ss97_tech_admin.js?v=20261118-r5", source("www/ss97-tech-admin.html"))
 
     def test_readiness_is_manager_only_and_never_enables_flags(self):
         page = source("www/ss97-tech-readiness.py")
