@@ -1,0 +1,30 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css?v=20261118-r2">
+<main class="ss97-universe admin">
+  <p><a href="/ss97-tech-os">← Espace technicien</a></p>
+  <span class="badge">Direction Soft System 97 — contrôle administrateur</span>
+  <h1>Préparation de la mise en service</h1>
+  <p class="lead">Ce tableau en lecture seule fonctionne même lorsque les modules TECH OS sont désactivés. Il indique les configurations présentes, mais ne valide ni une identité, ni un paiement, ni la réception d'un email.</p>
+  <section class="panel">
+    <h2>État technique détecté</h2>
+    <button id="readiness-refresh" type="button">Actualiser les contrôles</button>
+    <div id="readiness-results" role="status" aria-live="polite">Vérification en cours…</div>
+  </section>
+  <section class="panel">
+    <h2>Contrôles humains obligatoires avant activation</h2>
+    <ol>
+      <li>Tester séparément un candidat N2, N3 et N4, un client et un responsable administratif.</li>
+      <li>Valider les 20, 30 et 40 questions confidentielles de chaque filière et les durées côté serveur.</li>
+      <li>Contrôler la confidentialité des pièces, l'antivirus, leur durée de conservation et le droit à l'effacement.</li>
+      <li>Vérifier la délivrance des emails sur un compte sortant autorisé et la suppression des doublons.</li>
+      <li>Faire approuver les contrats freelance et les preuves de signature avant toute habilitation.</li>
+      <li>Tester les tickets, les affectations, le mandat cyber écrit, les validations indépendantes et les révocations.</li>
+      <li>Tester les paiements seulement en environnement isolé ; aucun virement n'est déclenché par ce portail.</li>
+      <li>Valider sauvegarde, restauration et surveillance avant l'ouverture des fonctionnalités sensibles.</li>
+    </ol>
+  </section>
+  <p class="notice">Aucun bouton sur cette page n'active un service. Chaque ouverture reste une décision séparée de l'administrateur après recette documentée.</p>
+</main>
+<script src="/assets/softsystem97/js/ss97_tech_readiness.js?v=20261118-r2" defer></script>
+{% endblock %}
