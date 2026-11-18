@@ -1,8 +1,8 @@
 {% extends "templates/web.html" %}
 {% block page_content %}
 <style>
-.ss97-tech{max-width:75rem;margin:1rem auto;padding:1.25rem;color:#17293b}
-.ss97-tech h1{font-size:clamp(2rem,4vw,2.7rem);margin:0 0 .4rem}
+.ss97-tech{max-width:75rem;margin:1rem auto;padding:1.25rem;color:#17293b;background:#f7f9fc;border:1px solid #d6e1ec;border-radius:18px;box-shadow:0 12px 30px rgba(9,24,40,.12)}
+.ss97-tech h1{font-size:clamp(2rem,4vw,2.7rem);margin:0 0 .4rem;color:#162b43}
 .ss97-tech .intro{color:#43576c;max-width:55rem}
 .ss97-tech .tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:1rem;margin:1.5rem 0}
 .ss97-tech .track{border:2px solid #dae1e8;background:#fff;padding:1rem;border-radius:14px}
@@ -30,6 +30,7 @@
   <div class="track bank"><strong>N3 — Bancaire</strong><p>Interventions bancaires soumises à autorisation supplémentaire.</p></div>
   <div class="track cyber"><strong>N4 — Cybersécurité</strong><p>Missions sensibles et deuxième validation indépendante.</p></div>
 </div>
+<p class="warning">Pour une première candidature, commencez par <a href="/recrutement">la page Recrutement</a>. L'espace privé TECH OS est réservé aux comptes professionnels éligibles après contrôle. Une candidature générale ne crée pas automatiquement une habilitation N2, N3 ou N4.</p>
 {% if is_guest %}
 <p class="warning">Connectez-vous pour consulter votre propre dossier.</p>
 <a href="/login?redirect-to=%2Fss97-tech-os">Se connecter</a>
