@@ -34,14 +34,21 @@
       row(list, "Emails des tickets", data.ticket_email_enabled, data.ticket_email_enabled ? "option active, livraison non vérifiée" : "désactivés");
       row(list, "Accueil des demandes cyber", data.cyber_intake_enabled, data.cyber_intake_enabled ? "activé" : "désactivé");
       row(list, "Notifications client", data.client_notification_doctype, data.client_notification_doctype ? "structure présente" : "structure absente");
-      for (const [label, current, target] of [
-        ["N2 généraliste", data.n2_question_count, 20],
-        ["N3 bancaire", data.n3_question_count, 30],
-        ["N4 cybersécurité", data.n4_question_count, 40]
+      for (const [code, label, current, target] of [
+        ["L2", "N2 généraliste", data.n2_question_count, 20],
+        ["BANK", "N3 bancaire", data.n3_question_count, 30],
+        ["CYBER", "N4 cybersécurité", data.n4_question_count, 40]
       ]) {
         const number = Number.isFinite(Number(current)) ? Number(current) : 0;
-        row(list, `Banque de questions ${label}`, number >= target, `${number}/${target} questions actives`);
+        const audit = data.question_bank_audit && data.question_bank_audit[code];
+        const detail = audit
+          ? (audit.unavailable ? "audit indisponible : vérifier la migration et les permissions"
+            : `${number}/${target} actives, ${audit.invalid_count} invalides, ${audit.duplicate_count} doublons`)
+          : `${number}/${target} actives, intégrité non vérifiée`;
+        row(list, `Banque de questions ${label}`, !!(audit && audit.ready), detail);
       }
+      row(list, "Rémunérations bancaires freelances", false,
+        "validation des bénéficiaires et Stripe Connect en attente ; aucun virement activé");
       root.replaceChildren(list);
     } catch (error) {
       root.textContent = error.message;

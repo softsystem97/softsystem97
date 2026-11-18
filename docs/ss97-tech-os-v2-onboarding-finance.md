@@ -48,6 +48,12 @@ sécurité et juridique, par un responsable disposant des permissions Frappe.
 5. Importer les banques de questions confidentielles dans Frappe, pas dans
    GitHub (dépôt public). Confirmer : N2 20 questions/20 min, N3 30/25 min,
    N4 40/20 min, réponses jamais envoyées au navigateur.
+   Le tableau administrateur `/ss97-tech-readiness` vérifie en lecture seule
+   non seulement le volume de questions actives, mais aussi les quatre options,
+   la clé de réponse, les catégories et les énoncés en doublon. Les réponses,
+   énoncés et chemins privés ne sont jamais renvoyés à cette page ; une banque
+   inaccessible, invalide ou de plus de 500 questions bloque la validation
+   technique de son examen.
 6. Configurer un véritable compte SMTP sortant, contrôler les permissions
    d'expédition et un test de réception. Le statut `QUEUED` dans l'outbox SS97
    signifie seulement « accepté par Frappe Email Queue », pas « délivré ».

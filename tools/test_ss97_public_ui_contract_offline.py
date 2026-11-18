@@ -89,7 +89,7 @@ class PublicUiContracts(unittest.TestCase):
         ready_page = source("www/ss97-tech-readiness.html")
         ready_js = source("public/js/ss97_tech_readiness.js")
         self.assertIn('href="/ss97-client-missions"', cyber_page)
-        self.assertIn("ss97_tech_readiness.js?v=20261118-r3", ready_page)
+        self.assertIn("ss97_tech_readiness.js?v=20261118-r4", ready_page)
         self.assertIn("technician_email_enabled", ready_js)
         self.assertIn("technician_schema_ready", ready_js)
 
