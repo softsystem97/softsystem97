@@ -1,0 +1,29 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css">
+<main class="ss97-universe">
+ <span class="badge">Soft System 97 — entreprises et cybersécurité</span>
+ <h1>Analyse de votre sécurité informatique</h1>
+ <p class="lead">Choisissez un niveau d'étude. Un responsable SS97 valide le périmètre, puis une mission est confiée à un technicien habilité N4. Aucune analyse intrusive ne démarre depuis ce formulaire.</p>
+ <div class="grid" id="cyber-tiers" aria-label="Formules d'analyse"></div>
+ <section class="panel">
+  <h2>Ouvrir une demande entreprise ou un ticket libre</h2>
+  <p>Il faut être connecté à son compte client. Une confirmation dans votre espace est prévue lors de la création du ticket ; l'envoi par email dépend d'un compte sortant validé.</p>
+  <form id="cyber-request-form">
+   <label for="cyber-kind">Votre demande</label>
+   <select id="cyber-kind" required><option value="CYBER">Analyse cybersécurité</option><option value="LIBRE">Ticket libre</option></select>
+   <label for="cyber-tier">Niveau de l'analyse</label>
+   <select id="cyber-tier"><option value="ESSENTIEL">Essentiel</option><option value="SUPERIEUR">Supérieur</option><option value="EXTREME">Extrême</option></select>
+   <label for="cyber-org">Nom de l'entreprise ou organisation</label>
+   <input id="cyber-org" maxlength="120" required autocomplete="organization">
+   <label for="cyber-summary">Description du besoin (sans mots de passe ni secrets)</label>
+   <textarea id="cyber-summary" rows="5" maxlength="2000" required></textarea>
+   <label><input id="cyber-consent" type="checkbox" required> J'accepte d'être recontacté au sujet de cette demande et je comprends qu'aucun test technique n'est autorisé sans mandat distinct.</label>
+   <button id="cyber-submit" type="submit">Envoyer la demande</button>
+  </form>
+  <p id="cyber-status" role="status" aria-live="polite">Chargement des offres…</p>
+  <p><a href="/login">Accéder à mon compte client</a></p>
+ </section>
+</main>
+<script src="/assets/softsystem97/js/ss97_cyber_enterprises.js" defer></script>
+{% endblock %}

@@ -51,6 +51,17 @@
  </form>
 </section>
 <section class="panel"><h2>Supervision des missions</h2><div id="admin-missions"></div></section>
+<section class="panel">
+ <h2>Contrôle avant ouverture des services</h2>
+ <p>Ces vérifications ne déclenchent ni courriel, ni paiement, ni intervention sur un poste client.</p>
+ <div id="admin-readiness" role="status">Chargement des contrôles…</div>
+</section>
+<section class="panel">
+ <h2>Demandes d'analyse cybersécurité des entreprises</h2>
+ <p><a href="/ss97-cyber-entreprises">Consulter le catalogue entreprise</a> — une demande est un ticket à instruire, pas une autorisation de scan.</p>
+ <div id="admin-cyber-queue">Chargement des demandes…</div>
+</section>
 </main>
 <script src="/assets/softsystem97/js/ss97_tech_admin.js" defer></script>
+<script src="/assets/softsystem97/js/ss97_cyber_admin.js" defer></script>
 {% endblock %}

@@ -1,0 +1,34 @@
+name: SS97 cyber enterprise intake — offline checks
+
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/cyber_assessment/**'
+      - 'softsystem97/www/ss97-cyber-entreprises.*'
+      - 'softsystem97/public/js/ss97_cyber_*.js'
+      - 'tools/test_ss97_cyber_assessment_offline.py'
+      - '.github/workflows/ss97-cyber-assessment-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Audit intake contracts
+        run: python -m unittest -q tools.test_ss97_cyber_assessment_offline
+      - name: Javascript syntax
+        run: |
+          node --check softsystem97/public/js/ss97_cyber_enterprises.js
+          node --check softsystem97/public/js/ss97_cyber_admin.js
+      - name: Python compilation
+        run: python -m compileall -q softsystem97/cyber_assessment softsystem97/www/ss97-cyber-entreprises.py
+      - name: Operational warning
+        run: echo 'Offline-only checks. No native Frappe 16, SMTP, client signup or live ticket creation tested.'
