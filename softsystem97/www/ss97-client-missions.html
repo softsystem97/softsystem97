@@ -1,0 +1,37 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<style>
+.ss97-client-missions{max-width:55rem;margin:1.5rem auto;padding:1.5rem;background:#f7f9fc;color:#17293b;border-radius:16px;border:1px solid #d6e1ec}
+.ss97-client-missions h1,.ss97-client-missions h2{color:#162b43}
+.ss97-client-missions .panel{margin-top:1.1rem;padding:1.2rem;background:white;border:1px solid #cbd8e5;border-radius:12px}
+.ss97-client-missions label{display:block;font-weight:600;margin:.75rem 0 .4rem}
+.ss97-client-missions input{box-sizing:border-box;width:100%;max-width:30rem;padding:.7rem;border:1px solid #9aaebe;border-radius:6px}
+.ss97-client-missions button{background:#155b80;color:#fff;border:0;border-radius:7px;padding:.7rem 1rem;margin:.6rem .6rem .3rem 0;cursor:pointer}
+.ss97-client-missions button:disabled{opacity:.6;cursor:default}
+.ss97-client-missions .mission{border-top:1px solid #dce4ec;margin-top:1rem;padding-top:.7rem}
+.ss97-client-missions .notice{background:#fff5e3;border-left:4px solid #a76e22;padding:.85rem}
+.ss97-client-missions [hidden]{display:none!important}
+</style>
+<main class="ss97-client-missions">
+  <h1>Suivre mon intervention</h1>
+  <p>Retrouvez l'état d'une mission liée à votre ticket Soft System 97, consultez le compte rendu et confirmez le résultat. Seul le client propriétaire du ticket peut accéder à ces informations.</p>
+  <p><a href="/ticket-libre">Créer un ticket</a> · <a href="/portail-client">Mon portail client</a></p>
+  {% if is_guest %}
+  <p class="notice">Connectez-vous avec le compte client associé à votre ticket.</p>
+  <p><a href="/login?redirect-to=%2Fss97-client-missions">Connexion client</a></p>
+  {% else %}
+  <section class="panel">
+    <h2>Rechercher mon ticket</h2>
+    <form id="ss97-client-mission-form">
+      <label for="ss97-client-ticket">Numéro du ticket</label>
+      <input id="ss97-client-ticket" name="ticket" autocomplete="off" maxlength="140" required placeholder="Exemple : ISS-00001">
+      <button type="submit">Voir mes interventions</button>
+    </form>
+    <p id="ss97-client-mission-status" role="status" aria-live="polite">Saisissez le numéro du ticket reçu lors de votre demande.</p>
+    <div id="ss97-client-mission-results" aria-live="polite"></div>
+  </section>
+  <p class="notice">Une validation ici confirme seulement le rapport d'intervention ; elle ne déclenche aucun paiement. Toute contestation sera transmise à l'équipe SS97.</p>
+  {% endif %}
+</main>
+{% if not is_guest %}<script src="/assets/softsystem97/js/ss97_client_missions.js?v=20261118-r3" defer></script>{% endif %}
+{% endblock %}

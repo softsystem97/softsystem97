@@ -7,12 +7,15 @@ on:
       - 'softsystem97/technician_exams/**'
       - 'softsystem97/softsystem97/doctype/ss97_technician_*/**'
       - 'softsystem97/www/ss97-tech-*'
+      - 'softsystem97/www/ss97-client-missions.*'
       - 'softsystem97/public/js/ss97_tech_*.js'
+      - 'softsystem97/public/js/ss97_client_missions.js'
       - 'softsystem97/public/css/ss97_tech_*.css'
       - 'tools/test_ss97_tech_os_offline.py'
       - 'tools/test_ss97_technician_exams_offline.py'
       - 'tools/test_ss97_technician_documents_offline.py'
       - 'tools/test_ss97_technician_workflow_v2_offline.py'
+      - 'tools/test_ss97_public_ui_contract_offline.py'
       - '.github/workflows/ss97-tech-os-pilot.yml'
   workflow_dispatch:
 
@@ -27,11 +30,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: API, filières, justificatifs, notifications et rémunération - tests hors production
-        run: python -m unittest -q tools.test_ss97_tech_os_offline tools.test_ss97_technician_exams_offline tools.test_ss97_technician_documents_offline tools.test_ss97_technician_workflow_v2_offline
+        run: python -m unittest -q tools.test_ss97_tech_os_offline tools.test_ss97_technician_exams_offline tools.test_ss97_technician_documents_offline tools.test_ss97_technician_workflow_v2_offline tools.test_ss97_public_ui_contract_offline
       - name: JavaScript navigateur - syntaxe
         run: |
           node --check softsystem97/public/js/ss97_tech_os.js
           node --check softsystem97/public/js/ss97_tech_universe.js
           node --check softsystem97/public/js/ss97_tech_admin.js
+          node --check softsystem97/public/js/ss97_client_missions.js
+          node --check softsystem97/public/js/ss97_tech_readiness.js
       - name: Modules Python - compilation
         run: python -m compileall -q softsystem97/technician_os softsystem97/technician_exams

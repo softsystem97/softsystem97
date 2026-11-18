@@ -10,7 +10,7 @@ from uuid import uuid4
 import frappe
 from frappe.utils import now_datetime
 
-from .documents import REQUIRED_DOCUMENTS, check_private_upload
+from .documents import REQUIRED_DOCUMENTS, check_private_upload, safe_private_file_url
 from .notices import stage_notice, _mail_enabled
 from .training import course_for_track
 from .rules import (
@@ -250,7 +250,7 @@ def get_admin_documents(profile_id):
         # Even staff cannot get an unverified public/external URL from this API.
         if (not file_data or int(file_data.is_private or 0) != 1
                 or file_data.owner != profile.candidate_user
-                or not str(file_data.file_url or "").startswith("/private/files/")):
+                or not safe_private_file_url(file_data.file_url)):
             continue
         result.append({"document_id": row.name, "category": row.category,
                        "state": row.state, "file_name": file_data.file_name,
