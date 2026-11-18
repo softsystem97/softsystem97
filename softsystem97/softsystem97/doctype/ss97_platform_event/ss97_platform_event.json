@@ -1,0 +1,20 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Platform Event",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:event_id",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": ["event_id", "record_id", "action", "actor", "occurred_at"],
+  "fields": [
+    {"fieldname": "event_id", "fieldtype": "Data", "label": "Événement UUID", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "record_id", "fieldtype": "Link", "options": "SS97 Platform Record", "label": "Dossier", "reqd": 1, "read_only": 1, "search_index": 1},
+    {"fieldname": "action", "fieldtype": "Select", "options": "SUBMITTED\nIN_REVIEW\nCOMPLETED\nCANCELLED", "label": "Action", "reqd": 1, "read_only": 1},
+    {"fieldname": "actor", "fieldtype": "Link", "options": "User", "label": "Acteur", "reqd": 1, "read_only": 1},
+    {"fieldname": "occurred_at", "fieldtype": "Datetime", "label": "Horodatage", "reqd": 1, "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

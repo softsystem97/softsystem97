@@ -1,0 +1,65 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<style>
+.ss97-one{max-width:76rem;margin:1.5rem auto;color:#142638;padding:1rem}
+.ss97-one h1{font-size:clamp(2rem,4vw,3rem);margin:0 0 .35rem}
+.ss97-one .sub{color:#435970;margin-bottom:1.3rem}
+.ss97-one .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.65rem;margin-bottom:1.5rem}
+.ss97-one .tile{border:1px solid #ccd9e6;border-radius:12px;background:#fff;padding:1rem}
+.ss97-one .tile strong{display:block;color:#116e65;font-size:1.15rem}
+.ss97-one .tile small{color:#536579}
+.ss97-one .panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem}
+.ss97-one .panel{border:1px solid #cad6e1;border-radius:12px;padding:1.25rem;background:#fff}
+.ss97-one label{font-weight:600;display:block;margin:.8rem 0 .25rem}
+.ss97-one input,.ss97-one select,.ss97-one textarea{width:100%;min-height:42px;padding:.5rem;border:1px solid #a8b9ca;border-radius:7px}
+.ss97-one input[type=checkbox]{width:auto;min-height:auto}
+.ss97-one button{background:#11766d;color:#fff;border:0;padding:.65rem .95rem;margin-top:.7rem;border-radius:7px;cursor:pointer}
+.ss97-one button.secondary{background:#39566e}
+.ss97-one button.danger{background:#a52c37}
+.ss97-one button:disabled{opacity:.55;cursor:not-allowed}
+.ss97-one #platform-status{min-height:1.8rem;font-weight:600}
+.ss97-one #platform-results .item{padding:.9rem;border:1px solid #cad6e1;border-radius:9px;margin:.6rem 0;overflow-wrap:anywhere}
+.ss97-one pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.9rem}
+.ss97-one [hidden]{display:none!important}
+</style>
+<main class="ss97-one">
+<h1>SS97 ONE — socle V1 à V20</h1>
+<p class="sub">Espace de travail unifié : dossiers liés à vos tickets, avec accès vérifié et historique.
+Les fiches V11 à V20 nécessitent une activation distincte sur un site de test.
+Ces fiches n'exécutent aucune réparation, IA, supervision ou connexion MeshCentral ; les paiements restent séparés.</p>
+{% if is_guest %}
+<p>Connectez-vous à votre compte Soft System 97 pour consulter vos dossiers.</p>
+<a href="/login?redirect-to=%2Fss97-platform">Se connecter</a>
+{% else %}
+<p id="platform-status" role="status" aria-live="polite">Chargement des modules…</p>
+<section class="tiles" id="platform-tiles" aria-label="Versions SS97">
+<article class="tile"><strong>V1 — Remote Assist</strong><small>Coordination d'assistance et consentement sur une page séparée.</small><p><a href="/ss97-remote-assist">Ouvrir la V1</a></p></article>
+</section>
+<section class="panels">
+<article class="panel">
+<h2>Nouveau dossier</h2>
+<form id="platform-create">
+<label for="platform-ticket">Référence du ticket SS97</label>
+<input id="platform-ticket" maxlength="140" placeholder="ISS-00001" required autocomplete="off">
+<label for="platform-audience">Votre espace</label>
+<select id="platform-audience"><option value="technician">Technicien affecté</option><option value="client">Client</option></select>
+<label for="platform-version">Version</label>
+<select id="platform-version" required></select>
+<div id="platform-fields"></div>
+<button id="platform-submit" type="submit">Enregistrer le dossier</button>
+</form>
+</article>
+<article class="panel">
+<h2>Consulter les dossiers</h2>
+<p>Les dossiers sont limités au ticket auquel votre compte a réellement accès.</p>
+<button id="platform-read" type="button" class="secondary">Afficher les dossiers du ticket</button>
+<div id="platform-overview"></div>
+<div id="platform-results" aria-live="polite"></div>
+</article>
+</section>
+{% endif %}
+</main>
+{% if not is_guest %}
+<script src="/assets/softsystem97/js/ss97_platform.js" defer></script>
+{% endif %}
+{% endblock %}
