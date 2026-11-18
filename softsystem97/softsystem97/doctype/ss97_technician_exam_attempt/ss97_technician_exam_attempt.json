@@ -1,0 +1,25 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Technician Exam Attempt",
+  "module": "SoftSystem97",
+  "autoname": "field:attempt_id",
+  "allow_rename": 0,
+  "engine": "InnoDB",
+  "field_order": ["attempt_id", "candidate_user", "track", "state", "started_at", "deadline_at", "submitted_at", "snapshot_json", "answers_json", "correct_count", "score_percentage"],
+  "fields": [
+    {"fieldname": "attempt_id", "fieldtype": "Data", "label": "Identifiant de tentative", "unique": 1, "reqd": 1, "read_only": 1},
+    {"fieldname": "candidate_user", "fieldtype": "Link", "options": "User", "label": "Candidat", "reqd": 1, "read_only": 1, "search_index": 1, "in_list_view": 1},
+    {"fieldname": "track", "fieldtype": "Select", "options": "L2\nBANK\nCYBER", "label": "Filière", "reqd": 1, "read_only": 1, "in_list_view": 1},
+    {"fieldname": "state", "fieldtype": "Select", "options": "IN_PROGRESS\nPASSED\nFAILED\nEXPIRED", "label": "État", "reqd": 1, "read_only": 1, "in_list_view": 1},
+    {"fieldname": "started_at", "fieldtype": "Datetime", "label": "Début", "reqd": 1, "read_only": 1},
+    {"fieldname": "deadline_at", "fieldtype": "Datetime", "label": "Fin obligatoire", "reqd": 1, "read_only": 1},
+    {"fieldname": "submitted_at", "fieldtype": "Datetime", "label": "Clôture", "read_only": 1},
+    {"fieldname": "snapshot_json", "fieldtype": "Long Text", "label": "Questions et corrigé privés", "reqd": 1, "read_only": 1},
+    {"fieldname": "answers_json", "fieldtype": "Long Text", "label": "Réponses", "reqd": 1, "read_only": 1},
+    {"fieldname": "correct_count", "fieldtype": "Int", "label": "Bonnes réponses", "read_only": 1},
+    {"fieldname": "score_percentage", "fieldtype": "Float", "label": "Score (%)", "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}
