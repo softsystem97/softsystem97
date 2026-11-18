@@ -43,6 +43,8 @@ sécurité et juridique, par un responsable disposant des permissions Frappe.
 4. Vérifier que la validation `DOCUMENTS_VALIDATED` est impossible tant que
    les justificatifs identité **et** diplôme ne sont pas tous deux `VERIFIED`.
    N3/N4 demandent toujours un second validateur distinct pour l'habilitation.
+   Une pièce devenue publique, supprimée, déplacée ou réattribuée après dépôt
+   bloque également sa validation et l'activation du technicien.
 5. Importer les banques de questions confidentielles dans Frappe, pas dans
    GitHub (dépôt public). Confirmer : N2 20 questions/20 min, N3 30/25 min,
    N4 40/20 min, réponses jamais envoyées au navigateur.
@@ -55,7 +57,9 @@ sécurité et juridique, par un responsable disposant des permissions Frappe.
    sa preuve. Le portail n'exécute pas de signature électronique.
 8. Tester le ticket client, les affectations, le mandat de sécurité, la double
    validation N3/N4, les rapports, la clôture client et la révocation en cours
-   de mission, avec trois comptes de test distincts.
+   de mission, avec trois comptes de test distincts. La deuxième approbation
+   N3/N4 revérifie le ticket ouvert, l'affectation, l'habilitation active et
+   l'indépendance du responsable avant toute proposition au technicien.
 
 ### Gestion d'un rapport contesté
 

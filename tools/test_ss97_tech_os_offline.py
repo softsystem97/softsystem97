@@ -237,7 +237,7 @@ class TechnicianOSRulesTests(unittest.TestCase):
                 module._enabled = lambda: None
                 module._manager = lambda: "manager_a@test.invalid"
                 module._mission_by_id = lambda *args, **kwargs: mission
-                module._rework_ticket = lambda m: types.SimpleNamespace(raised_by="client@test.invalid")
+                module._active_assignment_ticket = lambda m: types.SimpleNamespace(raised_by="client@test.invalid")
                 module._log = lambda *args: None
                 with self.assertRaises(PermissionError):
                     module.request_dispute_rework(mission.name, "REWORK-DECISION")
