@@ -116,6 +116,32 @@ class TechnicianOSRulesTests(unittest.TestCase):
         self.assertNotIn('"iban"', source)
         self.assertNotIn('"rib"', source)
 
+    def test_wrong_universe_is_rejected_before_html_context(self):
+        fake_frappe = types.ModuleType("frappe")
+        fake_frappe.__path__ = []
+        fake_frappe.PermissionError = PermissionError
+        fake_frappe.throw = lambda message, kind=PermissionError: (_ for _ in ()).throw(kind(message))
+        fake_frappe.whitelist = lambda **_kw: lambda func: func
+        fake_utils = types.ModuleType("frappe.utils")
+        fake_utils.now_datetime = lambda: None
+        fake_frappe.utils = fake_utils
+        with patch.dict(sys.modules, {"frappe": fake_frappe, "frappe.utils": fake_utils}):
+            page_module = importlib.import_module("softsystem97.technician_os.pages")
+            try:
+                page_module._enabled = lambda: None
+                page_module._my_active_profile = lambda: types.SimpleNamespace(track="L2")
+                with self.assertRaises(PermissionError):
+                    page_module.technician_page(types.SimpleNamespace(), "CYBER")
+                with self.assertRaises(PermissionError):
+                    page_module.technician_page(types.SimpleNamespace(), "BANK")
+                context = types.SimpleNamespace()
+                page_module.technician_page(context, "L2")
+                self.assertEqual(context.tech_track, "L2")
+                self.assertEqual(context.no_cache, 1)
+            finally:
+                sys.modules.pop("softsystem97.technician_os.pages", None)
+                sys.modules.pop("softsystem97.technician_os.api", None)
+
     def test_client_view_never_exposes_technician_pay_or_private_authorization(self):
         fake_frappe = types.ModuleType("frappe")
         fake_frappe.__path__ = []
