@@ -5,6 +5,7 @@
   const selected = $("cyber-kind");
   const tier = $("cyber-tier");
   const button = $("cyber-submit");
+  let catalogActive = false;
   let pendingId = null;
   const idempotency = () => (window.crypto?.randomUUID?.() ||
     (Date.now().toString(36) + Math.random().toString(36).slice(2)));
@@ -34,14 +35,20 @@
         });
         section.append(h, p, list); root.append(section);
       });
-      button.disabled = !payload.active;
-      status(payload.active ? "Les demandes sont ouvertes aux comptes clients connectés." :
+      catalogActive = payload.active === true;
+      button.disabled = !catalogActive;
+      status(catalogActive ? "Les demandes sont ouvertes aux comptes clients connectés." :
         "Les offres sont consultables ; la réception des demandes attend sa recette de sécurité.");
-    } catch (err) {button.disabled = true;status(err.message);}
+    } catch (err) {catalogActive = false;button.disabled = true;status(err.message);}
   }
 
   $("cyber-request-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!catalogActive) {
+      button.disabled = true;
+      status("La réception des demandes cybersécurité n'est pas encore ouverte.");
+      return;
+    }
     button.disabled = true;
     status("Enregistrement du ticket en cours…");
     try {
@@ -58,7 +65,7 @@
       status("Votre demande " + data.message.name + " a bien été enregistrée. Conservez ce numéro.");
       pendingId = null;
       $("cyber-request-form").reset();
-    } catch (err) {status(err.message);} finally {button.disabled = false;}
+    } catch (err) {status(err.message);} finally {button.disabled = !catalogActive;}
   });
   // A changed form represents a new request, never a replay of the old one.
   $("cyber-request-form").addEventListener("input", () => {pendingId = null;});
