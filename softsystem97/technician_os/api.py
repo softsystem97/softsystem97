@@ -352,3 +352,37 @@ def get_client_missions(ticket_name):
     rows = frappe.get_all(MISSION, filters={"ticket_name": ticket.name, "customer": ticket.customer},
                           fields=["name"], limit_page_length=50)
     return {"missions": [_mission_view(_mission_by_id(row.name), as_client=True) for row in rows]}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_admin_overview():
+    """Minimal supervisor view: no ID images, signature evidence, bank data or keys."""
+    _enabled()
+    _manager()
+    profiles = frappe.get_all(PROFILE, fields=["name", "candidate_user", "track", "state",
+                                              "engagement"], order_by="creation desc",
+                              limit_page_length=100)
+    missions = frappe.get_all(MISSION, fields=["name", "ticket_name", "technician",
+                                              "track", "state", "created_by_user"],
+                              order_by="creation desc", limit_page_length=100)
+    return {"profiles": [dict(row) for row in profiles],
+            "missions": [dict(row) for row in missions], "limit": 100,
+            "notice": "Aucun versement bancaire ni signature électronique dans ce module."}
+
+
+@frappe.whitelist(methods=["POST"])
+def cancel_mission(mission_id, reason):
+    """Stop an offer/intervention without altering the linked Issue or paying."""
+    _enabled()
+    manager = _manager()
+    mission = _mission_by_id(mission_id, lock=True)
+    if not next_mission_state(mission.state, "CANCELLED"):
+        frappe.throw("Cette mission ne peut plus être annulée.", frappe.PermissionError)
+    try:
+        mission.cancellation_reason = short_note(reason, maximum=500)
+    except ValueError as exc:
+        frappe.throw(str(exc), frappe.PermissionError)
+    mission.state = "CANCELLED"
+    mission.save(ignore_permissions=True)
+    _log("MISSION", mission.name, "CANCELLED", manager)
+    return _mission_view(mission)

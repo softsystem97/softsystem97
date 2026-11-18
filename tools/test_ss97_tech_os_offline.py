@@ -92,7 +92,29 @@ class TechnicianOSRulesTests(unittest.TestCase):
         self.assertNotIn("frappe.sendmail", api)
         names = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
         self.assertTrue({"apply", "review_profile", "offer_mission", "approve_sensitive_mission",
-                         "transition_my_mission", "review_client_report", "get_my_workspace"} <= names)
+                         "transition_my_mission", "review_client_report", "get_my_workspace",
+                         "get_admin_overview", "cancel_mission"} <= names)
+
+    def test_separate_pages_have_hard_server_guards(self):
+        page_targets = {"ss97-tech-n2": "L2", "ss97-tech-banque": "BANK",
+                        "ss97-tech-cyber": "CYBER"}
+        for slug, track in page_targets.items():
+            source = (ROOT / "softsystem97" / "www" / f"{slug}.py").read_text(encoding="utf-8")
+            with self.subTest(slug=slug):
+                self.assertIn(f'technician_page(context, "{track}")', source)
+                html = (ROOT / "softsystem97" / "www" / f"{slug}.html").read_text(encoding="utf-8")
+                self.assertIn(f'data-track="{track}"', html)
+        guard = (ROOT / "softsystem97" / "technician_os" / "pages.py").read_text(encoding="utf-8")
+        self.assertIn("_my_active_profile()", guard)
+        self.assertIn("profile.track != track", guard)
+        self.assertIn("_manager()", guard)
+
+    def test_admin_api_excludes_bank_identifiers(self):
+        source = (ROOT / "softsystem97" / "technician_os" / "api.py").read_text(encoding="utf-8")
+        self.assertIn('def get_admin_overview():', source)
+        self.assertIn('"candidate_user", "track", "state"', source)
+        self.assertNotIn('"iban"', source)
+        self.assertNotIn('"rib"', source)
 
     def test_client_view_never_exposes_technician_pay_or_private_authorization(self):
         fake_frappe = types.ModuleType("frappe")

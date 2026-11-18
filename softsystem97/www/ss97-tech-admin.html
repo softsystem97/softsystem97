@@ -1,0 +1,56 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css">
+<main class="ss97-universe admin">
+<p><a href="/ss97-tech-os">← TECH OS</a></p>
+<span class="badge">Direction Soft System 97 — accès administrateur uniquement</span>
+<h1>Pilotage des techniciens</h1>
+<p class="lead">Examen, revue documentaire, contrats freelance, habilitations et missions. Chaque action est validée côté serveur et journalisée. Aucun paiement ou signature électronique n'est déclenché ici.</p>
+<p class="notice">Les documents doivent être vérifiés par une personne habilitée avant de saisir leur référence. Une référence entrée dans ce formulaire n'est pas une vérification automatique.</p>
+<p id="admin-status" role="status" aria-live="polite">Chargement de la supervision…</p>
+<div class="grid" id="admin-summary"></div>
+<section class="panel">
+ <h2>Suivi des candidatures</h2>
+ <div id="admin-profiles"></div>
+</section>
+<section class="panel">
+ <h2>Avancer un dossier contrôlé</h2>
+ <form id="admin-review-form">
+  <label for="admin-profile-id">Identifiant du profil</label>
+  <input id="admin-profile-id" required maxlength="36" style="width:100%;padding:.65rem;border:1px solid #abbacc;border-radius:7px" placeholder="Sélectionnez un profil ci-dessus">
+  <label for="admin-profile-next">Nouvelle étape</label>
+  <select id="admin-profile-next" required style="width:100%;padding:.65rem">
+   <option value="IN_REVIEW">Dossier en étude</option>
+   <option value="EXAM_VALIDATED">Examen validé sur le serveur</option>
+   <option value="DOCUMENTS_VALIDATED">Documents vérifiés par un humain</option>
+   <option value="CONTRACT_SIGNED">Contrat freelance signé et vérifié</option>
+   <option value="ACTIVE">Activer l'habilitation</option>
+   <option value="SUSPENDED">Suspendre l'habilitation</option>
+   <option value="REJECTED">Candidature non retenue</option>
+  </select>
+  <label for="admin-evidence">Référence de vérification documentaire ou de signature externe (si demandée)</label>
+  <input id="admin-evidence" maxlength="120" style="width:100%;padding:.65rem;border:1px solid #abbacc;border-radius:7px" autocomplete="off">
+  <button type="submit">Valider l'étape du dossier</button>
+ </form>
+</section>
+<section class="panel">
+ <h2>Proposer une mission</h2>
+ <p>Le ticket doit déjà avoir une affectation native approuvée par le pont SS97. Les missions N3/N4 demandent une autorisation écrite et un second responsable.</p>
+ <form id="admin-mission-form">
+  <label for="admin-ticket">Numéro du ticket</label>
+  <input id="admin-ticket" required maxlength="140" style="width:100%;padding:.65rem;border:1px solid #abbacc;border-radius:7px">
+  <label for="admin-technician">Utilisateur technicien (compte SS97)</label>
+  <input id="admin-technician" required maxlength="140" style="width:100%;padding:.65rem;border:1px solid #abbacc;border-radius:7px">
+  <label for="admin-fee">Rémunération proposée en EUR (ex. 120.00)</label>
+  <input id="admin-fee" required pattern="[0-9]+(\.[0-9]{1,2})?" style="width:100%;padding:.65rem;border:1px solid #abbacc;border-radius:7px">
+  <label for="admin-route">Consignes non sensibles / fiche de route</label>
+  <textarea id="admin-route" required maxlength="2000" rows="3"></textarea>
+  <label for="admin-authorization">Référence de l'autorisation écrite pour N3/N4</label>
+  <input id="admin-authorization" maxlength="120" style="width:100%;padding:.65rem;border:1px solid #abbacc;border-radius:7px">
+  <button type="submit">Proposer au technicien habilité</button>
+ </form>
+</section>
+<section class="panel"><h2>Supervision des missions</h2><div id="admin-missions"></div></section>
+</main>
+<script src="/assets/softsystem97/js/ss97_tech_admin.js" defer></script>
+{% endblock %}

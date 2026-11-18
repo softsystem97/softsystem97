@@ -207,6 +207,13 @@
     $("tech-profile-help").textContent = data.profile.state === "ACTIVE"
       ? "Votre espace professionnel est limité à cette seule spécialité."
       : "L'équipe SS97 vérifie les étapes nécessaires avant toute activation.";
+    const universe = $("tech-universe-link");
+    const urls = {L2: "/ss97-tech-n2", BANK: "/ss97-tech-banque", CYBER: "/ss97-tech-cyber"};
+    universe.hidden = data.profile.state !== "ACTIVE" || !urls[data.profile.track];
+    if (!universe.hidden) {
+      universe.href = urls[data.profile.track];
+      universe.textContent = "Ouvrir mon espace " + data.profile.track_label;
+    }
     renderMissions(data.missions || []);
     status("Espace personnel chargé.");
   }

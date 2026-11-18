@@ -6,7 +6,7 @@
   "autoname": "field:mission_id",
   "allow_rename": 0,
   "track_changes": 0,
-  "field_order": ["mission_id", "ticket_name", "customer", "technician", "track", "state", "currency", "offered_fee_eur", "route_instructions", "authorization_reference", "created_by_user", "approved_by", "accepted_at", "report_summary", "report_submitted_at", "client_accepted_at"],
+  "field_order": ["mission_id", "ticket_name", "customer", "technician", "track", "state", "currency", "offered_fee_eur", "route_instructions", "authorization_reference", "created_by_user", "approved_by", "accepted_at", "report_summary", "report_submitted_at", "client_accepted_at", "cancellation_reason"],
   "fields": [
     {"fieldname": "mission_id", "fieldtype": "Data", "label": "Identifiant", "reqd": 1, "unique": 1, "read_only": 1},
     {"fieldname": "ticket_name", "fieldtype": "Link", "options": "Issue", "label": "Ticket", "reqd": 1, "search_index": 1, "read_only": 1},
@@ -23,7 +23,8 @@
     {"fieldname": "accepted_at", "fieldtype": "Datetime", "label": "Acceptée le", "read_only": 1},
     {"fieldname": "report_summary", "fieldtype": "Small Text", "label": "Compte rendu", "read_only": 1},
     {"fieldname": "report_submitted_at", "fieldtype": "Datetime", "label": "Compte rendu reçu le", "read_only": 1},
-    {"fieldname": "client_accepted_at", "fieldtype": "Datetime", "label": "Validation client le", "read_only": 1}
+    {"fieldname": "client_accepted_at", "fieldtype": "Datetime", "label": "Validation client le", "read_only": 1},
+    {"fieldname": "cancellation_reason", "fieldtype": "Small Text", "label": "Motif de l'annulation", "read_only": 1}
   ],
   "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
   "sort_field": "creation",

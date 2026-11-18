@@ -2,7 +2,16 @@
 
 ## Portée de ce lot
 
-Frappe/ERPNext v16. Route proposée : `/ss97-tech-os`.
+Frappe/ERPNext v16. Routes proposées :
+
+- `/ss97-tech-os` : candidature et examen, puis portail d'accès.
+- `/ss97-tech-n2` : atelier généraliste N2 uniquement.
+- `/ss97-tech-banque` : univers bancaire N3 uniquement.
+- `/ss97-tech-cyber` : espace cybersécurité N4 uniquement.
+- `/ss97-tech-admin` : pilotage des habilitations et missions (System Manager uniquement).
+
+Les trois routes métier sont **contrôlées côté serveur avant l'affichage du
+HTML** ; masquer un menu en JavaScript ne constitue pas une autorisation.
 
 Le code crée **trois DocTypes privés**, un module d'autorisation, un portail et
 des endpoints vérifiés côté serveur. L'activation est explicitement désactivée
@@ -36,6 +45,11 @@ questions privée, sans réponse dans le navigateur.
 6. Rôles de filière vérifiés, compte actif et, pour N3/N4, second validateur
    différent de celui ayant contrôlé les documents → `ACTIVE`.
 7. Un responsable peut passer `ACTIVE` à `SUSPENDED` immédiatement.
+
+Le tableau de bord administratif affiche les 100 derniers profils et les 100
+dernières missions au maximum, sans document d'identité ni coordonnées
+bancaires. Une mission en cours peut être annulée par un responsable avec
+motif; la fin administrative du ticket et les paiements restent séparés.
 
 La sélection initiale de filière par le candidat ne vaut aucune habilitation.
 Aucune pièce d'identité, diplôme, RIB, numéro de compte ou mot de passe ne doit
@@ -80,6 +94,8 @@ L'activation de ces clés n'est pas effectuée par la livraison GitHub.
   et après révocation de l'affectation.
 - Vérifier concurrence (double inscription, double mission), CSRF, permissions
   natives Frappe, réponses JSON, restauration et migrations sur Frappe v16.
+- Appeler directement les routes N3 et N4 avec un profil N2 et vérifier le
+  rejet serveur **avant rendu**; idem N3→N2/N4 et N4→N2/N3.
 - Vérifier les pages réelles existantes du recrutement avant raccordement des
   comptes candidats; ne pas remplacer les formulaires live sans contrôle.
 
