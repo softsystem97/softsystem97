@@ -4,8 +4,11 @@
 
 **Produit** : plateforme Soft System 97 sur Frappe / ERPNext v16, avec
 `SS97 Remote Assist` comme premier module. Le moteur d'écran distant envisagé
-est MeshCentral, isolé de l'ERP. Ce document n'affirme ni partenariat, ni
-déploiement, ni prise de contrôle réussie d'un ordinateur client.
+est MeshCentral, isolé de l'ERP. **Le 17 novembre 2026, un test manuel en
+laboratoire Asus (technicien) → Dell (client) a confirmé l'affichage du bureau
+et sa navigation dans MeshCentral.** Ce succès ne constitue ni une intégration
+automatique au ticket SS97, ni une autorisation locale vérifiée, ni une recette
+de production. Voir `docs/ss97-meshcentral-asus-dell-test-2026-11-17.md`.
 
 La branche de développement contient un **coordinateur de sessions V1.1** :
 ticket et technicien affecté, compte client vérifié, code à neuf chiffres,
@@ -18,7 +21,7 @@ Les tests hors serveur ne remplacent pas une recette sur Frappe v16.
 
 | Version | Capacité livrable | Situation |
 |---|---|---|
-| **V1 — Remote Assist** | Ticket, identité, code unique, accord du client, journal, puis contrôle écran/clavier/souris après accord local | Coordination codée ; moteur réel à raccorder |
+| **V1 — Remote Assist** | Ticket, identité, code unique, accord du client, journal, puis contrôle écran/clavier/souris après accord local | Coordination codée ; bureau Asus–Dell testé manuellement ; liaison au ticket et preuves de consentement/coupure à raccorder |
 | **V2 — Missions & techniciens** | Compétences, affectation, agenda, prestation d'une heure, transfert avec nouvel accord, rapport de fin | Conception |
 | **V3 — Command Center** | Pré-diagnostic, IA d'aide au technicien, expertise et supervision sans action autonome de l'IA | Conception |
 | **V4 — SS97 ONE** | Un seul compte entreprise et un parcours demande → devis → paiement → prestation → suivi | Conception |
