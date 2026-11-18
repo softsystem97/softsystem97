@@ -69,6 +69,8 @@ def get_admin_queue():
 def get_admin_readiness():
     """Read-only configuration checks without disclosing API secrets or personal data."""
     _manager()
+    from softsystem97.technician_exams.readiness import MAX_ACTIVE_BANK_SIZE, audit_bank
+    from softsystem97.technician_exams.rules import TRACKS as EXAM_TRACKS
     tech = frappe.conf.get("ss97_tech_os") or {}
     exams = frappe.conf.get("ss97_technician_exams") or {}
     mail = frappe.conf.get("ss97_tech_email_notifications") or {}
@@ -80,8 +82,24 @@ def get_admin_readiness():
                           "SS97 Technician Notice", "SS97 Technician Settlement")
     tech_schema_ready = all(frappe.db.exists("DocType", name) for name in technical_doctypes)
     exam_schema_ready = question_doctype and bool(frappe.db.exists("DocType", "SS97 Technician Exam Attempt"))
-    def count_questions(track):
-        return frappe.db.count("SS97 Technician Exam Question", {"track": track, "is_active": 1}) if question_doctype else 0
+    def bank_audit(track):
+        if not question_doctype:
+            return audit_bank([], EXAM_TRACKS[track].question_count)
+        filters = {"track": track, "is_active": 1}
+        try:
+            total = frappe.db.count("SS97 Technician Exam Question", filters)
+            rows = frappe.get_all(
+                "SS97 Technician Exam Question", filters=filters,
+                fields=["prompt", "options_json", "correct_option", "category"],
+                limit_page_length=MAX_ACTIVE_BANK_SIZE + 1,
+            )
+            return audit_bank(rows, EXAM_TRACKS[track].question_count, total=total)
+        except Exception:
+            # An inaccessible or incomplete bank must not look deployable;
+            # internal exceptions and private answers never reach the browser.
+            return {"active_count": 0, "invalid_count": 0,
+                    "duplicate_count": 0, "ready": False, "unavailable": True}
+    audits = {track: bank_audit(track) for track in EXAM_TRACKS}
     return {"tech_os_enabled": isinstance(tech, dict) and tech.get("enabled") is True,
             "technician_schema_ready": tech_schema_ready,
             "exam_schema_ready": exam_schema_ready,
@@ -94,6 +112,9 @@ def get_admin_readiness():
             "cyber_intake_enabled": (isinstance(cyber, dict)
                                     and cyber.get("enabled") is True),
             "client_notification_doctype": bool(frappe.db.exists("DocType", "SS97 Client Notification")),
-            "n2_question_count": count_questions("L2"),
-            "n3_question_count": count_questions("BANK"),
-            "n4_question_count": count_questions("CYBER")}
+            "n2_question_count": audits["L2"]["active_count"],
+            "n3_question_count": audits["BANK"]["active_count"],
+            "n4_question_count": audits["CYBER"]["active_count"],
+            "question_bank_audit": audits,
+            "question_banks_ready": all(result["ready"] for result in audits.values()),
+            "stripe_connect_transfers_enabled": False}

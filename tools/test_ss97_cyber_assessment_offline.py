@@ -1,6 +1,7 @@
 """Cyber intake unit contracts. No remote scan, mail, client or production write."""
 
 import importlib
+import json
 import sys
 import types
 import unittest
@@ -115,6 +116,14 @@ class CyberApiTests(unittest.TestCase):
                     "SS97 Technician Profile", "SS97 Technician Mission",
                     "SS97 Technician OS Event", "SS97 Technician Document",
                     "SS97 Technician Notice", "SS97 Technician Settlement"}
+        def fake_bank_rows(_doctype, filters, **_kwargs):
+            total = {"L2": 20, "BANK": 30, "CYBER": 40}[filters["track"]]
+            return [{"prompt": f"Question de vérification {filters['track']} numéro {i + 1}",
+                     "options_json": json.dumps({"A": "Réponse A", "B": "Réponse B",
+                                                  "C": "Réponse C", "D": "Réponse D"}),
+                     "correct_option": "A", "category": "Général"}
+                    for i in range(total)]
+        self.fake_frappe.get_all = fake_bank_rows
         self.fake_frappe.db = types.SimpleNamespace(
             get_value=lambda table, user, field: 1,
             exists=lambda table, name: name in doctypes,
@@ -128,12 +137,29 @@ class CyberApiTests(unittest.TestCase):
         self.assertFalse(result["technician_email_enabled"])
         self.assertEqual((result["n2_question_count"], result["n3_question_count"],
                           result["n4_question_count"]), (20, 30, 40))
+        self.assertTrue(result["question_banks_ready"])
+        self.assertFalse(result["stripe_connect_transfers_enabled"])
 
     def test_disabled_manager_account_cannot_read_readiness(self):
         self.fake_frappe.db = types.SimpleNamespace(get_value=lambda *args: 0)
         self.fake_frappe.get_roles = lambda user: ["System Manager"]
         with self.assertRaises(PermissionError):
             self.api.get_admin_readiness()
+
+    def test_unavailable_private_bank_is_not_reported_ready_or_disclosed(self):
+        doctypes = {"SS97 Technician Exam Question", "SS97 Technician Exam Attempt"}
+        self.fake_frappe.db = types.SimpleNamespace(
+            get_value=lambda *args: 1,
+            exists=lambda table, name: name in doctypes,
+            count=lambda table, filters: 40,
+        )
+        self.fake_frappe.get_roles = lambda user: ["System Manager"]
+        self.fake_frappe.get_all = lambda *args, **kwargs: (_ for _ in ()).throw(
+            RuntimeError("PRIVATE_ANSWER_MUST_NOT_LEAK"))
+        result = self.api.get_admin_readiness()
+        self.assertFalse(result["question_banks_ready"])
+        self.assertTrue(result["question_bank_audit"]["CYBER"]["unavailable"])
+        self.assertNotIn("PRIVATE_ANSWER_MUST_NOT_LEAK", str(result))
 
 
 if __name__ == "__main__":
