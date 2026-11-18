@@ -33,7 +33,7 @@
 {% if is_guest %}
 <p class="warning">Connectez-vous pour consulter votre propre dossier.</p>
 <a href="/login?redirect-to=%2Fss97-tech-os">Se connecter</a>
-<p>Vous n'avez pas encore de compte professionnel ? <a href="/signup?redirect-to=%2Fss97-tech-os">Créer un compte puis confirmer votre adresse email</a>. Un compte client existant ne peut pas devenir un compte technicien.</p>
+<p>Vous n'avez pas encore de compte professionnel ? <a href="/login?redirect-to=%2Fss97-tech-os#signup">Créer un compte puis confirmer votre adresse email</a>. Un compte client existant ne peut pas devenir un compte technicien.</p>
 {% else %}
 <p id="tech-status" aria-live="polite" role="status">Chargement de votre espace privé…</p>
 <section id="tech-apply" class="panel" hidden>

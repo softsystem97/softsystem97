@@ -16,6 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class TechnicianWorkflowV2Tests(unittest.TestCase):
+    def test_guest_signup_link_uses_existing_login_signup_form(self):
+        source = (ROOT / "softsystem97/www/ss97-tech-os.html").read_text(encoding="utf-8")
+        self.assertIn('/login?redirect-to=%2Fss97-tech-os#signup', source)
+        self.assertNotIn('href="/signup?', source)
+
     def test_training_not_mixed_across_tracks(self):
         self.assertEqual(set(COURSES), {"L2", "BANK", "CYBER"})
         for track in COURSES:
