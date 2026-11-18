@@ -169,9 +169,30 @@
     });
     const notices = $("admin-notices");
     notices.replaceChildren();
+    line(notices, "p", data.email_enabled
+      ? "L'envoi a été activé sur le site ; vérifier la file Email Queue."
+      : "L'envoi est désactivé sur ce site (mode sécurisé). ");
     for (const [key, count] of Object.entries(data.notice_counts || {})) {
       line(notices, "p", key + " : " + count + " notification(s)");
     }
+    (data.latest_notices || []).forEach((notice) => {
+      const row = document.createElement("article");
+      row.className = "mission";
+      line(row, "p", `${notice.candidate_user} — ${notice.kind} — ${notice.state}`);
+      if (data.email_enabled && ["HELD", "ERROR"].includes(notice.state)) {
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.textContent = "Relancer via Email Queue";
+        retry.addEventListener("click", async () => {
+          if (!window.confirm("Relancer cet email après validation SMTP ?")) return;
+          retry.disabled = true;
+          try {await api("retry_candidate_notice", {notice_id: notice.name}, true);await refresh();}
+          catch (error) {status(error.message);retry.disabled = false;}
+        });
+        row.append(retry);
+      }
+      notices.append(row);
+    });
     status("Supervision chargée (maximum " + data.limit + " dossiers par catégorie).");
   }
   $("admin-review-form").addEventListener("submit", async (event) => {

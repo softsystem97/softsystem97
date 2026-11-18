@@ -82,6 +82,7 @@ class TechnicianWorkflowV2Tests(unittest.TestCase):
         source = (ROOT / "softsystem97/technician_os/api.py").read_text(encoding="utf-8")
         functions = {n.name for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)}
         self.assertTrue({"prepare_settlement", "approve_settlement"} <= functions)
+        self.assertIn('"reviewed_by": reviewer, "state": "VERIFIED"', source)
         self.assertIn('mission.state != "CLIENT_ACCEPTED"', source)
         self.assertIn("manager in {settlement.prepared_by, mission.technician, mission.created_by_user}", source)
         self.assertNotIn("stripe.Transfer.create", source)
@@ -106,6 +107,12 @@ class TechnicianWorkflowV2Tests(unittest.TestCase):
         self.assertEqual(key["unique"], 1)
         self.assertIn("HELD", next(field for field in schema["fields"]
                                    if field["fieldname"] == "state")["options"])
+
+    def test_notice_retry_never_sends_when_flag_is_off(self):
+        source = (ROOT / "softsystem97/technician_os/api.py").read_text(encoding="utf-8")
+        self.assertIn('def retry_candidate_notice(notice_id):', source)
+        self.assertIn('if not _mail_enabled():', source)
+        self.assertIn('if notice.state not in {"HELD", "ERROR"}:', source)
 
 
 if __name__ == "__main__":

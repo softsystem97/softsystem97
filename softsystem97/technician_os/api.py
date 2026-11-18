@@ -11,7 +11,7 @@ import frappe
 from frappe.utils import now_datetime
 
 from .documents import REQUIRED_DOCUMENTS, check_private_upload
-from .notices import stage_notice
+from .notices import stage_notice, _mail_enabled
 from .training import course_for_track
 from .rules import (
     SENSITIVE_TRACKS, TRACKS, TRACK_ROLES, exact_track_role, fee_eur,
@@ -365,6 +365,9 @@ def review_profile(profile_id, state, evidence_reference=""):
             frappe.throw("Contrat, contrôle et rôle N2/N3/N4 requis.", frappe.PermissionError)
         if profile.track in SENSITIVE_TRACKS and profile.documents_validated_by == reviewer:
             frappe.throw("Double validation indépendante requise pour N3/N4.", frappe.PermissionError)
+        if profile.track in SENSITIVE_TRACKS and frappe.db.exists(DOCUMENT, {
+                "profile": profile.name, "reviewed_by": reviewer, "state": "VERIFIED"}):
+            frappe.throw("Le validateur final N3/N4 doit être distinct du contrôleur des pièces.", frappe.PermissionError)
         profile.activated_by = reviewer
     profile.state = state
     profile.save(ignore_permissions=True)
@@ -521,13 +524,40 @@ def get_admin_overview():
                                                   "technician", "amount_eur"],
                                  order_by="creation desc", limit_page_length=100)
     notices = frappe.get_all(NOTICE, fields=["state"], limit_page_length=1000)
+    latest_notices = frappe.get_all(
+        NOTICE, fields=["name", "kind", "state", "candidate_user"],
+        order_by="creation desc", limit_page_length=50,
+    )
     return {"profiles": [dict(row) for row in profiles],
             "missions": [dict(row) for row in missions],
             "settlements": [dict(row) for row in settlements],
             "notice_counts": {state: sum(1 for row in notices if row.state == state)
                               for state in ("HELD", "PENDING", "QUEUED", "ERROR")},
+            "latest_notices": [dict(row) for row in latest_notices],
+            "email_enabled": _mail_enabled(),
             "limit": 100,
             "notice": "Validation comptable uniquement : aucun virement bancaire dans ce module."}
+
+
+@frappe.whitelist(methods=["POST"])
+def retry_candidate_notice(notice_id):
+    """A manager may release a held/failed notice only after SMTP validation."""
+    _enabled()
+    manager = _manager()
+    if not _mail_enabled():
+        frappe.throw("Envoi des courriels non activé.", frappe.PermissionError)
+    if not isinstance(notice_id, str) or len(notice_id) != 36:
+        frappe.throw("Notification invalide.", frappe.PermissionError)
+    notice = frappe.get_doc(NOTICE, notice_id, for_update=True)
+    if notice.state not in {"HELD", "ERROR"}:
+        frappe.throw("Notification non relançable.", frappe.PermissionError)
+    notice.state = "PENDING"
+    notice.save(ignore_permissions=True)
+    _log("PROFILE", notice.profile, "NOTIFICATION_RETRY", manager)
+    frappe.enqueue("softsystem97.technician_os.notices.deliver_notice", queue="short",
+                   enqueue_after_commit=True, notice_id=notice.name)
+    return {"notice_id": notice.name, "state": "PENDING",
+            "info": "Envoi à traiter par la file Frappe, pas encore livré."}
 
 
 @frappe.whitelist(methods=["POST"])
