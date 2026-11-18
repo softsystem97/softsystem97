@@ -1,4 +1,4 @@
-# SS97 Remote Assist V1 — préparation et parcours sécurisé
+# SS97 Remote Assist V1.1 — préparation et parcours sécurisé
 
 Statut : **implémentation pilote non déployée**. Branche `feature/ss97-remote-assist-v1`,
 basée sur `feature/ss97-final-integration`. Le laboratoire MeshCentral d'octobre
@@ -10,7 +10,9 @@ basée sur `feature/ss97-final-integration`. Le laboratoire MeshCentral d'octobr
    pont de tickets existant, la politique métier et la règle de paiement déjà
    configurée. Aucun droit supplémentaire n'est donné aux techniciens.
 2. Code aléatoire de **9 chiffres**, remis une seule fois au technicien. Seule
-   son empreinte HMAC est conservée en base; expiration après **15 minutes**.
+   son empreinte HMAC est conservée en base; fenêtre d'une **heure** à partir
+   de sa préparation, à la demande du fondateur SS97. Le code est consommé
+   dès que le client légitime le saisit correctement.
 3. Client authentifié et propriétaire de ce même ticket : `join_session`
    valide le code, le Customer et le `Portal User` sans accès interclients.
    Limite applicative de cinq erreurs sur quinze minutes par utilisateur.
@@ -20,6 +22,12 @@ basée sur `feature/ss97-final-integration`. Le laboratoire MeshCentral d'octobr
 5. Invitations en attente révoquées si le ticket est clôturé ou si l'affectation
    est perdue; tâche de nettoyage des demandes expirées.
 6. Interface web `/ss97-remote-assist` reliée aux méthodes Frappe.
+
+La fenêtre d'une heure règle **l'invitation à rejoindre**, pas encore la durée
+d'une prise en main réelle ni la facturation d'une prestation. La future durée
+de travail commencera uniquement quand le moteur distant aura attesté une
+connexion et un consentement local. Sa prolongation devra être expressément
+acceptée par le client. Les rendez-vous à l'avance ne sont pas implémentés ici.
 
 ## Ce que V1 NE FAIT PAS
 

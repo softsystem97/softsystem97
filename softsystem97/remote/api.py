@@ -5,18 +5,19 @@ desktop, claims MeshCentral consent, or accepts a browser-supplied device ID.
 All endpoints fail closed until an operator explicitly enables the pilot.
 """
 
-from datetime import timedelta
 from uuid import uuid4
 
 import frappe
 from frappe.utils import get_datetime, now_datetime
 
 from softsystem97.integrations.ticket_bridge import historical, payment_gate, policy
-from .logic import PENDING, TERMINAL, can_transition, code_digest, new_code, normalize_code
+from .logic import (
+    ASSISTANCE_WINDOW_MINUTES, PENDING, TERMINAL, assistance_window_end,
+    can_transition, code_digest, new_code, normalize_code,
+)
 
 SESSION = "SS97 Remote Session"
 EVENT = "SS97 Remote Event"
-MAX_PENDING_MINUTES = 15
 
 
 def _settings():
@@ -80,6 +81,7 @@ def _view(session):
         "expires_at": str(session.expires_at),
         "consented_at": str(session.consented_at or ""),
         "ended_at": str(session.ended_at or ""),
+        "assistance_window_minutes": ASSISTANCE_WINDOW_MINUTES,
         "engine_connected": False,
     }
 
@@ -92,7 +94,11 @@ def _transition(session, state, actor):
     if not can_transition(session.state, state):
         frappe.throw("Transition de session interdite.", frappe.PermissionError)
     session.state = state
-    if state == "CLIENT_APPROVED":
+    if state == "CLIENT_READY":
+        # The code is consumed when the correct customer joins, not merely
+        # when a client later accepts or declines. It cannot be replayed.
+        session.code_digest = None
+    elif state == "CLIENT_APPROVED":
         session.consented_at = now_datetime()
     elif state in TERMINAL:
         session.ended_at = now_datetime()
@@ -135,6 +141,7 @@ def prepare_session(ticket_name):
     else:
         frappe.throw("Impossible de générer un code unique.")
 
+    prepared_at = now_datetime()
     session = frappe.get_doc({
         "doctype": SESSION,
         "session_id": str(uuid4()),
@@ -144,7 +151,7 @@ def prepare_session(ticket_name):
         "technician": technician,
         "state": "CREATED",
         "code_digest": digest,
-        "expires_at": now_datetime() + timedelta(minutes=MAX_PENDING_MINUTES),
+        "expires_at": assistance_window_end(prepared_at),
     }).insert(ignore_permissions=True)
     _event(session, "CREATED", technician)
     return {**_view(session), "join_code": code}

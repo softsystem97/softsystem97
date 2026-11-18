@@ -1,14 +1,21 @@
 """Run without a Frappe site: python -m unittest tools.test_remote_assist_offline."""
 
 import unittest
+from datetime import datetime, timedelta
 
 from softsystem97.remote.logic import (
-    PENDING, TERMINAL, can_transition, code_digest, new_code, normalize_code,
+    ASSISTANCE_WINDOW_MINUTES, PENDING, TERMINAL, assistance_window_end,
+    can_transition, code_digest, new_code, normalize_code,
 )
 
 
 class TestRemoteAssistLogic(unittest.TestCase):
     secret = "A" * 48
+
+    def test_assistance_window_is_one_hour(self):
+        start = datetime(2026, 11, 17, 10, 0)
+        self.assertEqual(ASSISTANCE_WINDOW_MINUTES, 60)
+        self.assertEqual(assistance_window_end(start), start + timedelta(hours=1))
 
     def test_generated_code_is_nine_ascii_digits(self):
         values = {new_code() for _ in range(200)}

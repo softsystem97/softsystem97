@@ -4,10 +4,19 @@ import hashlib
 import hmac
 import re
 import secrets
+from datetime import timedelta
 
 CODE_LENGTH = 9
+# The invitation is usable within a one-hour assistance window. This is not
+# permission to control a desktop for one hour: local consent is still needed.
+ASSISTANCE_WINDOW_MINUTES = 60
 PENDING = frozenset({"CREATED", "CLIENT_READY", "CLIENT_APPROVED"})
 TERMINAL = frozenset({"DECLINED", "ENDED", "EXPIRED", "ERROR"})
+
+
+def assistance_window_end(starts_at):
+    """Compute the fixed V1.1 window without depending on a Frappe site."""
+    return starts_at + timedelta(minutes=ASSISTANCE_WINDOW_MINUTES)
 
 
 def normalize_code(code):

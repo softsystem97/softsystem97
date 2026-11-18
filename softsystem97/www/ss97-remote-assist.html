@@ -29,10 +29,10 @@
         <form id="remote-prepare">
           <label for="remote-ticket">Référence du ticket attribué</label>
           <input id="remote-ticket" maxlength="140" required autocomplete="off" placeholder="Ex. ISS-00001">
-          <button type="submit">Préparer une assistance</button>
+          <button type="submit">Préparer un créneau d'une heure</button>
         </form>
         <section id="remote-code-panel" hidden>
-          <p>Transmettez ce code au client par un canal convenu. Il expire après 15 minutes.</p>
+          <p>Transmettez ce code au client par un canal convenu. Il est à usage unique et valable pendant une heure maximum.</p>
           <p id="remote-code" aria-label="Code d'assistance"></p>
         </section>
       </article>
@@ -45,7 +45,7 @@
         </form>
         <section id="remote-client-session" hidden>
           <p id="remote-client-details"></p>
-          <p>Votre accord dans ce portail ne donne pas accès à votre écran. Une autorisation locale séparée sera toujours nécessaire dans l'assistant MeshCentral.</p>
+          <p>Le créneau prévu est d'une heure. Votre accord dans ce portail ne donne pas accès à votre écran. Une autorisation locale séparée sera toujours nécessaire dans l'assistant MeshCentral.</p>
           <button id="remote-approve" type="button">J'accepte de préparer l'assistance</button>
           <button id="remote-decline" type="button" class="danger">Refuser</button>
         </section>
