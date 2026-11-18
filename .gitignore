@@ -33,3 +33,6 @@ sk_live_*
 sk_test_*
 pk_live_*
 pk_test_*
+
+# Administrative metadata exports stay private, including partial reports.
+SS97_CLOUD_RULES*.json

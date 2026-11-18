@@ -39,7 +39,7 @@ def health():
     }
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_request(
     action=None,
     samAccountName=None,
@@ -48,6 +48,7 @@ def create_request(
     requestId=None,
     **kwargs
 ):
+    frappe.has_permission(DOCTYPE, "create", throw=True)
     data = _body()
 
     action = action or data.get("action")
@@ -80,6 +81,7 @@ def create_request(
         frappe.throw("role is required")
 
     if frappe.db.exists(DOCTYPE, {"request_id": request_id}):
+        _get_request(request_id)
         return {
             "status": "EXISTS",
             "requestId": request_id
@@ -95,7 +97,7 @@ def create_request(
         "role": role
     })
 
-    doc.insert(ignore_permissions=True)
+    doc.insert()
 
     return {
         "status": "PENDING",
@@ -105,7 +107,8 @@ def create_request(
 
 @frappe.whitelist()
 def pending():
-    rows = frappe.get_all(
+    frappe.has_permission(DOCTYPE, "read", throw=True)
+    rows = frappe.get_list(
         DOCTYPE,
         filters={"status": "PENDING"},
         fields=[
@@ -136,24 +139,23 @@ def pending():
     return requests
 
 
-@frappe.whitelist()
+def _get_request(request_id):
+    frappe.has_permission(DOCTYPE, "read", throw=True)
+    if not request_id:
+        frappe.throw("requestId is required")
+    doc = frappe.get_doc(DOCTYPE, {"request_id": request_id})
+    doc.check_permission("read")
+    return doc
+
+
+@frappe.whitelist(methods=["POST"])
 def received(requestId=None, request_id=None, **kwargs):
     data = _body()
     rid = _request_id(data, request_id, requestId)
 
-    if not rid:
-        frappe.throw("requestId is required")
-
-    name = frappe.db.get_value(
-        DOCTYPE,
-        {"request_id": rid},
-        "name"
-    )
-
-    if not name:
-        frappe.throw(f"Request not found: {rid}")
-
-    frappe.db.set_value(DOCTYPE, name, "status", "RECEIVED")
+    doc = _get_request(rid)
+    doc.status = "RECEIVED"
+    doc.save()
 
     return {
         "status": "RECEIVED",
@@ -161,24 +163,14 @@ def received(requestId=None, request_id=None, **kwargs):
     }
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def processing(requestId=None, request_id=None, **kwargs):
     data = _body()
     rid = _request_id(data, request_id, requestId)
 
-    if not rid:
-        frappe.throw("requestId is required")
-
-    name = frappe.db.get_value(
-        DOCTYPE,
-        {"request_id": rid},
-        "name"
-    )
-
-    if not name:
-        frappe.throw(f"Request not found: {rid}")
-
-    frappe.db.set_value(DOCTYPE, name, "status", "PROCESSING")
+    doc = _get_request(rid)
+    doc.status = "PROCESSING"
+    doc.save()
 
     return {
         "status": "PROCESSING",
@@ -186,31 +178,19 @@ def processing(requestId=None, request_id=None, **kwargs):
     }
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def result(requestId=None, request_id=None, **kwargs):
     data = _body()
     rid = _request_id(data, request_id, requestId)
 
-    if not rid:
-        frappe.throw("requestId is required")
+    doc = _get_request(rid)
+    doc.check_permission("write")
 
-    name = frappe.db.get_value(
-        DOCTYPE,
-        {"request_id": rid},
-        "name"
-    )
+    result_status = data.get("Status", data.get("status", "SUCCESS"))
 
-    if not name:
-        frappe.throw(f"Request not found: {rid}")
-
-    result_status = (
-        data.get("Status")
-        or data.get("status")
-        or "SUCCESS"
-    ).upper()
-
-    if result_status not in ("SUCCESS", "ERROR"):
-        result_status = "SUCCESS"
+    if not isinstance(result_status, str) or result_status.upper() not in ("SUCCESS", "ERROR"):
+        frappe.throw("status must be SUCCESS or ERROR")
+    result_status = result_status.upper()
 
     error_message = (
         data.get("Error")
@@ -220,9 +200,7 @@ def result(requestId=None, request_id=None, **kwargs):
         or ""
     )
 
-    frappe.db.set_value(
-        DOCTYPE,
-        name,
+    doc.update(
         {
             "status": result_status,
             "result_json": json.dumps(
@@ -233,6 +211,7 @@ def result(requestId=None, request_id=None, **kwargs):
             "error_message": error_message
         }
     )
+    doc.save()
 
     return {
         "status": result_status,
