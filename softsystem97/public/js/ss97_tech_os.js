@@ -179,6 +179,13 @@
 
   async function refresh() {
     const data = await api("get_my_workspace");
+    const chosenTrack = data.profile?.track || "";
+    document.querySelector(".ss97-tech").dataset.track = chosenTrack;
+    document.querySelectorAll(".ss97-tech .track").forEach((card) => {
+      const code = card.classList.contains("l2") ? "L2"
+        : card.classList.contains("bank") ? "BANK" : "CYBER";
+      card.hidden = !!chosenTrack && code !== chosenTrack;
+    });
     $("tech-apply").hidden = !!data.profile;
     $("tech-profile").hidden = !data.profile;
     $("tech-exam").hidden = !data.profile || data.profile.state !== "IN_REVIEW";
