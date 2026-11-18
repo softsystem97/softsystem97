@@ -5,6 +5,7 @@ Frappe File owner and private path are checked again by the server endpoint.
 """
 
 from pathlib import PurePosixPath
+from urllib.parse import unquote
 
 
 REQUIRED_DOCUMENTS = {
@@ -15,6 +16,19 @@ ALLOWED_EXTENSIONS = frozenset({".pdf", ".png", ".jpg", ".jpeg"})
 MAX_FILE_BYTES = 8 * 1024 * 1024
 
 
+def safe_private_file_url(url):
+    """Accept only a single local Frappe private filename, never a path escape."""
+    prefix = "/private/files/"
+    if not isinstance(url, str) or not url.startswith(prefix):
+        return False
+    tail = url[len(prefix):]
+    # Encoded separators/dot segments can be interpreted later by a proxy.
+    decoded = unquote(unquote(tail))
+    return bool(tail and decoded and decoded not in {".", ".."}
+                and not any(char in decoded for char in "/\\?#\x00")
+                and not any(ord(char) < 32 for char in decoded))
+
+
 def check_private_upload(file_data, expected_owner):
     """Only private, owner-controlled Frappe Files below the size limit."""
     if not file_data or file_data.get("owner") != expected_owner:
@@ -22,7 +36,7 @@ def check_private_upload(file_data, expected_owner):
     if int(file_data.get("is_private") or 0) != 1:
         raise ValueError("Le document doit être enregistré en mode privé.")
     url = file_data.get("file_url")
-    if not isinstance(url, str) or not url.startswith("/private/files/"):
+    if not safe_private_file_url(url):
         raise ValueError("Seuls les fichiers privés locaux sont acceptés.")
     filename = file_data.get("file_name")
     if (not isinstance(filename, str) or len(filename) > 180

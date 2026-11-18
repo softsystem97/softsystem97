@@ -13,7 +13,9 @@ def _enabled():
 
 def _manager():
     user = frappe.session.user
-    if not user or user == "Guest" or "System Manager" not in frappe.get_roles(user):
+    if (not user or user == "Guest"
+            or not frappe.db.get_value("User", user, "enabled")
+            or "System Manager" not in frappe.get_roles(user)):
         frappe.throw("Supervision réservée à la direction.", frappe.PermissionError)
 
 
@@ -69,13 +71,22 @@ def get_admin_readiness():
     _manager()
     tech = frappe.conf.get("ss97_tech_os") or {}
     exams = frappe.conf.get("ss97_technician_exams") or {}
+    mail = frappe.conf.get("ss97_tech_email_notifications") or {}
     bridge = frappe.conf.get("ss97_ticket_bridge") or {}
     cyber = frappe.conf.get("ss97_cyber_assessment") or {}
     question_doctype = bool(frappe.db.exists("DocType", "SS97 Technician Exam Question"))
+    technical_doctypes = ("SS97 Technician Profile", "SS97 Technician Mission",
+                          "SS97 Technician OS Event", "SS97 Technician Document",
+                          "SS97 Technician Notice", "SS97 Technician Settlement")
+    tech_schema_ready = all(frappe.db.exists("DocType", name) for name in technical_doctypes)
+    exam_schema_ready = question_doctype and bool(frappe.db.exists("DocType", "SS97 Technician Exam Attempt"))
     def count_questions(track):
         return frappe.db.count("SS97 Technician Exam Question", {"track": track, "is_active": 1}) if question_doctype else 0
     return {"tech_os_enabled": isinstance(tech, dict) and tech.get("enabled") is True,
+            "technician_schema_ready": tech_schema_ready,
+            "exam_schema_ready": exam_schema_ready,
             "exams_enabled": isinstance(exams, dict) and exams.get("enabled") is True,
+            "technician_email_enabled": isinstance(mail, dict) and mail.get("enabled") is True,
             "ticket_bridge_enabled": (isinstance(bridge, dict)
                                       and bridge.get("enabled") is True),
             "ticket_email_enabled": (isinstance(bridge, dict)

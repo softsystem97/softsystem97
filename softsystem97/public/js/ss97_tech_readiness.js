@@ -25,7 +25,11 @@
       const data = payload.message;
       const list = document.createElement("ul");
       row(list, "Espace TECH OS", data.tech_os_enabled, data.tech_os_enabled ? "activé" : "désactivé par sécurité");
+      row(list, "Structures techniciens", data.technician_schema_ready, data.technician_schema_ready ? "présentes" : "migration manquante");
+      row(list, "Structures d'examens", data.exam_schema_ready, data.exam_schema_ready ? "présentes" : "migration manquante");
       row(list, "Examens", data.exams_enabled, data.exams_enabled ? "activés" : "désactivés");
+      row(list, "Emails du parcours technicien", data.technician_email_enabled,
+        data.technician_email_enabled ? "option activée, réception non vérifiée" : "retenus jusqu'au test SMTP");
       row(list, "Pont client / tickets", data.ticket_bridge_enabled, data.ticket_bridge_enabled ? "configuré" : "désactivé");
       row(list, "Emails des tickets", data.ticket_email_enabled, data.ticket_email_enabled ? "option active, livraison non vérifiée" : "désactivés");
       row(list, "Accueil des demandes cyber", data.cyber_intake_enabled, data.cyber_intake_enabled ? "activé" : "désactivé");

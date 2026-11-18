@@ -66,6 +66,32 @@ class PublicUiContracts(unittest.TestCase):
         self.assertNotIn("site_config", js)
         self.assertIn("Aucun bouton sur cette page n'active un service", html)
 
+    def test_customer_can_review_only_own_ticket_from_separate_page(self):
+        html = source("www/ss97-client-missions.html")
+        page = source("www/ss97-client-missions.py")
+        js = source("public/js/ss97_client_missions.js")
+        api = source("technician_os/api.py")
+        self.assertIn("context.is_guest", page)
+        self.assertIn("{% if is_guest %}", html)
+        self.assertIn("/login?redirect-to=%2Fss97-client-missions", html)
+        self.assertIn('api("get_client_missions"', js)
+        self.assertIn('api("review_client_report"', js)
+        self.assertIn("window.confirm(prompt)", js)
+        self.assertIn("element.textContent = String(value)", js)
+        self.assertNotIn("innerHTML", js)
+        self.assertNotIn("offered_fee_eur", js)
+        self.assertIn('policy.authorize(ticket, "client")', api)
+        self.assertIn("_authorized_ticket(mission, \"client\")", api)
+
+    def test_customer_link_and_email_readiness_have_fresh_assets(self):
+        cyber_page = source("www/ss97-cyber-entreprises.html")
+        ready_page = source("www/ss97-tech-readiness.html")
+        ready_js = source("public/js/ss97_tech_readiness.js")
+        self.assertIn('href="/ss97-client-missions"', cyber_page)
+        self.assertIn("ss97_tech_readiness.js?v=20261118-r3", ready_page)
+        self.assertIn("technician_email_enabled", ready_js)
+        self.assertIn("technician_schema_ready", ready_js)
+
 
 if __name__ == "__main__":
     unittest.main()

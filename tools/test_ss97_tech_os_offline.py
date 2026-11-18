@@ -167,6 +167,42 @@ class TechnicianOSRulesTests(unittest.TestCase):
             finally:
                 sys.modules.pop("softsystem97.technician_os.api", None)
 
+    def test_client_report_decision_requires_ticket_authorization(self):
+        fake_frappe = types.ModuleType("frappe")
+        fake_frappe.__path__ = []
+        fake_frappe.PermissionError = PermissionError
+        fake_frappe.whitelist = lambda **_kwargs: lambda fn: fn
+        fake_frappe.get_roles = lambda user: ["Customer"]
+        fake_utils = types.ModuleType("frappe.utils")
+        fake_utils.now_datetime = lambda: "2026-11-18 12:00:00"
+        fake_frappe.utils = fake_utils
+        with patch.dict(sys.modules, {"frappe": fake_frappe, "frappe.utils": fake_utils}):
+            module = importlib.import_module("softsystem97.technician_os.api")
+            try:
+                mission = types.SimpleNamespace(
+                    name="m" * 36, ticket_name="ISS-001",
+                    technician="worker@example.test", track="CYBER",
+                    state="REPORT_SUBMITTED", report_summary="Intervention contrôlée",
+                    client_accepted_at=None, save=lambda **kwargs: None,
+                )
+                module._enabled = lambda: None
+                module._user = lambda: "client@example.test"
+                module._mission_by_id = lambda *args, **kwargs: mission
+                module._log = lambda *args: None
+                module._authorized_ticket = lambda *args: (_ for _ in ()).throw(
+                    PermissionError("Autre client"))
+                with self.assertRaises(PermissionError):
+                    module.review_client_report(mission.name, "CLIENT_ACCEPTED")
+                self.assertEqual(mission.state, "REPORT_SUBMITTED")
+                module._authorized_ticket = lambda *args: types.SimpleNamespace(status="Open")
+                result = module.review_client_report(mission.name, "CLIENT_ACCEPTED")
+                self.assertEqual(mission.state, "CLIENT_ACCEPTED")
+                self.assertNotIn("offered_fee_eur", result)
+                self.assertNotIn("payment_status", result)
+                self.assertEqual(mission.client_accepted_at, "2026-11-18 12:00:00")
+            finally:
+                sys.modules.pop("softsystem97.technician_os.api", None)
+
 
 if __name__ == "__main__":
     unittest.main()

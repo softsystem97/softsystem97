@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from softsystem97.technician_os.documents import (
-    MAX_FILE_BYTES, REQUIRED_DOCUMENTS, check_private_upload,
+    MAX_FILE_BYTES, REQUIRED_DOCUMENTS, check_private_upload, safe_private_file_url,
 )
 
 
@@ -34,6 +34,11 @@ class TechnicianDocumentsTests(unittest.TestCase):
             {"owner": "other@example.test"}, {"is_private": 0},
             {"file_url": "https://others.example.test/file.pdf"},
             {"file_url": "/files/public.pdf"},
+            {"file_url": "/private/files/../secret.pdf"},
+            {"file_url": "/private/files/%2e%2e%2fsecret.pdf"},
+            {"file_url": "/private/files/%252e%252e%252fsecret.pdf"},
+            {"file_url": "/private/files/photo.pdf?download=1"},
+            {"file_url": "/private/files/subdir/photo.pdf"},
             {"file_name": "payload.exe"}, {"file_name": "photo.pdf.exe"},
             {"file_size": 0}, {"file_size": MAX_FILE_BYTES + 1},
             {"file_size": "unknown"}, {"attached_to_doctype": "Customer"},
@@ -42,6 +47,14 @@ class TechnicianDocumentsTests(unittest.TestCase):
         for changed in modifications:
             with self.subTest(changed=changed), self.assertRaises(ValueError):
                 check_private_upload({**self.valid, **changed}, "candidate@example.test")
+
+    def test_safe_private_url_does_not_accept_encoded_path_escape(self):
+        self.assertTrue(safe_private_file_url("/private/files/cv%20technicien.pdf"))
+        for path in ("/private/files/", "/private/files/%2fetc%2fpasswd",
+                     "/private/files/%252e%252e%255csecret.pdf",
+                     "/private/files/photo.pdf#private", "/private/files/./photo.pdf"):
+            with self.subTest(path=path):
+                self.assertFalse(safe_private_file_url(path))
 
     def test_document_doctype_private_read_only(self):
         path = (ROOT / "softsystem97/softsystem97/doctype/ss97_technician_document"
