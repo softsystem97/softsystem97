@@ -1,0 +1,19 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css">
+<main class="ss97-universe l2" data-track="L2">
+<p><a href="/ss97-tech-os">← Mon dossier professionnel</a></p>
+<span class="badge">Niveau 2 · Support généraliste</span>
+<h1>Mon atelier informatique</h1>
+<p class="lead">Un espace réservé à l'assistance aux ordinateurs, périphériques, logiciels, imprimantes et réseaux. Aucune mission bancaire ou de cybersécurité n'est disponible ici.</p>
+<div class="grid" aria-label="Mes outils de support">
+ <div class="tile"><h2>Diagnostic</h2><p>Décrire la panne, les symptômes et le poste concerné.</p></div>
+ <div class="tile"><h2>Fiche de route</h2><p>Préparer l'intervention et vérifier l'accord du client.</p></div>
+ <div class="tile"><h2>Rapport</h2><p>Documenter les actions, les tests et le résultat.</p></div>
+</div>
+<p class="notice">La prise en main à distance nécessite une autorisation client distincte. Aucun accès automatique n'est déclenché par cet espace.</p>
+<p id="universe-status" role="status" aria-live="polite">Chargement sécurisé de mes missions…</p>
+<section class="panel"><h2>Mes missions N2</h2><div id="universe-missions" aria-live="polite"></div></section>
+</main>
+<script src="/assets/softsystem97/js/ss97_tech_universe.js" defer></script>
+{% endblock %}

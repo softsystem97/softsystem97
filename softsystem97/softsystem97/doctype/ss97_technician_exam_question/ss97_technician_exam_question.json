@@ -1,0 +1,20 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Technician Exam Question",
+  "module": "SoftSystem97",
+  "autoname": "hash",
+  "engine": "InnoDB",
+  "field_order": ["track", "category", "prompt", "options_json", "correct_option", "critical", "is_active"],
+  "fields": [
+    {"fieldname": "track", "fieldtype": "Select", "label": "Filière", "options": "L2\nBANK\nCYBER", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "category", "fieldtype": "Data", "label": "Domaine de compétence", "reqd": 1},
+    {"fieldname": "prompt", "fieldtype": "Long Text", "label": "Énoncé", "reqd": 1},
+    {"fieldname": "options_json", "fieldtype": "Long Text", "label": "Choix A-D (JSON)", "reqd": 1},
+    {"fieldname": "correct_option", "fieldtype": "Select", "label": "Bonne réponse", "options": "A\nB\nC\nD", "reqd": 1},
+    {"fieldname": "critical", "fieldtype": "Check", "label": "Question éliminatoire de sécurité"},
+    {"fieldname": "is_active", "fieldtype": "Check", "label": "Inclure dans l'examen", "default": "1", "in_list_view": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1}],
+  "sort_field": "modified",
+  "sort_order": "DESC"
+}

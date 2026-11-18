@@ -1,0 +1,20 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css">
+<main class="ss97-universe cyber" data-track="CYBER">
+<p><a href="/ss97-tech-os">← Mon dossier professionnel</a></p>
+<span class="badge">Niveau 4 · Cybersécurité</span>
+<h1>Mon espace cyber protégé</h1>
+<p class="lead">Un environnement de missions sensibles, limité aux habilitations personnelles et au périmètre approuvé. Aucune intervention n'est autorisée par la seule présence d'un ticket.</p>
+<div class="grid" aria-label="Mes règles cyber">
+ <div class="tile"><h2>Périmètre écrit</h2><p>Définir les machines, horaires et opérations expressément autorisées.</p></div>
+ <div class="tile"><h2>Double validation</h2><p>Offre suspendue jusqu'à l'approbation d'un deuxième responsable distinct.</p></div>
+ <div class="tile"><h2>Journal de preuves</h2><p>Constat et rapport sans divulgation de secrets ni de données inutiles.</p></div>
+ <div class="tile"><h2>Arrêt de sécurité</h2><p>Faire suspendre une mission lorsque le périmètre ou l'accord change.</p></div>
+</div>
+<p class="notice">Aucun scan intrusif, test de pénétration, récupération d'identifiants ou intervention hors périmètre sans autorisation écrite supplémentaire. Le coffre de secrets et les accès à durée limitée relèvent d'un futur module séparé.</p>
+<p id="universe-status" role="status" aria-live="polite">Contrôle de mon habilitation cyber…</p>
+<section class="panel"><h2>Mes missions cyber</h2><div id="universe-missions" aria-live="polite"></div></section>
+</main>
+<script src="/assets/softsystem97/js/ss97_tech_universe.js" defer></script>
+{% endblock %}

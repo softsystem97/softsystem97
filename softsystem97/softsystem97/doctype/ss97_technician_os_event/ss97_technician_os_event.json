@@ -1,0 +1,21 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Technician OS Event",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:event_id",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": ["event_id", "entity_type", "entity_id", "action", "actor", "occurred_at"],
+  "fields": [
+    {"fieldname": "event_id", "fieldtype": "Data", "label": "Événement UUID", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "entity_type", "fieldtype": "Select", "options": "PROFILE\nMISSION", "label": "Objet", "reqd": 1, "read_only": 1},
+    {"fieldname": "entity_id", "fieldtype": "Data", "label": "Identifiant de l'objet", "reqd": 1, "search_index": 1, "read_only": 1},
+    {"fieldname": "action", "fieldtype": "Data", "label": "Action", "reqd": 1, "read_only": 1},
+    {"fieldname": "actor", "fieldtype": "Link", "options": "User", "label": "Utilisateur", "reqd": 1, "read_only": 1},
+    {"fieldname": "occurred_at", "fieldtype": "Datetime", "label": "Horodatage", "reqd": 1, "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

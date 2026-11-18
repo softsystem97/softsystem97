@@ -1,0 +1,26 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Technician Profile",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:profile_id",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": ["profile_id", "candidate_user", "track", "engagement", "state", "applied_at", "verification_reference", "documents_validated_by", "contract_reference", "contract_signed_at", "activated_by"],
+  "fields": [
+    {"fieldname": "profile_id", "fieldtype": "Data", "label": "Identifiant", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "candidate_user", "fieldtype": "Link", "options": "User", "label": "Compte candidat", "reqd": 1, "unique": 1, "search_index": 1, "read_only": 1},
+    {"fieldname": "track", "fieldtype": "Select", "options": "L2\nBANK\nCYBER", "label": "Spécialité", "reqd": 1, "read_only": 1},
+    {"fieldname": "engagement", "fieldtype": "Select", "options": "FREELANCE\nEMPLOYEE", "label": "Statut contractuel", "reqd": 1, "read_only": 1},
+    {"fieldname": "state", "fieldtype": "Select", "options": "APPLIED\nIN_REVIEW\nEXAM_VALIDATED\nDOCUMENTS_VALIDATED\nCONTRACT_SIGNED\nACTIVE\nSUSPENDED\nREJECTED", "label": "Étape", "reqd": 1, "read_only": 1},
+    {"fieldname": "applied_at", "fieldtype": "Datetime", "label": "Candidature reçue", "reqd": 1, "read_only": 1},
+    {"fieldname": "verification_reference", "fieldtype": "Data", "label": "Référence du contrôle documentaire", "hidden": 1, "read_only": 1},
+    {"fieldname": "documents_validated_by", "fieldtype": "Link", "options": "User", "label": "Contrôlé par", "hidden": 1, "read_only": 1},
+    {"fieldname": "contract_reference", "fieldtype": "Data", "label": "Identifiant de contrat signé", "hidden": 1, "read_only": 1},
+    {"fieldname": "contract_signed_at", "fieldtype": "Datetime", "label": "Signature vérifiée le", "hidden": 1, "read_only": 1},
+    {"fieldname": "activated_by", "fieldtype": "Link", "options": "User", "label": "Habilitation par", "hidden": 1, "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

@@ -1,0 +1,32 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Technician Mission",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:mission_id",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": ["mission_id", "ticket_name", "customer", "technician", "track", "state", "currency", "offered_fee_eur", "route_instructions", "authorization_reference", "created_by_user", "approved_by", "accepted_at", "report_summary", "report_submitted_at", "client_accepted_at", "cancellation_reason"],
+  "fields": [
+    {"fieldname": "mission_id", "fieldtype": "Data", "label": "Identifiant", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "ticket_name", "fieldtype": "Link", "options": "Issue", "label": "Ticket", "reqd": 1, "search_index": 1, "read_only": 1},
+    {"fieldname": "customer", "fieldtype": "Link", "options": "Customer", "label": "Client", "reqd": 1, "read_only": 1},
+    {"fieldname": "technician", "fieldtype": "Link", "options": "User", "label": "Technicien", "reqd": 1, "search_index": 1, "read_only": 1},
+    {"fieldname": "track", "fieldtype": "Select", "options": "L2\nBANK\nCYBER", "label": "Spécialité", "reqd": 1, "read_only": 1},
+    {"fieldname": "state", "fieldtype": "Select", "options": "PENDING_APPROVAL\nOFFERED\nACCEPTED\nIN_PROGRESS\nREPORT_SUBMITTED\nCLIENT_ACCEPTED\nDECLINED\nCANCELLED\nDISPUTED", "label": "Statut", "reqd": 1, "read_only": 1},
+    {"fieldname": "currency", "fieldtype": "Link", "options": "Currency", "label": "Devise", "default": "EUR", "reqd": 1, "read_only": 1},
+    {"fieldname": "offered_fee_eur", "fieldtype": "Currency", "options": "currency", "label": "Rémunération annoncée EUR", "reqd": 1, "read_only": 1},
+    {"fieldname": "route_instructions", "fieldtype": "Small Text", "label": "Fiche de route (sans secrets)", "reqd": 1, "read_only": 1},
+    {"fieldname": "authorization_reference", "fieldtype": "Data", "label": "Autorisation pour mission sensible", "hidden": 1, "read_only": 1},
+    {"fieldname": "created_by_user", "fieldtype": "Link", "options": "User", "label": "Coordinateur", "reqd": 1, "read_only": 1},
+    {"fieldname": "approved_by", "fieldtype": "Link", "options": "User", "label": "Deuxième validateur", "read_only": 1},
+    {"fieldname": "accepted_at", "fieldtype": "Datetime", "label": "Acceptée le", "read_only": 1},
+    {"fieldname": "report_summary", "fieldtype": "Small Text", "label": "Compte rendu", "read_only": 1},
+    {"fieldname": "report_submitted_at", "fieldtype": "Datetime", "label": "Compte rendu reçu le", "read_only": 1},
+    {"fieldname": "client_accepted_at", "fieldtype": "Datetime", "label": "Validation client le", "read_only": 1},
+    {"fieldname": "cancellation_reason", "fieldtype": "Small Text", "label": "Motif de l'annulation", "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

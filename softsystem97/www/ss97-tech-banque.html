@@ -1,0 +1,19 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css">
+<main class="ss97-universe bank" data-track="BANK">
+<p><a href="/ss97-tech-os">← Mon dossier professionnel</a></p>
+<span class="badge">Niveau 3 · Systèmes bancaires</span>
+<h1>Mon environnement bancaire</h1>
+<p class="lead">Missions d'informatique bancaire approuvées et interventions documentées. Les tickets et informations des autres spécialités restent séparés.</p>
+<div class="grid" aria-label="Contrôles bancaires">
+ <div class="tile"><h2>Autorisation</h2><p>Une mission N3 exige une référence d'autorisation et deux validations internes.</p></div>
+ <div class="tile"><h2>Procédure</h2><p>Respect des horaires, du périmètre, des consignes et de la confidentialité bancaire.</p></div>
+ <div class="tile"><h2>Traçabilité</h2><p>Rapport d'intervention, constat, escalade et accord du client.</p></div>
+</div>
+<p class="notice">Ne jamais renseigner de code bancaire, secret d'accès, numéro de carte ou donnée client sensible dans une fiche de route ou un rapport.</p>
+<p id="universe-status" role="status" aria-live="polite">Vérification des missions autorisées…</p>
+<section class="panel"><h2>Mes missions bancaires</h2><div id="universe-missions" aria-live="polite"></div></section>
+</main>
+<script src="/assets/softsystem97/js/ss97_tech_universe.js" defer></script>
+{% endblock %}

@@ -1,0 +1,19 @@
+.ss97-universe{max-width:77rem;margin:1.2rem auto;padding:1.25rem;color:#192a3b}
+.ss97-universe h1{font-size:clamp(2rem,4vw,2.65rem);margin:.1rem 0 .5rem}
+.ss97-universe .lead{max-width:68ch;color:#45596d}
+.ss97-universe .badge{display:inline-block;padding:.25rem .7rem;border-radius:2rem;background:#e5edf6;font-weight:700}
+.ss97-universe .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin:1.2rem 0}
+.ss97-universe .tile,.ss97-universe .panel{background:#fff;border:1px solid #ced9e5;border-radius:14px;padding:1rem}
+.ss97-universe .tile{border-top:4px solid var(--accent,#286f96)}
+.ss97-universe .panel{margin:1.2rem 0;padding:1.3rem}
+.ss97-universe .mission{padding:1.2rem 0;border-top:1px solid #d4e0e9}
+.ss97-universe .mission h3{font-size:1.13rem}
+.ss97-universe button{background:var(--accent,#286f96);color:#fff;border:0;padding:.6rem .95rem;border-radius:7px;cursor:pointer;margin:.4rem .45rem .4rem 0}
+.ss97-universe button:disabled{opacity:.55;cursor:default}
+.ss97-universe label{display:block;font-weight:600;margin:.65rem 0 .2rem}
+.ss97-universe textarea{width:100%;padding:.65rem;border-radius:7px;border:1px solid #abbacc}
+.ss97-universe .notice{padding:1rem;border-radius:9px;background:var(--soft,#eef5fa);border-left:4px solid var(--accent,#286f96)}
+.ss97-universe.l2{--accent:#136ca1;--soft:#eaf5ff}
+.ss97-universe.bank{--accent:#7550a7;--soft:#f4effa}
+.ss97-universe.cyber{--accent:#a52e3d;--soft:#fff0f0}
+.ss97-universe [hidden]{display:none!important}
