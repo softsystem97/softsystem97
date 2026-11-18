@@ -1,0 +1,43 @@
+name: SS97 - Vérifications V1 à V20 sans accès aux clients
+
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/platform/**'
+      - 'softsystem97/remote/**'
+      - 'softsystem97/www/ss97-platform*'
+      - 'softsystem97/public/js/ss97_platform.js'
+      - 'softsystem97/softsystem97/doctype/ss97_platform_*/**'
+      - 'tools/test_ss97_platform_offline.py'
+      - 'tools/test_ss97_platform_extended_offline.py'
+      - 'tools/test_remote_*offline.py'
+      - '.github/workflows/ss97-v1-v10-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Valider le code Python sans Frappe Cloud
+        run: python -m compileall -q softsystem97/platform softsystem97/remote
+      - name: Valider JavaScript sans navigateur client
+        run: node --check softsystem97/public/js/ss97_platform.js
+      - name: Tester V1 et modules V2 à V20
+        run: |
+          python -m unittest -v \
+            tools.test_remote_gateway_protocol_offline \
+            tools.test_remote_receipts_offline \
+            tools.test_ss97_platform_offline \
+            tools.test_ss97_platform_extended_offline
+      - name: Rappeler les limites du contrôle
+        run: |
+          echo 'Aucune machine cliente, Stripe LIVE ni Frappe Cloud contacté.'
+          echo 'Recette réelle ERPNext v16 et consentement local MeshCentral restent nécessaires.'

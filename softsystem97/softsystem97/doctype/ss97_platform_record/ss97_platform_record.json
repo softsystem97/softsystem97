@@ -1,0 +1,26 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Platform Record",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:record_id",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": ["record_id", "version", "ticket_name", "customer", "technician", "created_by_user", "title", "state", "payload_json", "starts_at", "ends_at"],
+  "fields": [
+    {"fieldname": "record_id", "fieldtype": "Data", "label": "Identifiant UUID", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "version", "fieldtype": "Select", "options": "V2\nV3\nV4\nV5\nV6\nV7\nV8\nV9\nV10\nV11\nV12\nV13\nV14\nV15\nV16\nV17\nV18\nV19\nV20", "label": "Version", "reqd": 1, "read_only": 1},
+    {"fieldname": "ticket_name", "fieldtype": "Link", "options": "Issue", "label": "Ticket", "reqd": 1, "read_only": 1, "search_index": 1},
+    {"fieldname": "customer", "fieldtype": "Link", "options": "Customer", "label": "Entreprise", "reqd": 1, "read_only": 1, "search_index": 1},
+    {"fieldname": "technician", "fieldtype": "Link", "options": "User", "label": "Technicien", "read_only": 1, "search_index": 1},
+    {"fieldname": "created_by_user", "fieldtype": "Link", "options": "User", "label": "Auteur", "reqd": 1, "read_only": 1},
+    {"fieldname": "title", "fieldtype": "Data", "label": "Objet", "reqd": 1, "read_only": 1},
+    {"fieldname": "state", "fieldtype": "Select", "options": "SUBMITTED\nIN_REVIEW\nCOMPLETED\nCANCELLED", "label": "État", "reqd": 1, "read_only": 1},
+    {"fieldname": "payload_json", "fieldtype": "Long Text", "label": "Données validées", "reqd": 1, "read_only": 1},
+    {"fieldname": "starts_at", "fieldtype": "Data", "label": "Début UTC", "read_only": 1},
+    {"fieldname": "ends_at", "fieldtype": "Data", "label": "Fin UTC", "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}
