@@ -1,0 +1,141 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Intelligence Order",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "format:SS97-INT-{#####}",
+  "allow_rename": 0,
+  "index_web_pages_for_search": 0,
+  "field_order": [
+    "customer",
+    "requested_by",
+    "company_name",
+    "sector",
+    "track",
+    "tier",
+    "price_eur",
+    "status",
+    "answers_json",
+    "invoice",
+    "report_json",
+    "actions_json",
+    "reviewed_by",
+    "reviewed_on",
+    "generated_on"
+  ],
+  "fields": [
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "label": "Client",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "requested_by",
+      "fieldtype": "Link",
+      "options": "User",
+      "label": "Demandeur",
+      "reqd": 1
+    },
+    {
+      "fieldname": "company_name",
+      "fieldtype": "Data",
+      "label": "Nom de la société",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "sector",
+      "fieldtype": "Data",
+      "label": "Secteur libre",
+      "reqd": 1
+    },
+    {
+      "fieldname": "track",
+      "fieldtype": "Select",
+      "label": "Spécialité",
+      "options": "business\ncyber\ndigital\noperations\ntransformation",
+      "reqd": 1
+    },
+    {
+      "fieldname": "tier",
+      "fieldtype": "Select",
+      "label": "Niveau",
+      "options": "basic\nadvanced\nexpert",
+      "reqd": 1
+    },
+    {
+      "fieldname": "price_eur",
+      "fieldtype": "Currency",
+      "label": "Prix de catalogue EUR",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "options": "Draft\nCheckout\nReview\nDelivered",
+      "label": "Statut",
+      "reqd": 1,
+      "default": "Draft",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "answers_json",
+      "fieldtype": "Long Text",
+      "label": "Questionnaire"
+    },
+    {
+      "fieldname": "invoice",
+      "fieldtype": "Link",
+      "options": "Sales Invoice",
+      "label": "Facture"
+    },
+    {
+      "fieldname": "report_json",
+      "fieldtype": "Long Text",
+      "label": "Rapport figé"
+    },
+    {
+      "fieldname": "actions_json",
+      "fieldtype": "Long Text",
+      "label": "Plan de transformation"
+    },
+    {
+      "fieldname": "reviewed_by",
+      "fieldtype": "Link",
+      "options": "User",
+      "label": "Validé par"
+    },
+    {
+      "fieldname": "reviewed_on",
+      "fieldtype": "Datetime",
+      "label": "Date de validation"
+    },
+    {
+      "fieldname": "generated_on",
+      "fieldtype": "Datetime",
+      "label": "Date de génération"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "report": 1
+    },
+    {
+      "role": "Accounts Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1
+}
