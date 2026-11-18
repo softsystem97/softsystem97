@@ -53,7 +53,7 @@ class PublicUiContracts(unittest.TestCase):
         ):
             with self.subTest(file=file):
                 self.assertIn("ss97_tech_universe.css?v=20261118-r2", source(file))
-        self.assertIn("ss97_tech_admin.js?v=20261118-r2", source("www/ss97-tech-admin.html"))
+        self.assertIn("ss97_tech_admin.js?v=20261118-r4", source("www/ss97-tech-admin.html"))
 
     def test_readiness_is_manager_only_and_never_enables_flags(self):
         page = source("www/ss97-tech-readiness.py")
@@ -76,6 +76,7 @@ class PublicUiContracts(unittest.TestCase):
         self.assertIn("/login?redirect-to=%2Fss97-client-missions", html)
         self.assertIn('api("get_client_missions"', js)
         self.assertIn('api("review_client_report"', js)
+        self.assertIn("dispute_reason: reason", js)
         self.assertIn("window.confirm(prompt)", js)
         self.assertIn("element.textContent = String(value)", js)
         self.assertNotIn("innerHTML", js)
@@ -91,6 +92,19 @@ class PublicUiContracts(unittest.TestCase):
         self.assertIn("ss97_tech_readiness.js?v=20261118-r3", ready_page)
         self.assertIn("technician_email_enabled", ready_js)
         self.assertIn("technician_schema_ready", ready_js)
+
+    def test_dispute_rework_is_a_separate_sensitive_approval(self):
+        admin_js = source("public/js/ss97_tech_admin.js")
+        client_js = source("public/js/ss97_client_missions.js")
+        api = source("technician_os/api.py")
+        self.assertIn('api("request_dispute_rework"', admin_js)
+        self.assertIn('api("approve_sensitive_rework"', admin_js)
+        self.assertIn("REWORK_PENDING_APPROVAL", client_js)
+        self.assertIn('def request_dispute_rework(', api)
+        self.assertIn('def approve_sensitive_rework(', api)
+        self.assertIn('mission.rework_authorization_reference', api)
+        self.assertIn('mission.rework_requested_by', api)
+        self.assertNotIn("stripe.Transfer.create", api)
 
 
 if __name__ == "__main__":

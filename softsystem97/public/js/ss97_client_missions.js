@@ -8,6 +8,7 @@
     OFFERED: "Proposition envoyée au technicien",
     ACCEPTED: "Mission acceptée", IN_PROGRESS: "Intervention en cours",
     REPORT_SUBMITTED: "Rapport en attente de votre réponse",
+    REWORK_PENDING_APPROVAL: "Reprise soumise à une nouvelle validation",
     CLIENT_ACCEPTED: "Rapport accepté", DISPUTED: "Rapport contesté",
     DECLINED: "Mission refusée", CANCELLED: "Mission annulée",
   };
@@ -46,9 +47,20 @@
         ? "Confirmez-vous la réception et l'acceptation du rapport d'intervention ?"
         : "Voulez-vous contester ce rapport ? L'équipe SS97 devra reprendre votre dossier.";
       if (!window.confirm(prompt)) return;
+      let reason = "";
+      if (decision === "DISPUTED") {
+        const entry = window.prompt("Décrivez le problème rencontré (sans mot de passe ni donnée sensible) :", "");
+        if (entry === null) return;
+        reason = entry.trim();
+        if (!reason || reason.length > 500) {
+          status("Précisez un motif de contestation de 500 caractères maximum.");
+          return;
+        }
+      }
       button.disabled = true;
       try {
-        await api("review_client_report", {mission_id: mission.mission_id, decision}, true);
+        await api("review_client_report", {mission_id: mission.mission_id,
+          decision, dispute_reason: reason}, true);
         await load(currentTicket);
         status(decision === "CLIENT_ACCEPTED" ? "Rapport accepté et enregistré." : "Contestation enregistrée.");
       } catch (error) {status(error.message);button.disabled = false;}
@@ -69,6 +81,7 @@
       text(section, "h3", "Intervention " + mission.mission_id);
       text(section, "p", "État : " + (labels[mission.state] || "En vérification"));
       if (mission.report_summary) text(section, "p", "Compte rendu : " + mission.report_summary);
+      if (mission.dispute_reason) text(section, "p", "Motif de contestation : " + mission.dispute_reason);
       if (mission.state === "REPORT_SUBMITTED") {
         action(section, mission, "CLIENT_ACCEPTED");
         action(section, mission, "DISPUTED");

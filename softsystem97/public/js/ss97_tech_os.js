@@ -10,6 +10,7 @@
     PENDING_APPROVAL: "Validation complémentaire", OFFERED: "Proposée",
     ACCEPTED: "Acceptée", IN_PROGRESS: "En cours",
     REPORT_SUBMITTED: "Rapport transmis", CLIENT_ACCEPTED: "Rapport validé par le client",
+    REWORK_PENDING_APPROVAL: "Reprise soumise à validation indépendante",
     DECLINED: "Déclinée", CANCELLED: "Annulée", DISPUTED: "En discussion",
   };
   const documentStates = {MISSING: "À fournir", SUBMITTED: "En cours de contrôle",

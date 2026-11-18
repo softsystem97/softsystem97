@@ -134,8 +134,10 @@ def _mission_view(mission, as_client=False):
         result["offered_fee_eur"] = str(mission.offered_fee_eur)
         result["payment_status"] = "NOT_SCHEDULED"
         result["route_instructions"] = mission.route_instructions or ""
-    if mission.state in ("REPORT_SUBMITTED", "CLIENT_ACCEPTED", "DISPUTED"):
+    if mission.state in ("REPORT_SUBMITTED", "CLIENT_ACCEPTED", "DISPUTED", "REWORK_PENDING_APPROVAL"):
         result["report_summary"] = mission.report_summary or ""
+    if mission.state in ("DISPUTED", "REWORK_PENDING_APPROVAL"):
+        result["dispute_reason"] = mission.dispute_reason or ""
     return result
 
 
@@ -470,7 +472,7 @@ def transition_my_mission(mission_id, state, report_summary=""):
 
 
 @frappe.whitelist(methods=["POST"])
-def review_client_report(mission_id, decision):
+def review_client_report(mission_id, decision, dispute_reason=""):
     _enabled()
     client_user = _user()
     mission = _mission_by_id(mission_id, lock=True)
@@ -484,6 +486,11 @@ def review_client_report(mission_id, decision):
     ticket = _authorized_ticket(mission, "client")
     if ticket.status == "Closed":
         frappe.throw("Ticket fermé.", frappe.PermissionError)
+    if decision == "DISPUTED":
+        try:
+            mission.dispute_reason = short_note(dispute_reason, maximum=500)
+        except ValueError as exc:
+            frappe.throw(str(exc), frappe.PermissionError)
     mission.state = decision
     if decision == "CLIENT_ACCEPTED":
         mission.client_accepted_at = now_datetime()
@@ -491,6 +498,85 @@ def review_client_report(mission_id, decision):
     _log("MISSION", mission.name, decision, client_user)
     # Client approval does not generate or release a payout.
     return _mission_view(mission, as_client=True)
+
+
+def _rework_ticket(mission):
+    """A past assignment or inactive technician never authorizes resumed work."""
+    from softsystem97.integrations.ticket_bridge import policy
+
+    policy.settings()
+    if not frappe.db.exists("Issue", mission.ticket_name):
+        frappe.throw("Ticket inexistant pour une reprise.", frappe.PermissionError)
+    ticket = frappe.get_doc("Issue", mission.ticket_name)
+    profile = _profile_for_user(mission.technician)
+    if (ticket.status == "Closed" or not ticket.customer
+            or ticket.customer != mission.customer
+            or not policy.assigned(ticket.name, mission.technician)
+            or not profile or profile.state != "ACTIVE"
+            or profile.engagement != "FREELANCE" or profile.track != mission.track
+            or not exact_track_role(frappe.get_roles(mission.technician), mission.track)):
+        frappe.throw("Reprise interdite : ticket, affectation ou habilitation à vérifier.", frappe.PermissionError)
+    return ticket
+
+
+@frappe.whitelist(methods=["POST"])
+def request_dispute_rework(mission_id, evidence_reference, authorization_reference=""):
+    """Manager may request corrected work; N3/N4 await independent approval."""
+    _enabled()
+    manager = _manager()
+    mission = _mission_by_id(mission_id, lock=True)
+    if mission.state != "DISPUTED":
+        frappe.throw("Seule une mission contestée peut être reprise.", frappe.PermissionError)
+    ticket = _rework_ticket(mission)
+    if manager in {mission.technician, ticket.raised_by}:
+        frappe.throw("Contrôle indépendant obligatoire.", frappe.PermissionError)
+    try:
+        proof = reference(evidence_reference, "Décision motivée de reprise")
+        mandate = (reference(authorization_reference, "Nouveau mandat écrit pour la reprise")
+                   if mission.track in SENSITIVE_TRACKS else "")
+    except ValueError as exc:
+        frappe.throw(str(exc), frappe.PermissionError)
+    mission.rework_requested_by = manager
+    mission.rework_requested_at = now_datetime()
+    mission.rework_decision_reference = proof
+    mission.rework_authorization_reference = mandate
+    mission.rework_approved_by = ""
+    mission.rework_approved_at = None
+    if mission.track in SENSITIVE_TRACKS:
+        mission.state = "REWORK_PENDING_APPROVAL"
+    else:
+        mission.state = "IN_PROGRESS"
+        mission.rework_count = int(mission.rework_count or 0) + 1
+        mission.report_summary = ""
+        mission.report_submitted_at = None
+    mission.save(ignore_permissions=True)
+    _log("MISSION", mission.name, "REWORK_REQUESTED", manager)
+    return _mission_view(mission)
+
+
+@frappe.whitelist(methods=["POST"])
+def approve_sensitive_rework(mission_id):
+    """A second manager validates a fresh written mandate before N3/N4 resume."""
+    _enabled()
+    manager = _manager()
+    mission = _mission_by_id(mission_id, lock=True)
+    if (mission.state != "REWORK_PENDING_APPROVAL"
+            or mission.track not in SENSITIVE_TRACKS
+            or not mission.rework_authorization_reference
+            or manager in {mission.rework_requested_by, mission.technician}):
+        frappe.throw("Deuxième contrôle de reprise insuffisant.", frappe.PermissionError)
+    ticket = _rework_ticket(mission)
+    if manager == ticket.raised_by:
+        frappe.throw("Le client ne peut pas approuver sa propre reprise.", frappe.PermissionError)
+    mission.rework_approved_by = manager
+    mission.rework_approved_at = now_datetime()
+    mission.rework_count = int(mission.rework_count or 0) + 1
+    mission.report_summary = ""
+    mission.report_submitted_at = None
+    mission.state = "IN_PROGRESS"
+    mission.save(ignore_permissions=True)
+    _log("MISSION", mission.name, "SENSITIVE_REWORK_APPROVED", manager)
+    return _mission_view(mission)
 
 
 @frappe.whitelist(methods=["GET"])
@@ -518,7 +604,8 @@ def get_admin_overview():
                                               "engagement"], order_by="creation desc",
                               limit_page_length=100)
     missions = frappe.get_all(MISSION, fields=["name", "ticket_name", "technician",
-                                              "track", "state", "created_by_user"],
+                                              "track", "state", "created_by_user",
+                                              "dispute_reason"],
                               order_by="creation desc", limit_page_length=100)
     settlements = frappe.get_all(SETTLEMENT, fields=["name", "mission", "state",
                                                   "technician", "amount_eur"],
