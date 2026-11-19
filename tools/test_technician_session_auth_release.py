@@ -29,6 +29,27 @@ def load_endpoint(user="n2@example.invalid", enabled=1, roles=(), rows=None):
     return module, frappe
 
 
+def specialty_endpoint(track="L2", state="ACTIVE", engagement="FREELANCE",
+                       enabled_flag=True, roles=None):
+    from softsystem97.technician_os.rules import TRACKS
+    exact_role = TRACKS[track]["role"]
+    assigned = roles if roles is not None else ["Website User", exact_role]
+    module, frappe = load_endpoint(roles=assigned, rows=[
+        {"name": role, "disabled": 0} for role in assigned if role.startswith("SS97 ")
+    ])
+    frappe.conf = {"ss97_tech_os": {"enabled": enabled_flag}}
+    frappe.db.table_exists = Mock(return_value=True)
+    original_get = frappe.db.get_value.side_effect
+
+    def get_value(doctype, name, field, **kwargs):
+        if doctype == "SS97 Technician Profile":
+            return {"track": track, "state": state, "engagement": engagement}
+        return original_get(doctype, name, field)
+
+    frappe.db.get_value.side_effect = get_value
+    return module, frappe
+
+
 class N2SessionReleaseTests(unittest.TestCase):
     def test_valid_n2_website_user_does_not_need_application_list_permission(self):
         module, frappe = load_endpoint(roles=["Website User", "SS97 Technician"])
@@ -80,6 +101,48 @@ class N2SessionReleaseTests(unittest.TestCase):
         module, _ = load_endpoint(roles=["SS97 Technician"])
         with self.assertRaises(TypeError):
             module.my_technician_access("someone@example.invalid")
+
+    def test_active_n2_n3_n4_specialty_roles_are_recognized(self):
+        for track in ("L2", "BANK", "CYBER"):
+            with self.subTest(track=track):
+                module, _ = specialty_endpoint(track=track)
+                self.assertTrue(module.my_technician_access()["isTechnician"])
+
+    def test_suspended_and_unsigned_specialists_cannot_enter(self):
+        for state, engagement in (("SUSPENDED", "FREELANCE"),
+                                  ("CONTRACT_SIGNED", "FREELANCE"),
+                                  ("ACTIVE", "EMPLOYEE")):
+            with self.subTest(state=state, engagement=engagement):
+                module, _ = specialty_endpoint(state=state, engagement=engagement)
+                self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_disabled_specialty_feature_fails_closed(self):
+        module, _ = specialty_endpoint(enabled_flag=False)
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_multiple_specialty_roles_cannot_bypass_exact_track(self):
+        module, _ = specialty_endpoint(roles=["SS97 Technicien N2", "SS97 Technicien N3"])
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_generic_role_does_not_bypass_suspended_specialist(self):
+        module, _ = specialty_endpoint(state="SUSPENDED", roles=[
+            "SS97 Technician", "SS97 Technicien N2"
+        ])
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_wrong_specialty_is_denied(self):
+        module, _ = specialty_endpoint(track="L2", roles=["SS97 Technicien N3"])
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_missing_profile_table_is_denied(self):
+        module, frappe = specialty_endpoint()
+        frappe.db.table_exists.return_value = False
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_disabled_specialty_role_is_denied(self):
+        module, frappe = specialty_endpoint()
+        frappe.get_all.return_value = [{"name": "SS97 Technicien N2", "disabled": 1}]
+        self.assertFalse(module.my_technician_access()["isTechnician"])
 
     def test_release_hooks_keep_password_and_contrast_assets(self):
         hooks = (SOURCE.parent.parent / "hooks.py").read_text(encoding="utf-8")
