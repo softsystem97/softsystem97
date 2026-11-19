@@ -2,7 +2,9 @@
 import unittest
 import frappe
 from softsystem97.provisioning import (
-    TECHNICIAN_ROLE, plan_existing_user, prepare_technician_role, role_inventory,
+    TECHNICIAN_ROLE, HISTORICAL_TECHNICIAN_ROLE,
+    plan_existing_user, prepare_technician_role,
+    prepare_historical_technician_role, role_inventory,
 )
 
 
@@ -29,6 +31,15 @@ class TestProvisioning(unittest.TestCase):
         self.assertEqual(TECHNICIAN_ROLE, 'SS97 Technicien')
         with self.assertRaises(frappe.ValidationError):
             prepare_technician_role(self.role, dry_run=False)
+
+    def test_historical_role_has_distinct_canonical_name_and_no_automatic_write(self):
+        self.assertEqual(HISTORICAL_TECHNICIAN_ROLE, 'SS97 Technician')
+        self.assertNotEqual(HISTORICAL_TECHNICIAN_ROLE, TECHNICIAN_ROLE)
+        before = frappe.db.count('Role')
+        simulation = prepare_historical_technician_role()
+        self.assertEqual(simulation['role_name'], 'SS97 Technician')
+        self.assertFalse(simulation['changed'])
+        self.assertEqual(frappe.db.count('Role'), before)
 
     def test_explicit_role_creation_is_idempotent_and_grants_nothing(self):
         counts = {dt: frappe.db.count(dt) for dt in ['User', 'Has Role', 'DocPerm', 'Custom DocPerm']}
