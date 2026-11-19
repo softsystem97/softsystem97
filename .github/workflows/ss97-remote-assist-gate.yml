@@ -32,8 +32,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run the full offline Python regression suite
-        run: python -m unittest discover -s tools -p 'test_*.py' -q
+      - name: Run offline Python regressions (no optional Playwright dependency)
+        run: |
+          python -m unittest discover -s tools -p 'test_*offline.py' -q
+          python -m unittest -q tools.test_technician_session_auth_release
       - name: Test browser adapters with synthetic DOM fixtures
         run: |
           node tools/test_password_visibility.cjs
