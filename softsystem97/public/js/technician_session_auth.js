@@ -4,6 +4,7 @@
   if (window.__ss97TechSessionAuth) return;
   if (!/^\/(?:espace-technicien|connexion-technicien)(?:\/|$)/.test(location.pathname)) return;
   window.__ss97TechSessionAuth = true;
+  try { console.info('[SS97] SESSION_GATE_BRIDGE_V2'); } catch (ignored) {}
 
   var endpoint = '/api/method/softsystem97.portal.technician_access.my_technician_access';
   var inFlight = null;
@@ -16,6 +17,11 @@
   // Avoid treating a cached previous identity as authority; resolve per page load.
   function install(profile) {
     verifiedProfile = profile;
+    try {
+      console.info('[SS97] SESSION_GATE_VERIFIED',
+        profile.verificationError ? 'unavailable' :
+        (profile.authenticated && profile.isTechnician ? 'allowed' : 'denied'));
+    } catch (ignored) {}
     if (window.ss97Auth) {
       window.ss97Auth.profile = profile;
       window.ss97Auth.STATE = profile.authenticated ? 'AUTHENTICATED' : 'UNAUTHENTICATED';
