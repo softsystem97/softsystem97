@@ -4,7 +4,7 @@
   if (window.__ss97TechSessionAuth) return;
   if (!/^\/(?:espace-technicien|connexion-technicien)(?:\/|$)/.test(location.pathname)) return;
   window.__ss97TechSessionAuth = true;
-  try { console.info('[SS97] SESSION_GATE_BRIDGE_V2'); } catch (ignored) {}
+  try { console.info('[SS97] SESSION_GATE_BRIDGE_V3'); } catch (ignored) {}
 
   var endpoint = '/api/method/softsystem97.portal.technician_access.my_technician_access';
   var inFlight = null;
@@ -98,9 +98,23 @@
   }
 
   window.ss97AuthResolve = resolve;
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', recheck, {once: true});
-  } else {
+  function boot() {
     recheck();
+    // The historical login page may finish its own incorrect get_list check
+    // before this script loads and never call ss97AuthResolve again. Initiate
+    // the server check here, even when no dashboard guard is present.
+    resolve(function (profile) {
+      if (/^\/espace-technicien\/login\/?$/.test(location.pathname) &&
+          profile.authenticated && profile.isTechnician) {
+        // A fixed same-origin destination avoids trusting a stale client
+        // profile or a user-controlled redirect-to query string.
+        location.replace('/espace-technicien/dashboard');
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, {once: true});
+  } else {
+    boot();
   }
 })();
