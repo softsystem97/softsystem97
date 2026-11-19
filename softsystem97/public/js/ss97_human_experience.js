@@ -17,10 +17,11 @@
     es: "francés · inglés · español · criollo haitiano",
     ht: "franse · anglè · panyòl · kreyòl ayisyen"
   };
+  var chosenLanguage = null;
 
   function activeLanguage() {
     var active = document.querySelector('#ss97-lang-nav [aria-current="true"]');
-    var lang = (active && active.getAttribute("data-ss97-lang")) || document.documentElement.lang || "fr";
+    var lang = chosenLanguage || (active && active.getAttribute("data-ss97-lang")) || document.documentElement.lang || "fr";
     lang = lang.toLowerCase().split("-")[0];
     return Object.prototype.hasOwnProperty.call(translations, lang) ? lang : "fr";
   }
@@ -94,15 +95,32 @@
       }
     }
     translate();
-    // Le sélecteur de langue public est propre au site et peut être asynchrone.
+    // Le site insère parfois le sélecteur après DOMContentLoaded et son script
+    // de traduction peut mettre à jour aria-current après le clic.
     document.addEventListener("click", function (event) {
-      if (event.target.closest && event.target.closest("#ss97-lang-nav [data-ss97-lang]")) {
-        window.requestAnimationFrame(translate);
+      var button = event.target.closest && event.target.closest("#ss97-lang-nav [data-ss97-lang]");
+      if (!button) return;
+      chosenLanguage = button.getAttribute("data-ss97-lang");
+      translate();
+      window.requestAnimationFrame(translate);
+    }, true);
+
+    if (window.MutationObserver) {
+      function observeNavigation() {
+        var langNav = document.getElementById("ss97-lang-nav");
+        if (!langNav) return false;
+        new window.MutationObserver(function () {
+          if (!chosenLanguage) translate();
+        }).observe(langNav, { subtree: true, attributes: true, attributeFilter: ["aria-current"] });
+        if (!chosenLanguage) translate();
+        return true;
       }
-    });
-    var langNav = document.getElementById("ss97-lang-nav");
-    if (langNav && window.MutationObserver) {
-      new MutationObserver(translate).observe(langNav, { subtree: true, attributes: true, attributeFilter: ["aria-current"] });
+      if (!observeNavigation()) {
+        var waitForNavigation = new window.MutationObserver(function () {
+          if (observeNavigation()) waitForNavigation.disconnect();
+        });
+        waitForNavigation.observe(document.body, { childList: true, subtree: true });
+      }
     }
   }
 
