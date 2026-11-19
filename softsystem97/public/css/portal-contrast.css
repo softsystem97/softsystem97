@@ -1,0 +1,89 @@
+/* Accessibility safeguards for SS97 public, client and technician Web Pages.
+   Never change an input's foreground without also setting its background.
+   Portal-only: do not globally restyle ERPNext Desk data-entry controls. */
+
+input:not([type]),
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+textarea,
+select {
+  background-image: none !important;
+  background-color: #f7fbff !important;
+  color: #142b3e !important;
+  -webkit-text-fill-color: #142b3e !important;
+  caret-color: #142b3e !important;
+  border-color: #7994aa !important;
+  color-scheme: light;
+}
+
+input:not([type])::placeholder,
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="tel"]::placeholder,
+input[type="url"]::placeholder,
+input[type="search"]::placeholder,
+input[type="number"]::placeholder,
+textarea::placeholder {
+  color: #4c6577 !important;
+  -webkit-text-fill-color: #4c6577 !important;
+  opacity: 1;
+}
+
+input:not([type]):focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #10a6df !important;
+  outline-offset: 2px;
+}
+
+input:not([type]):-webkit-autofill,
+input[type="text"]:-webkit-autofill,
+input[type="email"]:-webkit-autofill,
+input[type="tel"]:-webkit-autofill,
+input[type="search"]:-webkit-autofill {
+  -webkit-text-fill-color: #142b3e !important;
+  -webkit-box-shadow: 0 0 0 1000px #f7fbff inset !important;
+}
+
+/* The live technician-login footer currently has dark text on a dark shell. */
+.ss97-tl-assist a {
+  color: #8be7ff !important;
+  -webkit-text-fill-color: #8be7ff !important;
+  text-decoration: underline;
+}
+
+/* The outlined recruitment CTA uses dark-blue text on a dark hero.
+   An explicit dark button background works on both dark and light sections. */
+.ss-btn-contour {
+  background: #0c2846 !important;
+  color: #e5f7ff !important;
+  -webkit-text-fill-color: #e5f7ff !important;
+  border-color: #65baff !important;
+}
+
+.ss-btn-contour:hover,
+.ss-btn-contour:focus-visible {
+  background: #154367 !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
