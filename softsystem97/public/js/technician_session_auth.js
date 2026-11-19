@@ -4,14 +4,38 @@
   if (window.__ss97TechSessionAuth) return;
   if (!/^\/(?:espace-technicien|connexion-technicien)(?:\/|$)/.test(location.pathname)) return;
   window.__ss97TechSessionAuth = true;
-  try { console.info('[SS97] SESSION_GATE_BRIDGE_V3'); } catch (ignored) {}
+  try { console.info('[SS97] SESSION_GATE_BRIDGE_V4'); } catch (ignored) {}
 
   var endpoint = '/api/method/softsystem97.portal.technician_access.my_technician_access';
   var inFlight = null;
   var verifiedProfile = null;
   var emittingVerifiedState = false;
+  var dashboardObserver = null;
   function recheck() {
     if (typeof window.technician_route_guard === 'function') window.technician_route_guard();
+  }
+
+  function reconcileDashboard() {
+    // The historical dashboard sets a second, independent READY/ERROR flag.
+    // Its client-side get_list checks can fail on Website Users even after the
+    // server has verified their technician role. Only a positive response from
+    // the authenticated Frappe endpoint may restore the private dashboard.
+    if (!/^\/espace-technicien\/(?:dashboard|tableau-de-bord)\/?$/.test(location.pathname)) return;
+    if (!verifiedProfile || verifiedProfile.verificationError ||
+        !verifiedProfile.authenticated || !verifiedProfile.isTechnician) return;
+    var body = document.body;
+    if (!body) return;
+    if (body.getAttribute('data-ss97-tech-state') !== 'READY') {
+      body.setAttribute('data-ss97-tech-state', 'READY');
+      try { window.dispatchEvent(new CustomEvent('ss97:tech-ready')); }
+      catch (ignored) { /* The attribute is sufficient for older pages. */ }
+    }
+    if (!dashboardObserver && typeof MutationObserver === 'function') {
+      dashboardObserver = new MutationObserver(reconcileDashboard);
+      dashboardObserver.observe(body, {
+        attributes: true, attributeFilter: ['data-ss97-tech-state']
+      });
+    }
   }
 
   // Avoid treating a cached previous identity as authority; resolve per page load.
@@ -41,6 +65,7 @@
     // server replies. Re-run it with the verified session instead of leaving
     // the stale 'no technician access' wall on screen.
     recheck();
+    reconcileDashboard();
   }
 
   // The historical ss97_auth_portal_v13.js performs client-side get_list
