@@ -28,6 +28,8 @@ bench --site <authorized-staging-site> execute softsystem97.provisioning.prepare
 
 Use `role_name` only for an exact compatible name established by source review. Repeated execution does not duplicate the role or rewrite existing settings. Candidate/admin/builtin catch-all roles cannot be selected. Booleans must be JSON booleans, not strings. The operation does not commit early; the authorized bench runner owns the transaction. Production use requires its own explicit approval and normal backup/deployment safeguards.
 
+The separately recovered historical N2 portal code names **`SS97 Technician`**, not the bridge's default `SS97 Technicien`. For a safe dry-run of that exact historical role, use `softsystem97.provisioning.prepare_historical_technician_role` on an approved staging bench. Read the [N2 recovery checks](technician-n2-recovery-2026-11-19.md) before any assignment. The presence of that Role alone cannot validate or activate the unknown historical technician profile.
+
 **Creating this role alone does not enable the technician portal.** No global Issue read/write/delete, System Manager, API-key permission or assignment is granted. Do not create broad DocPerm merely to make an access error disappear.
 
 ## Existing-user change plan

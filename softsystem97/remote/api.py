@@ -11,6 +11,7 @@ import frappe
 from frappe.utils import get_datetime, now_datetime
 
 from softsystem97.integrations.ticket_bridge import historical, payment_gate, policy
+from .invitation import request_client_invitation
 from .logic import (
     ASSISTANCE_WINDOW_MINUTES, PENDING, TERMINAL, assistance_window_end,
     can_transition, code_digest, new_code, normalize_code,
@@ -154,7 +155,13 @@ def prepare_session(ticket_name):
         "expires_at": assistance_window_end(prepared_at),
     }).insert(ignore_permissions=True)
     _event(session, "CREATED", technician)
-    return {**_view(session), "join_code": code}
+    # Opt-in mail: this is only an invitation, never remote-desktop access.
+    # The customer was resolved from the ticket and validated above.
+    mail_requested = request_client_invitation(ticket)
+    if mail_requested:
+        _event(session, "INVITATION_EMAIL_REQUESTED", technician)
+    return {**_view(session), "join_code": code,
+            "invite_email_requested": mail_requested}
 
 
 @frappe.whitelist(methods=["POST"])

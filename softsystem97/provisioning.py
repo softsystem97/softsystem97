@@ -2,6 +2,7 @@
 import frappe
 
 TECHNICIAN_ROLE = 'SS97 Technicien'
+HISTORICAL_TECHNICIAN_ROLE = 'SS97 Technician'
 
 
 def role_inventory():
@@ -36,6 +37,19 @@ def prepare_technician_role(role_name=TECHNICIAN_ROLE, dry_run=True, policy_conf
                         desk_access=0, is_custom=1)).insert()
     result.update(exists=True, changed=True)
     return result  # Transaction owned by the operator/runner; no early commit.
+
+
+def prepare_historical_technician_role(dry_run=True, policy_confirmed=False):
+    """Explicit canonical legacy role; never silently substitute the bridge role.
+
+    Default is strictly read-only and returns only a creation proposal.  Real
+    creation still requires a separately confirmed staging operation.
+    """
+    return prepare_technician_role(
+        HISTORICAL_TECHNICIAN_ROLE,
+        dry_run=dry_run,
+        policy_confirmed=policy_confirmed,
+    )
 
 
 def plan_existing_user(user, desired_last_name=None):

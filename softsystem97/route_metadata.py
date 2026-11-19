@@ -11,6 +11,8 @@ import frappe
 
 ROUTES = (
     "espace-technicien",
+    "espace-technicien/login",
+    "espace-technicien/dashboard",
     "espace-technicien/tickets",
     "espace-client",
     "espace-client/ticket",

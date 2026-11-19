@@ -22,6 +22,12 @@ basée sur `feature/ss97-final-integration`. Le laboratoire MeshCentral d'octobr
 5. Invitations en attente révoquées si le ticket est clôturé ou si l'affectation
    est perdue; tâche de nettoyage des demandes expirées.
 6. Interface web `/ss97-remote-assist` reliée aux méthodes Frappe.
+7. Invitation e-mail **facultative**, désactivée par défaut : si un compte
+   sortant approuvé est configuré pour le pilote, `prepare_session` demande
+   un message au seul client propriétaire du ticket. L'e-mail contient le lien
+   HTTPS vers le portail, **jamais le code à 9 chiffres** ni un identifiant
+   MeshCentral. La file e-mail fait partie de la transaction ; aucun envoi
+   immédiat, flush ou confirmation de réception n'est revendiqué.
 
 La fenêtre d'une heure règle **l'invitation à rejoindre**, pas encore la durée
 d'une prise en main réelle ni la facturation d'une prestation. La future durée
@@ -62,6 +68,11 @@ acceptée par le client. Les rendez-vous à l'avance ne sont pas implémentés i
    Une clé `encryption_key` de site forte et existante est obligatoire. Ne
    jamais publier cette clé, un mot de passe, un code de session, ni de token
    MeshCentral dans Git.
+   Pour essayer l'invitation e-mail **avec une boîte de capture contrôlée**,
+   ajouter `email_enabled: true` et `email_account` (nom exact du compte
+   sortant du staging) dans `ss97_remote_assist`. Sans ces valeurs, aucune
+   invitation n'est demandée. Vérifier Email Queue, scheduler, workers et
+   réception une seule fois, puis désactiver l'option après l'essai.
 6. Tester les deux rôles séparément dans `/ss97-remote-assist` : compte client
    titulaire du ticket et technicien approuvé. Effectuer les tests négatifs
    (autre client, technicien non affecté, ticket fermé, code erroné, expiration,
