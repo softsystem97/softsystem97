@@ -11,6 +11,12 @@
     es: ["Personas reales detrás de la tecnología.", "¿Tiene una pregunta?", "Hablemos", "Un equipo, conversaciones reales", "Estamos aquí para escucharle."],
     ht: ["Gen moun toutbon dèyè teknoloji a.", "Ou gen yon kesyon?", "Ann pale", "Yon ekip, bonjan konvèsasyon", "Nou la pou nou koute ou."]
   };
+  var languageLabels = {
+    fr: "français · anglais · espagnol · créole haïtien",
+    en: "French · English · Spanish · Haitian Creole",
+    es: "francés · inglés · español · criollo haitiano",
+    ht: "franse · anglè · panyòl · kreyòl ayisyen"
+  };
 
   function activeLanguage() {
     var active = document.querySelector('#ss97-lang-nav [aria-current="true"]');
@@ -73,12 +79,19 @@
     actions.insertAdjacentElement("afterend", note);
 
     function translate() {
-      var copy = translations[activeLanguage()];
+      var lang = activeLanguage();
+      var copy = translations[lang];
       heading.textContent = copy[0];
       line.firstChild.textContent = copy[1] + " ";
       link.textContent = copy[2];
       spotlightHeading.textContent = copy[3];
       spotlightDetail.textContent = copy[4];
+      var listedLanguages = document.querySelectorAll(".ss97-accueil .heros .panneau .ligne")[4];
+      var value = listedLanguages && listedLanguages.querySelector("b");
+      if (value) {
+        value.setAttribute("data-ss97-no-i18n", "1");
+        value.textContent = languageLabels[lang];
+      }
     }
     translate();
     // Le sélecteur de langue public est propre au site et peut être asynchrone.
