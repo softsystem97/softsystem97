@@ -1,0 +1,66 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<style>
+.ss97-remote {max-width:57rem;margin:1.5rem auto;padding:1rem;color:#1b2938}
+.ss97-remote .intro {color:#42566c}
+.ss97-remote .panels {display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+.ss97-remote article {padding:1.2rem;border:1px solid #ccd8e2;border-radius:12px;background:#fff}
+.ss97-remote label {display:block;font-weight:600;margin-top:.7rem}
+.ss97-remote input {width:100%;min-height:44px;padding:.55rem;border:1px solid #a4b6c6;border-radius:6px}
+.ss97-remote button {margin-top:.8rem;min-height:44px;padding:.6rem 1rem;border:0;border-radius:8px;background:#126c65;color:#fff;cursor:pointer}
+.ss97-remote button.secondary {background:#42566c}
+.ss97-remote button.danger {background:#ac3029}
+.ss97-remote button:disabled {opacity:.55;cursor:not-allowed}
+.ss97-remote #remote-code {font-size:2rem;letter-spacing:.2em;font-weight:700}
+.ss97-remote #remote-message {min-height:1.5rem}
+.ss97-remote [hidden] {display:none!important}
+</style>
+<main class="ss97-remote" aria-label="Assistance SS97">
+  <h1>Soft System 97 — Assistance à distance</h1>
+  <p class="intro">Même parcours sécurisé pour les techniciens N2 généralistes, N3 bancaires et N4 cybersécurité. L'assistance exige un ticket affecté, une mission en cours et l'accord du client.</p>
+  {% if is_guest %}
+    <p>Vous devez vous connecter à votre compte Soft System 97 pour continuer.</p>
+    <a href="/login?redirect-to=%2Fss97-remote-assist">Se connecter</a>
+  {% else %}
+    <p id="remote-message" role="status" aria-live="polite"></p>
+    <div class="panels">
+      <article>
+        <h2>Espace technicien</h2>
+        <form id="remote-prepare">
+          <label for="remote-ticket">Référence du ticket attribué</label>
+          <input id="remote-ticket" maxlength="140" required autocomplete="off" placeholder="Ex. ISS-00001">
+          <button type="submit">Préparer un créneau d'une heure</button>
+        </form>
+        <section id="remote-code-panel" hidden>
+          <p>Transmettez ce code au client par un canal convenu. Il est à usage unique et valable pendant une heure maximum. Il ne permet pas à lui seul le contrôle de l'ordinateur.</p>
+          <p id="remote-code" aria-label="Code d'assistance"></p>
+        </section>
+      </article>
+      <article>
+        <h2>Espace client</h2>
+        <form id="remote-join">
+          <label for="remote-join-code">Code d'assistance à 9 chiffres</label>
+          <input id="remote-join-code" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" minlength="9" required autocomplete="off">
+          <button type="submit">Rejoindre</button>
+        </form>
+        <section id="remote-client-session" hidden>
+          <p id="remote-client-details"></p>
+          <p>Le créneau prévu est d'une heure. Votre accord dans ce portail ne donne pas accès à votre écran. Une autorisation locale séparée sera toujours nécessaire dans l'assistant MeshCentral.</p>
+          <button id="remote-approve" type="button">J'accepte de préparer l'assistance</button>
+          <button id="remote-decline" type="button" class="danger">Refuser</button>
+        </section>
+      </article>
+    </div>
+    <article id="remote-status-panel" hidden>
+      <h2>Suivi de session</h2>
+      <p id="remote-status"></p>
+      <p>Le contrôle d'écran n'est pas encore actif dans cette version : l'intégration sécurisée à MeshCentral reste à valider.</p>
+      <button id="remote-refresh" class="secondary" type="button">Actualiser l'état</button>
+      <button id="remote-stop" class="danger" type="button">Terminer la demande</button>
+    </article>
+  {% endif %}
+</main>
+{% if not is_guest %}
+<script src="/assets/softsystem97/js/remote_assist.js" defer></script>
+{% endif %}
+{% endblock %}

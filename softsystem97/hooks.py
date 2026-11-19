@@ -71,9 +71,28 @@ fixtures = [
 doc_events = {
     "Issue": {
         "validate": "softsystem97.integrations.ticket_bridge.payment_gate.validate_paid_issue",
+        # Revocation only; never creates a remote connection.
+        "on_update": "softsystem97.remote.lifecycle.revoke_on_issue_close",
     },
     "ToDo": {
-        "on_update": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
-        "on_trash": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+        "on_update": [
+            "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+            "softsystem97.remote.lifecycle.revoke_on_todo_change",
+        ],
+        "on_trash": [
+            "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+            "softsystem97.remote.lifecycle.revoke_on_todo_change",
+        ],
     },
+    "SS97 Technician Mission": {
+        "on_update": "softsystem97.remote.lifecycle.revoke_on_mission_change",
+    },
+    "SS97 Technician Profile": {
+        "on_update": "softsystem97.remote.lifecycle.revoke_on_profile_change",
+    },
+}
+
+# Remote assistance is opt-in; expiry only affects unconnected invitations.
+scheduler_events = {
+    "all": ["softsystem97.remote.api.expire_pending_sessions"],
 }

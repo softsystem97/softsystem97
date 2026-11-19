@@ -1,0 +1,26 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Remote Session",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:session_id",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": ["session_id", "ticket_name", "customer", "client_user", "technician", "track", "state", "code_digest", "expires_at", "consented_at", "ended_at"],
+  "fields": [
+    {"fieldname": "session_id", "fieldtype": "Data", "label": "Session UUID", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "ticket_name", "fieldtype": "Link", "options": "Issue", "label": "Ticket", "reqd": 1, "search_index": 1, "read_only": 1},
+    {"fieldname": "customer", "fieldtype": "Link", "options": "Customer", "label": "Entreprise", "reqd": 1, "read_only": 1},
+    {"fieldname": "client_user", "fieldtype": "Link", "options": "User", "label": "Client", "reqd": 1, "read_only": 1},
+    {"fieldname": "technician", "fieldtype": "Link", "options": "User", "label": "Technicien", "reqd": 1, "read_only": 1},
+    {"fieldname": "track", "fieldtype": "Select", "options": "L2\nBANK\nCYBER", "label": "Spécialité", "reqd": 1, "read_only": 1},
+    {"fieldname": "state", "fieldtype": "Select", "options": "CREATED\nCLIENT_READY\nCLIENT_APPROVED\nACTIVE\nDECLINED\nENDED\nEXPIRED\nERROR", "label": "État", "reqd": 1, "read_only": 1},
+    {"fieldname": "code_digest", "fieldtype": "Data", "label": "Empreinte du code", "hidden": 1, "read_only": 1, "unique": 1},
+    {"fieldname": "expires_at", "fieldtype": "Datetime", "label": "Expiration", "reqd": 1, "read_only": 1},
+    {"fieldname": "consented_at", "fieldtype": "Datetime", "label": "Accord portail", "read_only": 1},
+    {"fieldname": "ended_at", "fieldtype": "Datetime", "label": "Fin", "read_only": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "report": 1}],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

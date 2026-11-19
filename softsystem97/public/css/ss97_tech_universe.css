@@ -10,6 +10,8 @@
 .ss97-universe .mission h3{font-size:1.13rem}
 .ss97-universe button{background:var(--accent,#286f96);color:#fff;border:0;padding:.6rem .95rem;border-radius:7px;cursor:pointer;margin:.4rem .45rem .4rem 0}
 .ss97-universe button:disabled{opacity:.55;cursor:default}
+.ss97-universe .ss97-remote-link{display:inline-block;background:var(--accent,#286f96);color:#fff;text-decoration:none;padding:.6rem .95rem;border-radius:7px;margin:.4rem .45rem .4rem 0;font-weight:700}
+.ss97-universe .ss97-remote-link:focus-visible{outline:3px solid #fbbf24;outline-offset:2px}
 .ss97-universe label{display:block;font-weight:600;margin:.65rem 0 .2rem}
 .ss97-universe textarea{width:100%;padding:.65rem;border-radius:7px;border:1px solid #abbacc}
 .ss97-universe .notice{padding:1rem;border-radius:9px;background:var(--soft,#eef5fa);border-left:4px solid var(--accent,#286f96)}
