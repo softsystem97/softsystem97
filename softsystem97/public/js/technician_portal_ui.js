@@ -99,6 +99,18 @@
     if (typeof window.ss97LoadMessages !== 'function') {
       window.ss97LoadMessages = function () { location.reload(); };
     }
+    // The inline callbacks of the original Web Page are not consistently
+    // exposed after the page's other scripts run. Bind our own click handlers
+    // so the controls work without depending on global name resolution.
+    var refresh = document.querySelector('.ws-main button[onclick*="ss97LoadMessages"]');
+    if (refresh && !refresh.dataset.ss97RefreshBound) {
+      refresh.dataset.ss97RefreshBound = '1';
+      refresh.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        location.reload();
+      }, true);
+    }
     Array.prototype.forEach.call(document.querySelectorAll('.ws-main a[href]'), function (link) {
       var text = link.textContent.trim();
       var href = link.getAttribute('href');
@@ -121,6 +133,14 @@
       if (!match || !safeTicket(match[1])) return;
       open.dataset.ss97CopyAdded = '1';
       var ticket = match[1];
+      if (!open.dataset.ss97OpenBound) {
+        open.dataset.ss97OpenBound = '1';
+        open.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          location.assign('/espace-technicien/intervention?ticket=' + encodeURIComponent(ticket));
+        }, true);
+      }
       var copy = document.createElement('button');
       copy.type = 'button';
       copy.className = open.className;
@@ -135,7 +155,8 @@
       open.insertAdjacentElement('afterend', copy);
     });
     Array.prototype.forEach.call(document.querySelectorAll('.ss97-copy-ticket'), function (button) {
-      // Avoid a MutationObserver loop: do not rewrite unchanged text.
+      // A MutationObserver watches the ticket list. Assigning textContent on
+      // every pass, even to the same string, would trigger itself forever.
       if (button.textContent !== t('copied') && button.textContent !== t('copy')) {
         button.textContent = t('copy');
       }
