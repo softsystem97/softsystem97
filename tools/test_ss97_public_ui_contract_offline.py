@@ -36,7 +36,10 @@ class PublicUiContracts(unittest.TestCase):
         self.assertIn('id="cyber-submit" type="submit" disabled', html)
         self.assertIn('catalogActive = payload.active === true', js)
         self.assertIn('if (!catalogActive)', js)
-        self.assertIn('finally {button.disabled = !catalogActive;}', js)
+        self.assertIn('finally {button.disabled = !catalogActive;syncForm();}', js)
+        self.assertIn('cyber && !pricesPublished', js)
+        self.assertIn('id="cyber-questionnaire"', html)
+        self.assertIn('id="cyber-my-reports"', html)
 
     def test_headings_remain_legible_on_dark_site_theme(self):
         for file in ("public/css/ss97_tech_universe.css", "www/ss97-tech-os.html"):

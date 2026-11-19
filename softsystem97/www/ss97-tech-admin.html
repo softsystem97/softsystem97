@@ -78,8 +78,34 @@
  <p><a href="/ss97-cyber-entreprises">Consulter le catalogue entreprise</a> — une demande est un ticket à instruire, pas une autorisation de scan.</p>
  <div id="admin-cyber-queue">Chargement des demandes…</div>
 </section>
+<section class="panel">
+ <h2>Tarification automatique des expertises cyber</h2>
+ <p>Renseignez des montants HT en euros validés par la direction. La publication affiche une estimation aux clients, sans créer de facture ou de paiement. La réception des demandes reste soumise à la recette et à son activation distincte.</p>
+ <form id="admin-cyber-pricing-form">
+  <label for="admin-cyber-basique">Basique — EUR HT</label><input id="admin-cyber-basique" required pattern="[0-9]+([.][0-9]{1,2})?" inputmode="decimal">
+  <label for="admin-cyber-premium">Premium — EUR HT</label><input id="admin-cyber-premium" required pattern="[0-9]+([.][0-9]{1,2})?" inputmode="decimal">
+  <label for="admin-cyber-ultra">Ultra — EUR HT</label><input id="admin-cyber-ultra" required pattern="[0-9]+([.][0-9]{1,2})?" inputmode="decimal">
+  <label><input id="admin-cyber-publish" type="checkbox"> Publier ces tarifs indicatifs pour le catalogue</label>
+  <button type="submit">Enregistrer les tarifs</button>
+ </form>
+ <p id="admin-cyber-pricing-status" role="status">Lecture de la configuration…</p>
+</section>
+<section class="panel">
+ <h2>Raccorder un devis, une commande ou une facture existante</h2>
+ <p>Cette action rattache uniquement un document ERPNext du même client au dossier cyber. Elle ne crée ni facture, ni prélèvement et ne déclenche pas d'intervention.</p>
+ <form id="admin-cyber-commercial-form">
+  <label for="admin-cyber-assessment-id">Identifiant du dossier cyber</label>
+  <input id="admin-cyber-assessment-id" required maxlength="36">
+  <label for="admin-cyber-document-type">Document ERPNext</label>
+  <select id="admin-cyber-document-type"><option value="Quotation">Devis</option><option value="Sales Order">Commande</option><option value="Sales Invoice">Facture</option></select>
+  <label for="admin-cyber-document-name">Numéro du document existant</label>
+  <input id="admin-cyber-document-name" required maxlength="140">
+  <button type="submit">Raccorder au dossier client</button>
+ </form>
+ <p id="admin-cyber-commercial-status" role="status">Aucun document rattaché.</p>
+</section>
 </div>
 </main>
 <script src="/assets/softsystem97/js/ss97_tech_admin.js?v=20261118-r5" defer></script>
-<script src="/assets/softsystem97/js/ss97_cyber_admin.js?v=20261118-r2" defer></script>
+<script src="/assets/softsystem97/js/ss97_cyber_admin.js?v=20261119-r3" defer></script>
 {% endblock %}

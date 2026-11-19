@@ -5,7 +5,7 @@ import re
 
 TIERS = {
     "ESSENTIEL": {
-        "label": "Essentiel — état des lieux",
+        "label": "Basique — état des lieux",
         "description": "Cartographie déclarative et priorités de sécurité accessibles.",
         "checks": (
             "Inventaire des postes, comptes et services déclarés",
@@ -16,10 +16,10 @@ TIERS = {
         "deliverables": ("Compte rendu de diagnostic", "Plan de corrections priorisées"),
     },
     "SUPERIEUR": {
-        "label": "Supérieur — analyse approfondie",
+        "label": "Premium — analyse approfondie",
         "description": "Revue des configurations, identités et pratiques de résilience.",
         "checks": (
-            "Tous les contrôles du niveau Essentiel",
+            "Tous les contrôles du niveau Basique",
             "Revues d'habilitations et comptes à privilèges",
             "Segmentation réseau et configuration du cloud",
             "Journalisation, alertes et traitement des incidents",
@@ -28,10 +28,10 @@ TIERS = {
         "deliverables": ("Matrice des risques", "Plan de remédiation avec responsabilités"),
     },
     "EXTREME": {
-        "label": "Extrême — résilience et gouvernance",
+        "label": "Ultra — résilience et gouvernance",
         "description": "Programme d'analyse renforcée sous mandat écrit et revue humaine.",
         "checks": (
-            "Tous les contrôles du niveau Supérieur",
+            "Tous les contrôles du niveau Premium",
             "Architecture et continuité d'activité multisite",
             "Exercices de gestion de crise sur scénario approuvé",
             "Revue de la détection et de la réponse aux incidents",
@@ -41,7 +41,31 @@ TIERS = {
     },
 }
 
-REQUEST_KINDS = {"LIBRE": "Ticket libre", "CYBER": "Analyse cybersécurité"}
+REQUEST_KINDS = {
+    "LIBRE": "Ticket libre", "CYBER": "Analyse cybersécurité",
+    "GENERALISTE": "Assistance informatique généraliste N2",
+    "BANQUE": "Assistance informatique bancaire N3",
+}
+
+# Question wording and answers are versioned so old customer self-assessments
+# remain intelligible after the catalogue evolves. Answers are DECLARATIVE.
+QUESTION_VERSION = "2026-11-v1"
+QUESTIONS = {
+    "inventory": "Disposez-vous d'un inventaire à jour des équipements et comptes ?",
+    "mfa": "L'authentification multifacteur protège-t-elle les accès sensibles ?",
+    "backup": "Les sauvegardes sont-elles testées par restauration ?",
+    "updates": "Les systèmes et logiciels reçoivent-ils des mises à jour régulières ?",
+    "endpoint": "Les postes et serveurs disposent-ils d'une protection suivie ?",
+    "access": "Les droits d'accès sont-ils revus à intervalles réguliers ?",
+    "network": "Les réseaux sensibles et les accès externes sont-ils séparés ?",
+    "training": "Les équipes sont-elles sensibilisées au phishing ?",
+    "incident": "Un plan de gestion des incidents a-t-il été testé ?",
+    "suppliers": "La sécurité des fournisseurs et prestataires est-elle évaluée ?",
+}
+ANSWER_VALUES = {"YES": 2, "PARTIAL": 1, "NO": 0, "UNKNOWN": 0}
+ANSWER_LABELS = {"YES": "Oui", "PARTIAL": "Partiellement", "NO": "Non", "UNKNOWN": "Je ne sais pas"}
+EMPLOYEE_BANDS = {"1-10", "11-50", "51-250", "251-1000", "1000+"}
+DATA_TYPES = {"PUBLIC", "CLIENT", "PERSONAL", "SENSITIVE"}
 
 
 def required_text(value, limit, label):
@@ -59,8 +83,8 @@ def request_payload(kind, tier, organization, summary, consent):
         raise ValueError("Type de demande inconnu.")
     if kind == "CYBER" and tier not in TIERS:
         raise ValueError("Formule cybersécurité inconnue.")
-    if kind == "LIBRE" and tier not in ("", None):
-        raise ValueError("Un ticket libre n'a pas de formule cyber.")
+    if kind != "CYBER" and tier not in ("", None):
+        raise ValueError("Seule une expertise cyber possède une formule.")
     if consent is not True:
         raise ValueError("Accord de contact explicite requis.")
     company = required_text(organization, 120, "Organisation")
@@ -69,6 +93,48 @@ def request_payload(kind, tier, organization, summary, consent):
         raise ValueError("Ne saisissez pas de mot de passe ou secret.")
     return {"kind": kind, "tier": tier if kind == "CYBER" else "",
             "organization": company, "summary": details}
+
+
+def validate_profile(profile):
+    """Accept business context, never credentials or arbitrary client objects."""
+    if not isinstance(profile, dict) or set(profile) != {
+        "sector", "country", "city", "employees", "sites", "devices", "contact_role", "data_type"
+    }:
+        raise ValueError("Formulaire entreprise incomplet.")
+    result = {field: required_text(profile[field], limit, label) for field, limit, label in (
+        ("sector", 100, "Secteur"), ("country", 70, "Pays"),
+        ("city", 100, "Ville"), ("contact_role", 100, "Fonction du contact"),
+    )}
+    if profile["employees"] not in EMPLOYEE_BANDS or profile["data_type"] not in DATA_TYPES:
+        raise ValueError("Taille ou sensibilité des données non reconnue.")
+    for key in ("sites", "devices"):
+        value = profile[key]
+        if type(value) is not int or not 1 <= value <= 100000:
+            raise ValueError("Nombre de sites ou de postes incorrect.")
+        result[key] = value
+    result["employees"] = profile["employees"]
+    result["data_type"] = profile["data_type"]
+    return result
+
+
+def validate_answers(answers):
+    if (not isinstance(answers, dict) or set(answers) != set(QUESTIONS)
+            or any(not isinstance(value, str) or value not in ANSWER_VALUES
+                   for value in answers.values())):
+        raise ValueError("Toutes les réponses d'autodiagnostic sont requises.")
+    return {key: answers[key] for key in QUESTIONS}
+
+
+def self_assessment(answers):
+    """Conservative self-reported indicator, never an automated certification."""
+    checked = validate_answers(answers)
+    score = round(100 * sum(ANSWER_VALUES[v] for v in checked.values()) /
+                  (2 * len(QUESTIONS)))
+    strengths = [QUESTIONS[key] for key, value in checked.items() if value == "YES"]
+    priorities = [QUESTIONS[key] for key, value in checked.items() if value != "YES"]
+    return {"score": score, "strengths": strengths, "priorities": priorities,
+            "unknown_count": sum(v == "UNKNOWN" for v in checked.values()),
+            "question_version": QUESTION_VERSION}
 
 
 def build_ticket(data):
