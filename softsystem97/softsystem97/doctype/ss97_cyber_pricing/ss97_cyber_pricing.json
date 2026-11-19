@@ -2,7 +2,7 @@
   "doctype": "DocType",
   "name": "SS97 Cyber Pricing",
   "module": "SoftSystem97",
-  "is_single": 1,
+  "issingle": 1,
   "track_changes": 1,
   "field_order": ["basique_eur", "premium_eur", "ultra_eur", "is_published"],
   "fields": [
