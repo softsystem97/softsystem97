@@ -10,6 +10,13 @@ app_email = "contact@softsystem97.com"
 app_license = "MIT"
 app_version = "1.0.0"
 
+# The commercial Web Pages still load their historical auth scripts.  Install
+# this adapter after those scripts so they query the authenticated session
+# instead of permission-restricted User/Application/Employee list endpoints.
+web_include_js = [
+	"/assets/softsystem97/js/technician_session_auth.js",
+]
+
 required_apps = ["erpnext"]
 after_install = "softsystem97.patches.v1_0.stripe_accounting.execute"
 
