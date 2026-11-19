@@ -1,39 +1,63 @@
-/* Portal login and dashboard use the authenticated Frappe session, never arbitrary User-list queries. */
+/* Every technician portal page uses the current Frappe session, not User-list queries. */
 (function () {
   'use strict';
   if (window.__ss97TechSessionAuth) return;
   if (!/^\/(?:espace-technicien|connexion-technicien)(?:\/|$)/.test(location.pathname)) return;
   window.__ss97TechSessionAuth = true;
-  try { console.info('[SS97] SESSION_GATE_BRIDGE_V4'); } catch (ignored) {}
+  try { console.info('[SS97] SESSION_GATE_BRIDGE_V5'); } catch (ignored) {}
 
   var endpoint = '/api/method/softsystem97.portal.technician_access.my_technician_access';
   var inFlight = null;
   var verifiedProfile = null;
   var emittingVerifiedState = false;
-  var dashboardObserver = null;
+  var protectedObserver = null;
   function recheck() {
     if (typeof window.technician_route_guard === 'function') window.technician_route_guard();
   }
 
-  function reconcileDashboard() {
-    // The historical dashboard sets a second, independent READY/ERROR flag.
-    // Its client-side get_list checks can fail on Website Users even after the
-    // server has verified their technician role. Only a positive response from
-    // the authenticated Frappe endpoint may restore the private dashboard.
-    if (!/^\/espace-technicien\/(?:dashboard|tableau-de-bord)\/?$/.test(location.pathname)) return;
-    if (!verifiedProfile || verifiedProfile.verificationError ||
-        !verifiedProfile.authenticated || !verifiedProfile.isTechnician) return;
+  function reconcileProtectedPage() {
+    // Older Web Page records (agenda, profile, reports, messages, dashboard)
+    // independently overwrite the auth panel after loading. Their get_list
+    // requests can fail for a valid Website User. Restore only the generic
+    // technician shell; each business API still checks ticket permissions.
+    if (!/^\/espace-technicien\/(?!login(?:\/|$))/.test(location.pathname)) return;
+    if (!verifiedProfile) return;
     var body = document.body;
     if (!body) return;
-    if (body.getAttribute('data-ss97-tech-state') !== 'READY') {
-      body.setAttribute('data-ss97-tech-state', 'READY');
-      try { window.dispatchEvent(new CustomEvent('ss97:tech-ready')); }
-      catch (ignored) { /* The attribute is sufficient for older pages. */ }
+    var authorized = !verifiedProfile.verificationError &&
+      verifiedProfile.authenticated && verifiedProfile.isTechnician;
+    var state = authorized ? 'READY' : 'ERROR';
+    var changed = false;
+    if (body.getAttribute('data-ss97-tech-state') !== state) {
+      body.setAttribute('data-ss97-tech-state', state);
+      changed = true;
     }
-    if (!dashboardObserver && typeof MutationObserver === 'function') {
-      dashboardObserver = new MutationObserver(reconcileDashboard);
-      dashboardObserver.observe(body, {
-        attributes: true, attributeFilter: ['data-ss97-tech-state']
+    if (typeof document.querySelectorAll === 'function') {
+      Array.prototype.forEach.call(document.querySelectorAll('[data-tech-login-required]'), function (panel) {
+        var desired = authorized ? 'none' : '';
+        if (panel.style && panel.style.display !== desired) {
+          panel.style.display = desired;
+          changed = true;
+        }
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-tech-private]'), function (panel) {
+        var desired = authorized ? '' : 'none';
+        if (panel.style && panel.style.display !== desired) {
+          panel.style.display = desired;
+          changed = true;
+        }
+      });
+    }
+    if (authorized && changed) {
+      try { window.dispatchEvent(new CustomEvent('ss97:tech-ready')); }
+      catch (ignored) { /* Legacy pages can also check the body attribute. */ }
+    }
+    if (!protectedObserver && typeof MutationObserver === 'function') {
+      protectedObserver = new MutationObserver(reconcileProtectedPage);
+      protectedObserver.observe(body, {
+        attributes: true,
+        attributeFilter: ['data-ss97-tech-state', 'style'],
+        subtree: true
       });
     }
   }
@@ -61,11 +85,9 @@
       }));
     } catch (ignored) { /* Older browsers still get the callback. */ }
     finally { emittingVerifiedState = false; }
-    // The dashboard's legacy guard may already be in ERROR by the time the
-    // server replies. Re-run it with the verified session instead of leaving
-    // the stale 'no technician access' wall on screen.
+    // The legacy guard may already be in ERROR on any protected page.
     recheck();
-    reconcileDashboard();
+    reconcileProtectedPage();
   }
 
   // The historical ss97_auth_portal_v13.js performs client-side get_list
@@ -77,18 +99,18 @@
     window.addEventListener('ss97:auth', function (event) {
       if (emittingVerifiedState || !verifiedProfile) return;
       var legacy = event && event.detail && event.detail.profile;
-      if (!legacy || !legacy.authenticated) return;
+      if (!legacy) return;
       if (!verifiedProfile.authenticated) {
         // A legacy file must not turn a failed or unavailable server check
         // into access. A subsequent login rechecks the server normally.
         install(verifiedProfile);
         return;
       }
-      if (!verifiedProfile.user ||
+      if (legacy.authenticated !== verifiedProfile.authenticated ||
+          legacy.isTechnician !== verifiedProfile.isTechnician ||
+          legacy.isAdmin !== verifiedProfile.isAdmin ||
           String(legacy.user || '').toLowerCase() !==
-            String(verifiedProfile.user).toLowerCase()) return;
-      if (legacy.isTechnician !== verifiedProfile.isTechnician ||
-          legacy.isAdmin !== verifiedProfile.isAdmin) {
+            String(verifiedProfile.user || '').toLowerCase()) {
         install(verifiedProfile);
       }
     });
