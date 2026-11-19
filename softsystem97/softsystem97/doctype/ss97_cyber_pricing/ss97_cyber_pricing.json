@@ -1,0 +1,17 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Pricing",
+  "module": "SoftSystem97",
+  "is_single": 1,
+  "track_changes": 1,
+  "field_order": ["basique_eur", "premium_eur", "ultra_eur", "is_published"],
+  "fields": [
+    {"fieldname": "basique_eur", "fieldtype": "Data", "label": "Prix Basique HT (EUR)", "reqd": 1},
+    {"fieldname": "premium_eur", "fieldtype": "Data", "label": "Prix Premium HT (EUR)", "reqd": 1},
+    {"fieldname": "ultra_eur", "fieldtype": "Data", "label": "Prix Ultra HT (EUR)", "reqd": 1},
+    {"fieldname": "is_published", "fieldtype": "Check", "label": "Publier les tarifs et autoriser les devis indicatifs", "default": "0"}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1}],
+  "sort_field": "modified",
+  "sort_order": "DESC"
+}
