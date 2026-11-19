@@ -2,6 +2,7 @@
 
 import ast
 import importlib
+import io
 import json
 import sys
 import types
@@ -120,6 +121,18 @@ class TechnicianWorkflowV2Tests(unittest.TestCase):
         self.assertIn('if notice.state not in {"HELD", "ERROR"}:', source)
 
     def test_verified_identity_and_diploma_stay_private_until_activation(self):
+        from reportlab.pdfgen.canvas import Canvas
+
+        def make_pdf(title):
+            output = io.BytesIO()
+            pdf_writer = Canvas(output)
+            pdf_writer.drawString(35, 740, title)
+            pdf_writer.showPage()
+            pdf_writer.save()
+            return output.getvalue()
+
+        file_contents = {"identity": make_pdf("PASSPORT"),
+                         "diploma": make_pdf("DIPLOME INFORMATIQUE")}
         fake_frappe = types.ModuleType("frappe")
         fake_frappe.__path__ = []
         fake_frappe.whitelist = lambda **_kw: lambda func: func
@@ -137,6 +150,9 @@ class TechnicianWorkflowV2Tests(unittest.TestCase):
             "attached_to_doctype": "", "attached_to_name": "",
         } for category in ("IDENTITY", "DIPLOMA")}
         fake_frappe.get_all = lambda *_args, **_kwargs: documents
+        fake_frappe.get_doc = lambda _doctype, filename: types.SimpleNamespace(
+            get_content=lambda: file_contents[filename]
+        )
         fake_frappe.db = types.SimpleNamespace(
             get_value=lambda _doctype, filename, *_args, **_kwargs: files.get(filename)
         )

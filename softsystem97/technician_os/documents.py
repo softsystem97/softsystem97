@@ -7,6 +7,8 @@ Frappe File owner and private path are checked again by the server endpoint.
 from pathlib import PurePosixPath
 from urllib.parse import unquote
 
+from softsystem97.recruitment.validation import inspect_document_bytes
+
 
 REQUIRED_DOCUMENTS = {
     "IDENTITY": "Pièce d'identité",
@@ -14,6 +16,31 @@ REQUIRED_DOCUMENTS = {
 }
 ALLOWED_EXTENSIONS = frozenset({".pdf", ".png", ".jpg", ".jpeg"})
 MAX_FILE_BYTES = 8 * 1024 * 1024
+
+
+def check_document_content(category, filename, contents):
+    """Verify that a private credential's bytes match the claimed format.
+
+    Semantic authenticity and correspondence to the applicant are *never*
+    implied by this check; the reviewer must approve those separately.
+    """
+    if category not in REQUIRED_DOCUMENTS:
+        raise ValueError("Catégorie de pièce inconnue.")
+    if not isinstance(contents, bytes) or not 0 < len(contents) <= MAX_FILE_BYTES:
+        raise ValueError("Pièce vide, illisible ou supérieure à 8 Mo.")
+    if not isinstance(filename, str):
+        raise ValueError("Nom du fichier invalide.")
+    suffix = PurePosixPath(filename).suffix.lower()
+    actual, detected_category = inspect_document_bytes(contents)
+    if actual not in {
+        ".pdf": {"pdf"}, ".jpg": {"jpg"}, ".jpeg": {"jpg"},
+        ".png": {"png"},
+    }.get(suffix, set()):
+        raise ValueError("Le contenu ne correspond pas au format du fichier.")
+    expected = "identity" if category == "IDENTITY" else "diploma"
+    if detected_category not in {expected, "unknown"}:
+        raise ValueError("La pièce semble appartenir à une autre rubrique.")
+    return True
 
 
 def safe_private_file_url(url):

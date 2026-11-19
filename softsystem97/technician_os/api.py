@@ -10,7 +10,8 @@ from uuid import uuid4
 import frappe
 from frappe.utils import now_datetime
 
-from .documents import REQUIRED_DOCUMENTS, check_private_upload, safe_private_file_url
+from .documents import (REQUIRED_DOCUMENTS, check_document_content,
+                        check_private_upload, safe_private_file_url)
 from .notices import stage_notice, _mail_enabled
 from .settlement_controls import amounts_match_eur, internal_financial_review_allowed, ticket_payment_evidence
 from .training import course_for_track
@@ -134,7 +135,9 @@ def _private_document_still_valid(document, candidate_user):
     )
     try:
         check_private_upload(file_data, candidate_user)
-    except (ValueError, TypeError):
+        contents = frappe.get_doc("File", document.file).get_content()
+        check_document_content(document.category, file_data.get("file_name"), contents)
+    except (ValueError, TypeError, OSError, AttributeError):
         return False
     return True
 
@@ -232,6 +235,8 @@ def submit_private_document(category, file_id):
     )
     try:
         check_private_upload(file_data, user)
+        contents = frappe.get_doc("File", file_id).get_content()
+        check_document_content(category, file_data.get("file_name"), contents)
     except ValueError as exc:
         frappe.throw(str(exc), frappe.PermissionError)
     # Profile row lock serializes two simultaneous submissions for one category.
