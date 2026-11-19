@@ -8,9 +8,10 @@ const script = fs.readFileSync(path.resolve(__dirname, "../softsystem97/public/j
 
 async function check(pathname, status, body, expectedRole) {
   const calls = [];
+  const redirects = [];
   let ready;
   const ctx = {
-    location: {pathname},
+    location: {pathname, replace(url) { redirects.push(url); }},
     document: {readyState: "loading", addEventListener(event, handler) {
       if (event === "DOMContentLoaded") ready = handler;
     }},
@@ -36,16 +37,20 @@ async function check(pathname, status, body, expectedRole) {
   assert.equal(calls.length, 1, "concurrent checks are deduplicated");
   assert.equal(calls[0].url, "/api/method/softsystem97.portal.technician_access.my_technician_access");
   assert.equal(calls[0].options.credentials, "same-origin");
+  if (pathname === "/espace-technicien/login") {
+    assert.deepEqual(redirects, expectedRole ? ["/espace-technicien/dashboard"] : []);
+  }
 }
 
 (async () => {
   await check("/espace-technicien/dashboard", 200, {authenticated: true, isTechnician: true}, true);
   await check("/espace-technicien/login", 200, {authenticated: true, isTechnician: false}, false);
+  await check("/espace-technicien/login", 200, {authenticated: true, isTechnician: true}, true);
   await check("/espace-technicien/dashboard", 503, {}, false);
   await check("/client/dashboard", 200, {authenticated: true, isTechnician: true});
   await checkLegacyDenialIsRepaired();
   await checkLegacyGrantAfterServerFailureIsRejected();
-  console.log("6 portal session adapter checks passed");
+  console.log("7 portal session adapter checks passed");
 })().catch(error => { console.error(error); process.exitCode = 1; });
 
 async function checkLegacyDenialIsRepaired() {
