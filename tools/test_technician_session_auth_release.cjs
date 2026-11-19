@@ -52,7 +52,9 @@ async function check(pathname, status, body, expectedRole) {
   await checkLegacyGrantAfterServerFailureIsRejected();
   await checkDashboardReadyOnlyAfterVerifiedRole();
   await checkDashboardDeniedWhenServerUnavailable();
-  console.log("9 portal session adapter checks passed");
+  await checkProtectedChildPageRecoversFromLateDenial();
+  await checkProtectedChildPageStaysClosedWithoutVerifiedRole();
+  console.log("11 portal session adapter checks passed");
 })().catch(error => { console.error(error); process.exitCode = 1; });
 
 async function checkLegacyDenialIsRepaired() {
@@ -163,4 +165,93 @@ async function checkDashboardDeniedWhenServerUnavailable() {
   vm.runInNewContext(script, ctx);
   await new Promise(done => ctx.window.ss97AuthResolve(done));
   assert.equal(attrs['data-ss97-tech-state'], 'ERROR', 'server outage must not grant access');
+}
+
+async function checkProtectedChildPageRecoversFromLateDenial() {
+  for (const route of ['profil', 'agenda', 'rapports', 'messages']) {
+    const listeners = {};
+    const events = [];
+    const attributes = {'data-ss97-tech-state': 'ERROR'};
+    const login = {style: {display: 'block'}};
+    const privatePanel = {style: {display: 'none'}};
+    let observeChange;
+    const body = {
+      getAttribute(key) { return attributes[key]; },
+      setAttribute(key, value) { attributes[key] = value; }
+    };
+    const ctx = {
+      location: {pathname: '/espace-technicien/' + route},
+      document: {
+        readyState: 'complete', body,
+        querySelectorAll(selector) {
+          if (selector === '[data-tech-login-required]') return [login];
+          if (selector === '[data-tech-private]') return [privatePanel];
+          return [];
+        }
+      },
+      window: {
+        ss97Auth: {profile: null, STATE: 'LOADING'},
+        addEventListener(name, handler) { (listeners[name] ??= []).push(handler); },
+        dispatchEvent(event) {
+          events.push(event.type);
+          (listeners[event.type] || []).forEach(handler => handler(event));
+        }
+      },
+      CustomEvent: function Event(name, options) { this.type = name; this.detail = options?.detail; },
+      MutationObserver: class {
+        constructor(callback) { observeChange = callback; }
+        observe(target, options) {
+          assert.equal(target, body);
+          assert.equal(options.subtree, true);
+        }
+      },
+      fetch: () => Promise.resolve({ok: true, json: () => Promise.resolve({message: {
+        authenticated: true, isTechnician: true, isAdmin: false, user: 'n2@example.invalid'
+      }})})
+    };
+    vm.runInNewContext(script, ctx);
+    await new Promise(done => ctx.window.ss97AuthResolve(done));
+    assert.equal(attributes['data-ss97-tech-state'], 'READY', route);
+    assert.equal(login.style.display, 'none', route + ' must hide false denial');
+    assert.equal(privatePanel.style.display, '', route + ' must show its private content');
+    assert.ok(events.includes('ss97:tech-ready'), route + ' must start its page-specific loader');
+    // A delayed legacy check can still re-hide the page. Restore only after
+    // having already verified the user's role with the authenticated API.
+    login.style.display = 'block';
+    privatePanel.style.display = 'none';
+    attributes['data-ss97-tech-state'] = 'ERROR';
+    observeChange();
+    assert.equal(login.style.display, 'none', route);
+    assert.equal(privatePanel.style.display, '', route);
+    assert.equal(attributes['data-ss97-tech-state'], 'READY', route);
+  }
+}
+
+async function checkProtectedChildPageStaysClosedWithoutVerifiedRole() {
+  const attributes = {'data-ss97-tech-state': 'ERROR'};
+  const login = {style: {display: 'block'}};
+  const privatePanel = {style: {display: 'none'}};
+  const ctx = {
+    location: {pathname: '/espace-technicien/rapports'},
+    document: {
+      readyState: 'complete',
+      body: {
+        getAttribute(key) { return attributes[key]; },
+        setAttribute(key, value) { attributes[key] = value; }
+      },
+      querySelectorAll(selector) {
+        return selector === '[data-tech-private]' ? [privatePanel] : [login];
+      }
+    },
+    window: {dispatchEvent() {}},
+    CustomEvent: function Event(name) { this.type = name; },
+    fetch: () => Promise.resolve({ok: true, json: () => Promise.resolve({message: {
+      authenticated: true, isTechnician: false, user: 'customer@example.invalid'
+    }})})
+  };
+  vm.runInNewContext(script, ctx);
+  await new Promise(done => ctx.window.ss97AuthResolve(done));
+  assert.equal(attributes['data-ss97-tech-state'], 'ERROR');
+  assert.equal(privatePanel.style.display, 'none');
+  assert.notEqual(login.style.display, 'none');
 }
