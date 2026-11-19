@@ -5,6 +5,7 @@ import json
 import sys
 import types
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from softsystem97.cyber_assessment.catalog import (TIERS, QUESTIONS, build_ticket,
@@ -19,6 +20,13 @@ ANSWERS = {key: "UNKNOWN" for key in QUESTIONS}
 
 
 class CyberCatalogTests(unittest.TestCase):
+    def test_frappe_price_settings_uses_standard_single_doctype_metadata(self):
+        path = (Path(__file__).resolve().parents[1] / "softsystem97" /
+                "softsystem97/doctype/ss97_cyber_pricing/ss97_cyber_pricing.json")
+        doctype = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(doctype["issingle"], 1)
+        self.assertNotIn("is_single", doctype)
+
     def test_three_risk_scoped_tiers(self):
         self.assertEqual(set(TIERS), {"ESSENTIEL", "SUPERIEUR", "EXTREME"})
         for spec in TIERS.values():
