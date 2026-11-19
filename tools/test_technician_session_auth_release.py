@@ -75,6 +75,17 @@ class N2SessionReleaseTests(unittest.TestCase):
         )
         self.assertFalse(module.my_technician_access()["isTechnician"])
 
+    def test_suspended_specialist_cannot_fall_back_to_generic_role(self):
+        module, _ = load_endpoint(
+            roles=["SS97 Technician", "SS97 Technicien N2"],
+            rows=[
+                {"name": "SS97 Technician", "disabled": 0},
+                {"name": "SS97 Technicien N2", "disabled": 0},
+            ],
+            profile={"track": "L2", "state": "SUSPENDED", "engagement": "FREELANCE"},
+        )
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
     def test_mismatched_track_does_not_grant_portal_access(self):
         module, _ = load_endpoint(
             roles=["SS97 Technicien N2"],

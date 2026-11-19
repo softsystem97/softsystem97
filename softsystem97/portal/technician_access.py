@@ -32,8 +32,8 @@ def evaluate_technician_session(user, enabled, assigned_roles, disabled_roles=()
     return {
         "authenticated": True,
         "isTechnician": (
+            active_specialist if roles & specialist_roles else
             any(role in roles and role not in disabled for role in TECHNICIAN_ROLES)
-            or active_specialist
         ),
         "isAdmin": user == "Administrator" or any(role in roles for role in ADMIN_ROLES),
     }
