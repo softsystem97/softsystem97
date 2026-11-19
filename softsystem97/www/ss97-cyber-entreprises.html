@@ -3,19 +3,45 @@
 <link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css?v=20261118-r2">
 <main class="ss97-universe">
  <span class="badge">Soft System 97 — entreprises et cybersécurité</span>
- <h1>Analyse de votre sécurité informatique</h1>
- <p class="lead">Choisissez un niveau d'étude. Un responsable SS97 valide le périmètre, puis une mission est confiée à un technicien habilité N4. Aucune analyse intrusive ne démarre depuis ce formulaire.</p>
+ <h1>CyberExpert 360 — expertise informatique de votre entreprise</h1>
+ <p class="lead">Décrivez votre activité, choisissez Basique, Premium ou Ultra, puis recevez une estimation HT et un pré-diagnostic PDF déclaratif. Un technicien habilité N4 vérifie les conclusions avant validation. Les interventions généralistes N2 et bancaires N3 passent par le même système de tickets.</p>
  <div class="grid" id="cyber-tiers" aria-label="Formules d'analyse"></div>
  <section class="panel">
-  <h2>Ouvrir une demande entreprise ou un ticket libre</h2>
-  <p>Il faut être connecté à son compte client. Une confirmation dans votre espace est prévue lors de la création du ticket ; l'envoi par email dépend d'un compte sortant validé.</p>
+  <h2>Formulaire initial : demande d'expertise ou d'assistance</h2>
+  <p>Connectez-vous à votre compte client pour envoyer une demande. Aucun paiement n'est déclenché ; le prix affiché est indicatif et soumis à devis. Le courriel dépend d'un compte sortant validé.</p>
   <form id="cyber-request-form">
    <label for="cyber-kind">Votre demande</label>
-   <select id="cyber-kind" required><option value="CYBER">Analyse cybersécurité</option><option value="LIBRE">Ticket libre</option></select>
-   <label for="cyber-tier">Niveau de l'analyse</label>
-   <select id="cyber-tier"><option value="ESSENTIEL">Essentiel</option><option value="SUPERIEUR">Supérieur</option><option value="EXTREME">Extrême</option></select>
+   <select id="cyber-kind" required>
+    <option value="CYBER">Cybersécurité — N4</option>
+    <option value="GENERALISTE">Assistance généraliste — N2</option>
+    <option value="BANQUE">Assistance bancaire — N3</option>
+    <option value="LIBRE">Autre demande / ticket libre</option>
+   </select>
+   <div id="cyber-offer-fields">
+    <label for="cyber-tier">Niveau de l'expertise</label>
+    <select id="cyber-tier"><option value="ESSENTIEL">Basique</option><option value="SUPERIEUR">Premium</option><option value="EXTREME">Ultra</option></select>
+    <p class="notice" id="cyber-estimate" aria-live="polite">Recherche du tarif...</p>
+   </div>
    <label for="cyber-org">Nom de l'entreprise ou organisation</label>
    <input id="cyber-org" maxlength="120" required autocomplete="organization">
+   <fieldset id="cyber-business-fields">
+    <legend>Profil de l'entreprise</legend>
+    <div class="cyber-columns">
+     <div><label for="cyber-sector">Secteur d'activité</label><input id="cyber-sector" maxlength="100" required placeholder="Ex. : commerce, santé, industrie"></div>
+     <div><label for="cyber-country">Pays d'implantation</label><input id="cyber-country" maxlength="70" required placeholder="Ex. : Martinique (France)"></div>
+     <div><label for="cyber-city">Ville / commune</label><input id="cyber-city" maxlength="100" required></div>
+     <div><label for="cyber-employees">Effectif</label><select id="cyber-employees" required><option value="1-10">1 à 10</option><option value="11-50">11 à 50</option><option value="51-250">51 à 250</option><option value="251-1000">251 à 1 000</option><option value="1000+">Plus de 1 000</option></select></div>
+     <div><label for="cyber-sites">Nombre de sites</label><input id="cyber-sites" type="number" min="1" max="100000" value="1" required></div>
+     <div><label for="cyber-devices">Nombre estimé de postes</label><input id="cyber-devices" type="number" min="1" max="100000" value="5" required></div>
+     <div><label for="cyber-role">Votre fonction</label><input id="cyber-role" maxlength="100" placeholder="Ex. : direction, responsable informatique" required></div>
+     <div><label for="cyber-data-type">Type de données</label><select id="cyber-data-type" required><option value="PUBLIC">Publiques</option><option value="CLIENT">Clients et commerciales</option><option value="PERSONAL">Personnelles</option><option value="SENSITIVE">Sensibles / réglementées</option></select></div>
+    </div>
+   </fieldset>
+   <fieldset id="cyber-questionnaire" aria-labelledby="cyber-questions-title">
+    <legend id="cyber-questions-title">Autodiagnostic de sécurité (10 domaines)</legend>
+    <p>Répondez selon vos connaissances ; « Je ne sais pas » est une réponse valable. Aucun outil n'analyse votre réseau à cette étape.</p>
+    <div id="cyber-questions">Chargement des questions…</div>
+   </fieldset>
    <label for="cyber-summary">Description du besoin (sans mots de passe ni secrets)</label>
    <textarea id="cyber-summary" rows="5" maxlength="2000" required></textarea>
    <label><input id="cyber-consent" type="checkbox" required> J'accepte d'être recontacté au sujet de cette demande et je comprends qu'aucun test technique n'est autorisé sans mandat distinct.</label>
@@ -25,6 +51,21 @@
   <p><a href="/login">Accéder à mon compte client</a></p>
   <p><a href="/ss97-client-missions">Suivre mon intervention et répondre au rapport du technicien</a></p>
  </section>
+ <section class="panel">
+  <h2>Mes expertises et mes rapports PDF</h2>
+  <p>Le rapport initial est un autodiagnostic fondé sur vos réponses. Il ne devient « revu N4 » qu'après un contrôle humain lié à une mission approuvée.</p>
+  <button id="cyber-refresh-reports" type="button">Actualiser mes dossiers</button>
+  <div id="cyber-my-reports" role="status">Connectez-vous pour consulter vos dossiers.</div>
+ </section>
 </main>
-<script src="/assets/softsystem97/js/ss97_cyber_enterprises.js?v=20261118-r2" defer></script>
+<style>
+.ss97-universe input:not([type=checkbox]),.ss97-universe select{width:100%;min-height:2.5rem;padding:.55rem;border:1px solid #869cb1;border-radius:7px;background:#fff;color:#17263b}
+.ss97-universe fieldset{margin:1rem 0;border:1px solid #c9d7e3;border-radius:12px;padding:1rem}
+.ss97-universe legend{font-weight:700;padding:0 .35rem}
+.ss97-universe .cyber-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:.4rem 1rem}
+.ss97-universe .cyber-question{padding:.7rem 0;border-bottom:1px solid #d8e3ea}
+.ss97-universe .cyber-question label{font-size:.94rem}
+.ss97-universe .cyber-answers{max-width:280px}
+</style>
+<script src="/assets/softsystem97/js/ss97_cyber_enterprises.js?v=20261119-r3" defer></script>
 {% endblock %}
