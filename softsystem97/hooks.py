@@ -19,6 +19,7 @@ after_install = "softsystem97.patches.v1_0.stripe_accounting.execute"
 web_include_css = [
     "/assets/softsystem97/css/password-contrast.css",
     "/assets/softsystem97/css/portal-contrast.css",
+    "/assets/softsystem97/css/technician_scroll.css?v=20261119-tech-scroll-1",
 ]
 web_include_js = [
     "/assets/softsystem97/js/password-visibility.js",
@@ -31,6 +32,7 @@ web_include_js = [
     # The legacy agenda Web Page had a permanent "Chargement…" placeholder,
     # but no working script to retrieve appointments or handle errors.
     "/assets/softsystem97/js/technician_agenda.js?v=20261119-agenda-1",
+    "/assets/softsystem97/js/technician_portal_ui.js?v=20261119-portal-ui-1",
 ]
 app_include_css = ["/assets/softsystem97/css/password-contrast.css"]
 
