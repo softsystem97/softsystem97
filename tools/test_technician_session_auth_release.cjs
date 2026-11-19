@@ -50,7 +50,9 @@ async function check(pathname, status, body, expectedRole) {
   await check("/client/dashboard", 200, {authenticated: true, isTechnician: true});
   await checkLegacyDenialIsRepaired();
   await checkLegacyGrantAfterServerFailureIsRejected();
-  console.log("7 portal session adapter checks passed");
+  await checkDashboardReadyOnlyAfterVerifiedRole();
+  await checkDashboardDeniedWhenServerUnavailable();
+  console.log("9 portal session adapter checks passed");
 })().catch(error => { console.error(error); process.exitCode = 1; });
 
 async function checkLegacyDenialIsRepaired() {
@@ -109,4 +111,56 @@ async function checkLegacyGrantAfterServerFailureIsRejected() {
   }}));
   assert.equal(ctx.window.ss97Auth.profile.isTechnician, false,
     "legacy code cannot grant access after a failed server check");
+}
+
+async function checkDashboardReadyOnlyAfterVerifiedRole() {
+  const events = [];
+  const attrs = {'data-ss97-tech-state': 'ERROR'};
+  let onChange;
+  const body = {
+    getAttribute(name) { return attrs[name]; },
+    setAttribute(name, value) {
+      attrs[name] = value;
+      if (onChange) onChange();
+    }
+  };
+  const ctx = {
+    location: {pathname: '/espace-technicien/dashboard'},
+    document: {readyState: 'complete', body},
+    window: {dispatchEvent(event) { events.push(event.type); }},
+    MutationObserver: class {
+      constructor(callback) { onChange = callback; }
+      observe(target, options) {
+        assert.equal(target, body);
+        assert.equal(options.attributeFilter[0], 'data-ss97-tech-state');
+      }
+    },
+    CustomEvent: function Event(name) { this.type = name; },
+    fetch: () => Promise.resolve({ok: true, json: () => Promise.resolve({message: {
+      authenticated: true, isTechnician: true, user: 'n2@example.invalid'
+    }})})
+  };
+  vm.runInNewContext(script, ctx);
+  await new Promise(done => ctx.window.ss97AuthResolve(done));
+  assert.equal(attrs['data-ss97-tech-state'], 'READY');
+  assert.ok(events.includes('ss97:tech-ready'), 'dashboard boot is awakened');
+  body.setAttribute('data-ss97-tech-state', 'ERROR');
+  assert.equal(attrs['data-ss97-tech-state'], 'READY', 'late legacy denial is repaired');
+}
+
+async function checkDashboardDeniedWhenServerUnavailable() {
+  const attrs = {'data-ss97-tech-state': 'ERROR'};
+  const ctx = {
+    location: {pathname: '/espace-technicien/dashboard'},
+    document: {readyState: 'complete', body: {
+      getAttribute(name) { return attrs[name]; },
+      setAttribute(name, value) { attrs[name] = value; }
+    }},
+    window: {dispatchEvent() {}},
+    CustomEvent: function Event(name) { this.type = name; },
+    fetch: () => Promise.resolve({ok: false})
+  };
+  vm.runInNewContext(script, ctx);
+  await new Promise(done => ctx.window.ss97AuthResolve(done));
+  assert.equal(attrs['data-ss97-tech-state'], 'ERROR', 'server outage must not grant access');
 }
