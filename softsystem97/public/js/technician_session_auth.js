@@ -44,10 +44,16 @@
   // current user returned by our server endpoint as authority.
   if (typeof window.addEventListener === 'function') {
     window.addEventListener('ss97:auth', function (event) {
-      if (emittingVerifiedState || !verifiedProfile ||
-          !verifiedProfile.authenticated || !verifiedProfile.user) return;
+      if (emittingVerifiedState || !verifiedProfile) return;
       var legacy = event && event.detail && event.detail.profile;
-      if (!legacy || !legacy.authenticated ||
+      if (!legacy || !legacy.authenticated) return;
+      if (!verifiedProfile.authenticated) {
+        // A legacy file must not turn a failed or unavailable server check
+        // into access. A subsequent login rechecks the server normally.
+        install(verifiedProfile);
+        return;
+      }
+      if (!verifiedProfile.user ||
           String(legacy.user || '').toLowerCase() !==
             String(verifiedProfile.user).toLowerCase()) return;
       if (legacy.isTechnician !== verifiedProfile.isTechnician ||
