@@ -1,0 +1,157 @@
+/* SoftSystem97 — accueil plus accueillant, sans changer la palette de marque.
+ * Ne s'applique pas aux espaces connectés ni aux formulaires ERPNext.
+ */
+.ss97-accueil .heros {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-image:
+    radial-gradient(ellipse 48% 70% at 82% 28%, rgba(50, 180, 224, .22) 0%, transparent 73%),
+    radial-gradient(ellipse 42% 58% at 8% 95%, rgba(75, 106, 198, .24) 0%, transparent 75%),
+    linear-gradient(132deg, #061126 0%, #0d2045 52%, #18417b 100%) !important;
+}
+.ss97-accueil .heros::after {
+  content: "";
+  position: absolute;
+  right: -10vw;
+  bottom: -32%;
+  width: min(48vw, 620px);
+  height: min(48vw, 620px);
+  border: 1px solid rgba(148, 224, 247, .14);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+.ss97-accueil .heros-grille { align-items: center; gap: clamp(28px, 4.6vw, 72px); }
+.ss97-accueil .ss-titre-hero {
+  max-width: 16ch;
+  font-size: clamp(2.55rem, 4.65vw, 4.9rem);
+  letter-spacing: -.045em;
+  line-height: 1.09;
+  text-wrap: balance;
+}
+.ss97-accueil .heros .ss-sous-titre { max-width: 60ch; line-height: 1.72; }
+.ss97-accueil .heros .ss-surtitre {
+  display: inline-flex;
+  padding: .55rem .9rem;
+  border: 1px solid rgba(159, 222, 242, .26);
+  border-radius: 999px;
+  background: rgba(210, 244, 255, .075);
+  letter-spacing: .09em;
+}
+.ss97-accueil .heros .panneau {
+  position: relative;
+  border: 1px solid rgba(197, 233, 248, .25);
+  border-radius: 26px;
+  background: linear-gradient(148deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .055));
+  box-shadow: 0 25px 65px rgba(0, 7, 28, .28), inset 0 1px 0 rgba(255, 255, 255, .1);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.ss97-accueil .heros .panneau h2 { letter-spacing: -.025em; }
+.ss97-accueil .heros .panneau .ligne { border-color: rgba(194, 229, 247, .13); }
+.ss97-accueil .ss97-human-spotlight {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  margin-bottom: 1.3rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid rgba(194, 229, 247, .16);
+}
+.ss97-accueil .ss97-human-spotlight-content strong {
+  display: block;
+  font-size: clamp(1rem, 1.3vw, 1.2rem);
+  letter-spacing: -.01em;
+}
+.ss97-accueil .ss97-human-spotlight-content span {
+  display: block;
+  margin-top: .2rem;
+  color: #bed9eb;
+  font-size: .92rem;
+}
+.ss97-accueil .heros .ss-btn {
+  border-radius: 14px;
+  box-shadow: 0 7px 18px rgba(0, 12, 35, .13);
+  transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.ss97-accueil .heros .ss-btn:hover,
+.ss97-accueil .heros .ss-btn:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 13px 26px rgba(0, 12, 35, .23);
+}
+
+/* Les personnes déjà présentées dans « Notre équipe » sont mises en avant,
+ * sans inventer de témoignages, de chiffres ou de techniciens supplémentaires. */
+.ss97-accueil .ss97-human-note {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 1.7rem;
+  max-width: 570px;
+  color: #e3edf9;
+  padding-left: 14px;
+  border-left: 3px solid rgba(110, 220, 244, .8);
+}
+.ss97-accueil .ss97-human-faces { display: flex; flex: none; padding-left: 4px; }
+.ss97-accueil .ss97-human-faces img {
+  display: block;
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border: 2px solid #d2edff;
+  border-radius: 22px;
+  box-shadow: 0 3px 12px rgba(1, 10, 33, .35);
+  background: #183f68;
+}
+.ss97-accueil .ss97-human-faces img + img { margin-left: -15px; }
+.ss97-accueil .ss97-human-note-content { line-height: 1.36; }
+.ss97-accueil .ss97-human-note-content strong { display: block; font-size: .97rem; font-weight: 650; }
+.ss97-accueil .ss97-human-note-content span { font-size: .86rem; color: #bcd4e9; }
+.ss97-accueil .ss97-human-note-content a {
+  color: #94e3ff;
+  font-size: .86rem;
+  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-color: rgba(148, 227, 255, .45);
+  text-underline-offset: 3px;
+}
+.ss97-accueil .ss97-human-note-content a:hover { text-decoration-color: currentColor; }
+
+.ss97-accueil #services .ss-carte,
+.ss97-accueil #equipe .equipe-carte {
+  border-radius: 22px;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.ss97-accueil #services .ss-carte:hover,
+.ss97-accueil #services .ss-carte:focus-visible,
+.ss97-accueil #equipe .equipe-carte:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(9, 34, 75, .14);
+  border-color: rgba(24, 154, 209, .25);
+}
+.ss97-accueil .equipe-carte .equipe-photo {
+  border-radius: 22px;
+  box-shadow: 0 10px 25px rgba(0, 10, 39, .16);
+}
+.ss97-accueil .ss-entete .ss-titre,
+.ss97-accueil .ss-entete .ss-sous-titre { text-wrap: pretty; }
+.ss97-accueil :is(a, button):focus-visible { outline: 3px solid #65d7fb; outline-offset: 3px; }
+
+@media (max-width: 990px) {
+  .ss97-accueil .heros-grille { gap: 28px; }
+  .ss97-accueil .ss-titre-hero { max-width: 18ch; }
+}
+@media (max-width: 650px) {
+  .ss97-accueil .heros { overflow: hidden; }
+  .ss97-accueil .ss-titre-hero { font-size: clamp(2.2rem, 10vw, 3.1rem); }
+  .ss97-accueil .ss97-human-note { align-items: flex-start; margin-top: 1.3rem; }
+  .ss97-accueil .heros .panneau { border-radius: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ss97-accueil .heros .ss-btn,
+  .ss97-accueil #services .ss-carte,
+  .ss97-accueil #equipe .equipe-carte { transition: none; }
+  .ss97-accueil .heros .ss-btn:hover,
+  .ss97-accueil #services .ss-carte:hover,
+  .ss97-accueil #equipe .equipe-carte:hover { transform: none; }
+}
