@@ -20,7 +20,11 @@ web_include_css = [
     "/assets/softsystem97/css/password-contrast.css",
     "/assets/softsystem97/css/portal-contrast.css",
 ]
-web_include_js = ["/assets/softsystem97/js/password-visibility.js"]
+web_include_js = [
+    "/assets/softsystem97/js/password-visibility.js",
+    # Explicit session check for the technician website, including Website Users.
+    "/assets/softsystem97/js/technician_session_auth.js",
+]
 app_include_css = ["/assets/softsystem97/css/password-contrast.css"]
 
 permission_query_conditions = {
