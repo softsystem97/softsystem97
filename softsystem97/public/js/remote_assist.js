@@ -45,7 +45,9 @@
       $('code').textContent = session.join_code;
       $('code-panel').hidden = false;
       showSession(session, 'technician');
-      message('Session préparée. Aucun contrôle à distance n’est ouvert.');
+      message(session.invite_email_requested ?
+        'Session préparée. Invitation e-mail demandée, livraison non confirmée. Aucun contrôle à distance n’est ouvert.' :
+        'Session préparée. Communiquez le code au client par un canal convenu. Aucun contrôle à distance n’est ouvert.');
     });
   };
   $('join').onsubmit = event => {

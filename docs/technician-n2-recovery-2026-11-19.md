@@ -32,6 +32,8 @@ Résultats à examiner localement, sans publier comptes réels, scripts de conne
 4. Tester les profils N2/N3/N4 avec utilisateur, client et tickets fictifs, sans paiements réels et sans contrats signés. Valider tickets affectés, transitions permises, refus hors périmètre, notifications et historique.
 5. Pour l'assistance à distance ASUS technicien → Dell client : code à usage unique, durée maximale d'une heure, consentement du client dans le portail **et** consentement local MeshCentral, connexion/déconnexion effective et révocation contrôlée. Les tests 22/22 du protocole ne démontrent pas cette connexion réelle. Ne pas activer l'automatisation ni présenter `engine_connected=False` comme un bureau distant opérationnel.
 
+Le producteur d'invitation e-mail optionnel (`softsystem97.remote.invitation`) est prêt pour une validation contrôlée : destinataire dérivé du ticket, compte sortant explicite, lien HTTPS, aucun code/session appareil transmis et file demandée avec la transaction du ticket. Il reste désactivé tant que `ss97_remote_assist.email_enabled` n'est pas explicitement vrai sur staging. Les 7 tests unitaires additionnels sont hors réseau ; aucune livraison SMTP réelle n'est confirmée.
+
 ## Validation et livraison
 
 ```bash
