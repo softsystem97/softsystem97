@@ -37,7 +37,26 @@
   border: 1px solid rgba(159, 222, 242, .26);
   border-radius: 999px;
   background: rgba(210, 244, 255, .075);
+  color: #b9e8ff !important;
   letter-spacing: .09em;
+}
+
+/* La navigation historique est plus large que l'espace disponible à 1280px.
+ * Son centrage masquait les premiers liens, même sur un écran d'ordinateur.
+ * Laisser le défilement horizontal accessible conserve tous les liens. */
+#ss97-topnav .ss97-nav-center {
+  justify-content: flex-start !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(129, 208, 243, .54) transparent;
+}
+#ss97-topnav .ss97-nav-center a { flex-shrink: 0; }
+#ss97-topnav .ss97-nav-center::-webkit-scrollbar { height: 4px; }
+#ss97-topnav .ss97-nav-center::-webkit-scrollbar-thumb {
+  background: rgba(129, 208, 243, .54);
+  border-radius: 99px;
 }
 .ss97-accueil .heros .panneau {
   position: relative;
