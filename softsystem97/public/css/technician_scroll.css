@@ -1,0 +1,37 @@
+/* Restore a visible right-hand scrollbar without altering the left navigation. */
+@media screen and (min-width: 801px) {
+  body:has(.ss97-tech-workspace) .ss97-tech-workspace .ws-main {
+    max-height: calc(100dvh - 115px) !important;
+    overflow-y: scroll !important;
+    overscroll-behavior-y: contain;
+    scrollbar-width: auto !important;
+    scrollbar-color: #67cde8 rgba(20, 43, 76, .8) !important;
+  }
+  body:has(.ss97-tech-workspace) .ss97-tech-workspace .ws-sidebar {
+    max-height: calc(100dvh - 115px) !important;
+    overflow-y: auto !important;
+  }
+}
+.ss97-tech-workspace .ws-main::-webkit-scrollbar,
+.ss97-tech-workspace .ws-sidebar::-webkit-scrollbar { width: 13px !important; }
+.ss97-tech-workspace .ws-main::-webkit-scrollbar-thumb,
+.ss97-tech-workspace .ws-sidebar::-webkit-scrollbar-thumb {
+  background: #67cde8 !important; border-radius: 9px;
+  border: 2px solid #153054;
+}
+#ss97-scroll-arrows {
+  position: fixed; right: 14px; top: 49%; z-index: 600;
+  display: grid; gap: 6px; pointer-events: auto;
+}
+#ss97-scroll-arrows button {
+  cursor: pointer; background: #13638a; color: white; border: 2px solid #8be9ff;
+  border-radius: 9px; font-size: 17px; width: 38px; height: 40px;
+  box-shadow: 0 3px 12px #07111daa;
+}
+#ss97-scroll-arrows button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.ss97-copy-ticket { margin-left: 7px; }
+#ss97-profile-save-note { padding: 8px 12px; color: #ffd39c; }
+@media screen and (max-width: 800px) {
+  #ss97-scroll-arrows { right: 6px; top: auto; bottom: 70px; }
+  #ss97-scroll-arrows button { width: 34px; height: 34px; }
+}
