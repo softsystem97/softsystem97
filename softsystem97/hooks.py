@@ -23,6 +23,7 @@ web_include_css = [
 ]
 web_include_js = [
     "/assets/softsystem97/js/password-visibility.js",
+    "/assets/softsystem97/js/ss97_recruitment_form.js?v=20261119-1",
     # Explicit session check for the technician website, including Website Users.
     # Version the URL so the browser/CDN cannot reuse the old in-flight legacy
     # auth bridge after Frappe Cloud deploys a corrected app build.
@@ -78,6 +79,12 @@ fixtures = [
 
 # Only revokes existing bridge approvals; never creates an assignment/grant.
 doc_events = {
+    "File": {
+        "before_insert": "softsystem97.recruitment.validation.enforce_private_job_applicant_file",
+    },
+    "Job Applicant": {
+        "validate": "softsystem97.recruitment.validation.validate_technician_application",
+    },
     "Issue": {
         "validate": "softsystem97.integrations.ticket_bridge.payment_gate.validate_paid_issue",
     },
