@@ -23,7 +23,7 @@ web_include_css = [
     "/assets/softsystem97/css/technician_scroll.css?v=20261119-tech-scroll-1",
 ]
 web_include_js = [
-    "/assets/softsystem97/js/ss97_human_experience.js?v=20261119-2",
+    "/assets/softsystem97/js/ss97_human_experience.js?v=20261119-3",
     "/assets/softsystem97/js/password-visibility.js",
     "/assets/softsystem97/js/ss97_recruitment_form.js?v=20261119-1",
     # Explicit session check for the technician website, including Website Users.
