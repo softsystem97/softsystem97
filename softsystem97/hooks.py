@@ -23,7 +23,9 @@ web_include_css = [
 web_include_js = [
     "/assets/softsystem97/js/password-visibility.js",
     # Explicit session check for the technician website, including Website Users.
-    "/assets/softsystem97/js/technician_session_auth.js",
+    # Version the URL so the browser/CDN cannot reuse the old in-flight legacy
+    # auth bridge after Frappe Cloud deploys a corrected app build.
+    "/assets/softsystem97/js/technician_session_auth.js?v=20261119-n2-gate-2",
 ]
 app_include_css = ["/assets/softsystem97/css/password-contrast.css"]
 
