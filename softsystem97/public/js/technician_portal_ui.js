@@ -135,7 +135,10 @@
       open.insertAdjacentElement('afterend', copy);
     });
     Array.prototype.forEach.call(document.querySelectorAll('.ss97-copy-ticket'), function (button) {
-      if (button.textContent !== t('copied')) button.textContent = t('copy');
+      // Avoid a MutationObserver loop: do not rewrite unchanged text.
+      if (button.textContent !== t('copied') && button.textContent !== t('copy')) {
+        button.textContent = t('copy');
+      }
     });
   }
 

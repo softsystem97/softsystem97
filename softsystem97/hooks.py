@@ -32,7 +32,7 @@ web_include_js = [
     # The legacy agenda Web Page had a permanent "Chargement…" placeholder,
     # but no working script to retrieve appointments or handle errors.
     "/assets/softsystem97/js/technician_agenda.js?v=20261119-agenda-1",
-    "/assets/softsystem97/js/technician_portal_ui.js?v=20261119-portal-ui-1",
+    "/assets/softsystem97/js/technician_portal_ui.js?v=20261119-portal-ui-2",
 ]
 app_include_css = ["/assets/softsystem97/css/password-contrast.css"]
 
