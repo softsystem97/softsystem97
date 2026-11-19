@@ -16,7 +16,10 @@ after_install = "softsystem97.patches.v1_0.stripe_accounting.execute"
 # Keep password fields readable throughout the SS97 public/technician portals
 # and ERPNext Desk, regardless of the surrounding light or dark theme.
 # The visibility control is web-only: Desk already has native password widgets.
-web_include_css = ["/assets/softsystem97/css/password-contrast.css"]
+web_include_css = [
+    "/assets/softsystem97/css/password-contrast.css",
+    "/assets/softsystem97/css/portal-contrast.css",
+]
 web_include_js = ["/assets/softsystem97/js/password-visibility.js"]
 app_include_css = ["/assets/softsystem97/css/password-contrast.css"]
 
