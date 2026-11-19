@@ -5,10 +5,33 @@ roles, assign work, or authorize individual tickets/remote access operations.
 """
 
 import frappe
+from softsystem97.technician_os.rules import TRACKS, TRACK_ROLES
 
 
 TECHNICIAN_ROLES = ("SS97 Technician", "SS97 Support", "SS97 Tech Lead")
 ADMIN_ROLES = ("System Manager", "SS97 Administrator", "SS97 Admin")
+PROFILE = "SS97 Technician Profile"
+
+
+def _active_specialty_profile(user, roles, disabled):
+    """N2/N3/N4 are admitted only after the complete reviewed lifecycle.
+
+    A specialty Role by itself is not proof of certification, and a suspended
+    profile must never be made operational by an older portal client script.
+    """
+    config = frappe.conf.get("ss97_tech_os") or {}
+    if not isinstance(config, dict) or config.get("enabled") is not True:
+        return False
+    assigned = set(roles) & TRACK_ROLES
+    if len(assigned) != 1 or assigned & set(disabled) or not frappe.db.table_exists(PROFILE):
+        return False
+    profile = frappe.db.get_value(
+        PROFILE, {"candidate_user": user}, ["track", "state", "engagement"], as_dict=True
+    )
+    return bool(profile and profile.get("track") in TRACKS
+                and profile.get("state") == "ACTIVE"
+                and profile.get("engagement") == "FREELANCE"
+                and TRACKS[profile["track"]]["role"] in assigned)
 
 
 def evaluate_technician_session(user, enabled, assigned_roles, disabled_roles=()):
@@ -35,7 +58,7 @@ def my_technician_access():
         return evaluate_technician_session(user, False, ())
 
     roles = set(frappe.get_roles(user))
-    relevant = [role for role in TECHNICIAN_ROLES if role in roles]
+    relevant = [role for role in (*TECHNICIAN_ROLES, *sorted(TRACK_ROLES)) if role in roles]
     disabled = set()
     if relevant:
         role_rows = frappe.get_all(
@@ -50,6 +73,10 @@ def my_technician_access():
         }
 
     result = evaluate_technician_session(user, enabled, roles, disabled)
+    # Dedicated specialty roles must match an active profile exactly. A user
+    # cannot bypass this requirement by also retaining a legacy generic role.
+    if roles & TRACK_ROLES:
+        result["isTechnician"] = _active_specialty_profile(user, roles, disabled)
     result["user"] = user
     result["fullName"] = frappe.db.get_value("User", user, "full_name") or user
     return result
