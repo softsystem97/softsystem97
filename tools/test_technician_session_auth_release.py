@@ -11,13 +11,19 @@ from unittest.mock import Mock, patch
 SOURCE = Path(__file__).resolve().parents[1] / "softsystem97/portal/technician_access.py"
 
 
-def load_endpoint(user="n2@example.invalid", enabled=1, roles=(), rows=None):
+def load_endpoint(user="n2@example.invalid", enabled=1, roles=(), rows=None, profile=None):
     frappe = types.ModuleType("frappe")
     frappe.session = types.SimpleNamespace(user=user)
     frappe.whitelist = lambda **options: lambda func: func
-    frappe.db = types.SimpleNamespace(get_value=Mock(side_effect=lambda _dt, _name, field: {
-        "enabled": enabled, "full_name": "Technicien N2"
-    }[field]))
+    def db_value(doctype, _name, field, **_options):
+        if doctype == "SS97 Technician Profile":
+            return profile
+        return {"enabled": enabled, "full_name": "Technicien N2"}[field]
+
+    frappe.db = types.SimpleNamespace(
+        get_value=Mock(side_effect=db_value),
+        table_exists=Mock(return_value=True),
+    )
     frappe.get_roles = Mock(return_value=list(roles))
     frappe.get_all = Mock(return_value=rows if rows is not None else [
         {"name": "SS97 Technician", "disabled": 0}
@@ -45,6 +51,57 @@ class N2SessionReleaseTests(unittest.TestCase):
         self.assertTrue(result["authenticated"])
         self.assertFalse(result["isTechnician"])
         frappe.get_all.assert_not_called()
+
+    def test_validated_n2_specialist_can_access_portal_after_graduation(self):
+        module, _ = load_endpoint(
+            roles=["Website User", "SS97 Technicien N2"],
+            rows=[{"name": "SS97 Technicien N2", "disabled": 0}],
+            profile={"track": "L2", "state": "ACTIVE", "engagement": "FREELANCE"},
+        )
+        self.assertTrue(module.my_technician_access()["isTechnician"])
+
+    def test_role_alone_cannot_bypass_graduation(self):
+        module, _ = load_endpoint(
+            roles=["SS97 Technicien N2"],
+            rows=[{"name": "SS97 Technicien N2", "disabled": 0}],
+        )
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_suspended_graduate_is_denied(self):
+        module, _ = load_endpoint(
+            roles=["SS97 Technicien N2"],
+            rows=[{"name": "SS97 Technicien N2", "disabled": 0}],
+            profile={"track": "L2", "state": "SUSPENDED", "engagement": "FREELANCE"},
+        )
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_suspended_specialist_cannot_fall_back_to_generic_role(self):
+        module, _ = load_endpoint(
+            roles=["SS97 Technician", "SS97 Technicien N2"],
+            rows=[
+                {"name": "SS97 Technician", "disabled": 0},
+                {"name": "SS97 Technicien N2", "disabled": 0},
+            ],
+            profile={"track": "L2", "state": "SUSPENDED", "engagement": "FREELANCE"},
+        )
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_mismatched_track_does_not_grant_portal_access(self):
+        module, _ = load_endpoint(
+            roles=["SS97 Technicien N2"],
+            rows=[{"name": "SS97 Technicien N2", "disabled": 0}],
+            profile={"track": "BANK", "state": "ACTIVE", "engagement": "FREELANCE"},
+        )
+        self.assertFalse(module.my_technician_access()["isTechnician"])
+
+    def test_multiple_specialities_do_not_bypass_role_integrity(self):
+        roles = ["SS97 Technicien N2", "SS97 Technicien N3"]
+        module, _ = load_endpoint(
+            roles=roles,
+            rows=[{"name": role, "disabled": 0} for role in roles],
+            profile={"track": "L2", "state": "ACTIVE", "engagement": "FREELANCE"},
+        )
+        self.assertFalse(module.my_technician_access()["isTechnician"])
 
     def test_unrecognised_role_does_not_bypass_gate(self):
         module, _ = load_endpoint(roles=["SS97 Technicien"])
