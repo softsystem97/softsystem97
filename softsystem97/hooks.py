@@ -28,6 +28,9 @@ web_include_js = [
     "/assets/softsystem97/js/technician_session_auth.js?v=20261119-tech-pages-5",
     # Shared FR/EN/ES/HT technician navigation, including the missing HT choice.
     "/assets/softsystem97/js/technician_language.js?v=20261119-tech-languages-1",
+    # The legacy agenda Web Page had a permanent "Chargement…" placeholder,
+    # but no working script to retrieve appointments or handle errors.
+    "/assets/softsystem97/js/technician_agenda.js?v=20261119-agenda-1",
 ]
 app_include_css = ["/assets/softsystem97/css/password-contrast.css"]
 
