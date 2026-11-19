@@ -1,0 +1,51 @@
+name: SS97 Remote Assist - security and regression gate
+
+on:
+  pull_request:
+    branches:
+      - release/ss97-tech-cyber-pilot-20261118
+      - feature/ss97-final-integration
+    paths:
+      - '.github/workflows/ss97-remote-assist-gate.yml'
+      - 'softsystem97/remote/**'
+      - 'softsystem97/hooks.py'
+      - 'softsystem97/www/ss97-remote-assist.*'
+      - 'softsystem97/public/js/remote_assist.js'
+      - 'softsystem97/public/js/ss97_tech_universe.js'
+      - 'softsystem97/public/css/ss97_tech_universe.css'
+      - 'tools/test_remote_*.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-security:
+    name: Remote assistance - offline checks (no desktop connection)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run the full offline Python regression suite
+        run: python -m unittest discover -s tools -p 'test_*.py' -q
+      - name: Test browser adapters with synthetic DOM fixtures
+        run: |
+          node tools/test_password_visibility.cjs
+          node tools/test_technician_session_auth_release.cjs
+          node tools/test_ticket_dashboard.cjs integrations/ss97_technician_operations/static/ticket_dashboard.js
+      - name: Check JavaScript and Python syntax
+        run: |
+          node --check softsystem97/public/js/remote_assist.js
+          node --check softsystem97/public/js/ss97_tech_universe.js
+          python -m compileall -q softsystem97
+      - name: Refuse tracked Stripe secrets
+        run: python tools/check_stripe_secrets.py
+      - name: State the test boundary
+        run: |
+          echo 'Offline checks only. No Frappe Cloud deployment, email, MeshCentral desktop session or customer machine was accessed.'
