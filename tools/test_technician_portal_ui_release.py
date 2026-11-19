@@ -41,11 +41,7 @@ class PortalUiContracts(unittest.TestCase):
         self.assertIn('overflow-y: scroll !important', css)
         self.assertIn('::-webkit-scrollbar', css)
         self.assertIn('technician_scroll.css?v=20261119-tech-scroll-1', HOOKS.read_text())
-        self.assertIn('technician_portal_ui.js?v=20261119-portal-ui-2', HOOKS.read_text())
-
-    def test_messages_observer_avoids_rewriting_same_text(self):
-        code = SCRIPT.read_text(encoding='utf-8')
-        self.assertIn("button.textContent !== t('copied') && button.textContent !== t('copy')", code)
+        self.assertIn('technician_portal_ui.js?v=20261119-portal-ui-3', HOOKS.read_text())
 
     def test_browser_patch_does_not_enable_remote_or_fake_profile_saves(self):
         code = SCRIPT.read_text(encoding='utf-8')
@@ -54,6 +50,16 @@ class PortalUiContracts(unittest.TestCase):
         self.assertNotIn('ignore_permissions', code)
         self.assertNotIn('meshcentral', code.lower())
         self.assertNotIn('window.ss97SaveProfile =', code)
+
+    def test_messages_mutation_observer_does_not_rewrite_unchanged_text(self):
+        code = SCRIPT.read_text(encoding='utf-8')
+        self.assertIn("button.textContent !== t('copied') && button.textContent !== t('copy')", code)
+
+    def test_buttons_have_capture_handlers_independent_of_inline_globals(self):
+        code = SCRIPT.read_text(encoding='utf-8')
+        self.assertIn('ss97RefreshBound', code)
+        self.assertIn('ss97OpenBound', code)
+        self.assertIn('event.stopImmediatePropagation()', code)
 
 
 if __name__ == '__main__':
