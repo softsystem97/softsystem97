@@ -85,6 +85,7 @@ class N2SessionReleaseTests(unittest.TestCase):
         hooks = (SOURCE.parent.parent / "hooks.py").read_text(encoding="utf-8")
         self.assertIn("/assets/softsystem97/js/password-visibility.js", hooks)
         self.assertIn("/assets/softsystem97/js/technician_session_auth.js", hooks)
+        self.assertIn("technician_session_auth.js?v=20261119-n2-gate-2", hooks)
         self.assertIn("/assets/softsystem97/css/portal-contrast.css", hooks)
 
 
