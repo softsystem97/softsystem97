@@ -44,7 +44,8 @@ async function check(pathname, status, body, expectedRole) {
   await check("/espace-technicien/dashboard", 503, {}, false);
   await check("/client/dashboard", 200, {authenticated: true, isTechnician: true});
   await checkLegacyDenialIsRepaired();
-  console.log("5 portal session adapter checks passed");
+  await checkLegacyGrantAfterServerFailureIsRejected();
+  console.log("6 portal session adapter checks passed");
 })().catch(error => { console.error(error); process.exitCode = 1; });
 
 async function checkLegacyDenialIsRepaired() {
@@ -78,4 +79,29 @@ async function checkLegacyDenialIsRepaired() {
     "a late client-side get_list denial must not overwrite the server result");
   assert.ok(calls.length >= 3, "the blocked dashboard is rechecked after the stale event");
   assert.equal(verified.user, "n2@example.invalid");
+}
+
+async function checkLegacyGrantAfterServerFailureIsRejected() {
+  const listeners = {};
+  const legacy = {authenticated: true, isTechnician: true, user: "someone@example.invalid"};
+  const ctx = {
+    location: {pathname: "/espace-technicien/dashboard"},
+    document: {readyState: "complete"},
+    window: {
+      ss97Auth: {STATE: "LOADING", profile: null},
+      addEventListener(name, handler) { (listeners[name] ??= []).push(handler); },
+      dispatchEvent(event) { (listeners[event.type] || []).forEach(handler => handler(event)); }
+    },
+    CustomEvent: function Event(name, options) { this.type = name; this.detail = options.detail; },
+    fetch: () => Promise.resolve({ok: false})
+  };
+  vm.runInNewContext(script, ctx);
+  const result = await new Promise(done => ctx.window.ss97AuthResolve(done));
+  assert.equal(result.isTechnician, false);
+  ctx.window.ss97Auth.profile = legacy;
+  ctx.window.dispatchEvent(new ctx.CustomEvent("ss97:auth", {detail: {
+    state: "AUTHENTICATED", profile: legacy
+  }}));
+  assert.equal(ctx.window.ss97Auth.profile.isTechnician, false,
+    "legacy code cannot grant access after a failed server check");
 }
