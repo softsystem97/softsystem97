@@ -3,6 +3,7 @@
 from html import escape
 
 from .catalog import ANSWER_LABELS, QUESTIONS, self_assessment
+from .recommendations import action_plan
 
 
 def report_html(doc, profile, answers):
@@ -14,6 +15,12 @@ def report_html(doc, profile, answers):
     )
     strengths = "".join(f"<li>{h(item)}</li>" for item in result["strengths"])
     priorities = "".join(f"<li>{h(item)}</li>" for item in result["priorities"])
+    actions = action_plan(answers)
+    action_rows = "".join(
+        "<tr><td>" + h(item["priority"]) + "</td><td>" + h(item["domain"]) +
+        "</td><td>" + h(item["recommendation"]) + "</td></tr>"
+        for item in actions
+    )
     reviewed = doc.state == "APPROVED_N4"
     verdict = ("Relecture humaine N4 effectuée" if reviewed else
                "Pré-diagnostic déclaratif, NON validé par un technicien")
@@ -41,6 +48,11 @@ effectif : {h(profile['employees'])} ; sites : {h(profile['sites'])} ; postes : 
 <p>Fonction du contact : {h(profile['contact_role'])} ; données : {h(profile['data_type'])}.</p>
 <h2>Points forts déclarés</h2><ul>{strengths or '<li>Aucun contrôle confirmé par ce questionnaire.</li>'}</ul>
 <h2>Points à examiner en priorité</h2><ul>{priorities or '<li>Demander une vérification indépendante.</li>'}</ul>
+<h2>Plan d'action proposé sur vos déclarations</h2>
+<p class="small">Ces recommandations sont des pistes de vérification, pas des vulnérabilités démontrées.
+La mention « À confirmer » signifie que l'information manque.</p>
+<table><thead><tr><th>État</th><th>Domaine</th><th>Action proposée</th></tr></thead>
+<tbody>{action_rows or '<tr><td colspan="3">Aucune action supplémentaire déclarée.</td></tr>'}</tbody></table>
 <h2>Questionnaire de sécurité</h2><table><thead><tr><th>Domaine</th><th>Réponse déclarée</th></tr></thead>
 <tbody>{answers_rows}</tbody></table>
 <h2>Revue N4</h2>{review or '<p>En attente de revue humaine N4.</p>'}

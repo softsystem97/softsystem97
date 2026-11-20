@@ -119,6 +119,11 @@ def link_commercial_document(assessment_id, document_type, document_name):
                            commercial.customer if document_type != "Quotation" else None)
     if commercial_customer != dossier.customer or int(commercial.docstatus or 0) == 2:
         frappe.throw("Document annulé ou appartenant à un autre client.", frappe.PermissionError)
+    if document_type == "Sales Invoice":
+        # A payment must never be offered for an unrelated or unsubmitted invoice.
+        if (int(commercial.docstatus or 0) != 1
+                or commercial.get("ss97_linked_issue") != dossier.ticket):
+            frappe.throw("Facture soumise et liée à ce ticket obligatoire.", frappe.PermissionError)
     dossier.set(field, name)
     dossier.save(ignore_permissions=True)
     return {"assessment_id": dossier.name, "document_type": document_type,
@@ -230,6 +235,29 @@ def _dossier(assessment_id, lock=False):
     if not frappe.db.exists(ASSESSMENT, assessment_id):
         frappe.throw("Dossier introuvable.", frappe.PermissionError)
     return frappe.get_doc(ASSESSMENT, assessment_id, for_update=lock)
+
+
+@frappe.whitelist(methods=["POST"])
+def create_assessment_checkout(assessment_id):
+    """Create Stripe Checkout for an authorized customer and matching submitted invoice.
+
+    No credit, token, technician authorization or payment is issued by this API.
+    Only the signed Stripe webhook and ERPNext ledger determine payment state.
+    """
+    from softsystem97.integrations.stripe.checkout import create_invoice_checkout
+
+    dossier = _dossier(assessment_id)
+    if _visible(dossier) != "customer":
+        frappe.throw("Dossier inaccessible au paiement.", frappe.PermissionError)
+    if not dossier.sales_invoice:
+        frappe.throw("Facture non encore établie pour cette expertise.", frappe.ValidationError)
+    if not frappe.get_meta("Sales Invoice").has_field("ss97_linked_issue"):
+        frappe.throw("Migration des paiements manquante.", frappe.ValidationError)
+    invoice = frappe.get_doc("Sales Invoice", dossier.sales_invoice)
+    if (invoice.customer != dossier.customer or int(invoice.docstatus or 0) != 1
+            or invoice.get("ss97_linked_issue") != dossier.ticket):
+        frappe.throw("Facture et ticket non concordants.", frappe.PermissionError)
+    return create_invoice_checkout(invoice.name)
 
 
 @frappe.whitelist(methods=["GET"])
