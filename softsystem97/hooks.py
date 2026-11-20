@@ -43,9 +43,11 @@ app_include_css = ["/assets/softsystem97/css/password-contrast.css"]
 
 permission_query_conditions = {
 	"SS97 Client Notification": "softsystem97.portal.notifications.get_permission_query_conditions",
+	"Issue": "softsystem97.portal.issue_permissions.get_permission_query_conditions",
 }
 has_permission = {
 	"SS97 Client Notification": "softsystem97.portal.notifications.has_permission",
+	"Issue": "softsystem97.portal.issue_permissions.has_permission",
 }
 
 # --- API publique (whitelist) ---
