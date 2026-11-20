@@ -126,7 +126,44 @@
         link.href = "/api/method/softsystem97.cyber_assessment.api.download_report?assessment_id=" +
           encodeURIComponent(doc.name);
         link.textContent = "Télécharger le pré-diagnostic / rapport PDF";
-        article.append(text, link); root.append(article);
+        article.append(text, link);
+        if (doc.sales_invoice) {
+          const pay = document.createElement("button");
+          pay.type = "button";
+          pay.className = "btn btn-primary";
+          pay.textContent = "Payer ma facture avec Stripe";
+          pay.addEventListener("click", async () => {
+            pay.disabled = true;
+            pay.textContent = "Ouverture du paiement…";
+            try {
+              const response = await fetch(
+                "/api/method/softsystem97.cyber_assessment.api.create_assessment_checkout",
+                {method: "POST", credentials: "same-origin",
+                 headers: {"Content-Type": "application/json",
+                   "X-Frappe-CSRF-Token": window.frappe?.csrf_token || ""},
+                 body: JSON.stringify({assessment_id: doc.name})}
+              );
+              const answer = await response.json().catch(() => ({}));
+              if (!response.ok || !answer.message?.checkout_url) {
+                throw new Error("Paiement indisponible : facture ou autorisation à vérifier.");
+              }
+              const url = new URL(answer.message.checkout_url);
+              if (url.protocol !== "https:" || url.hostname !== "checkout.stripe.com") {
+                throw new Error("Adresse de paiement non reconnue.");
+              }
+              window.location.assign(url.toString());
+            } catch (error) {
+              const feedback = document.createElement("p");
+              feedback.setAttribute("role", "status");
+              feedback.textContent = error.message;
+              article.append(feedback);
+              pay.disabled = false;
+              pay.textContent = "Payer ma facture avec Stripe";
+            }
+          });
+          article.append(pay);
+        }
+        root.append(article);
       });
     } catch (err) {root.textContent = err.message;}
   }
