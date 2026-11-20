@@ -132,7 +132,31 @@ def _finish(doc, timed_out=False):
                  "PASSED" if summary["passed"] else "FAILED")
     doc.submitted_at = now_datetime()
     doc.save(ignore_permissions=True)
+    _stage_exam_notice(doc)
     return _result(doc)
+
+
+def _stage_exam_notice(doc):
+    """One candidate-only notice per completed attempt, no automatic approval.
+
+    Standalone exam pilots do not have a TECH OS profile and keep their original
+    behavior. A notice is queued only when the site's email opt-in is enabled.
+    """
+    config = frappe.conf.get("ss97_tech_os") or {}
+    if not isinstance(config, dict) or config.get("enabled") is not True:
+        return
+    if doc.state not in {"PASSED", "FAILED", "EXPIRED"}:
+        return
+    profile = frappe.db.get_value(
+        "SS97 Technician Profile", {"candidate_user": doc.candidate_user},
+        ["name", "candidate_user", "track", "state"], as_dict=True,
+    )
+    if not profile or profile.state != "IN_REVIEW" or profile.track != doc.track:
+        return
+    from softsystem97.technician_os.notices import stage_notice
+    kind = {"PASSED": "EXAM_PASSED_PROVISIONAL", "FAILED": "EXAM_FAILED",
+            "EXPIRED": "EXAM_EXPIRED"}[doc.state]
+    stage_notice(profile, kind, doc.name)
 
 
 @frappe.whitelist(methods=["GET"])

@@ -1,0 +1,99 @@
+/* Parcours client — styles cantonnés aux pages publiques existantes. */
+.ss97-client-journey,
+.ss97-client-form-hint {
+  box-sizing: border-box;
+  color: #17334b;
+  font-family: Outfit, system-ui, sans-serif;
+}
+.ss97-client-journey *, .ss97-client-form-hint * { box-sizing: border-box; }
+.ss97-client-journey {
+  position: relative;
+  isolation: isolate;
+  width: min(1130px, calc(100% - 36px));
+  margin: 32px auto 50px;
+  padding: clamp(25px, 4.6vw, 50px);
+  overflow: hidden;
+  border: 1px solid #cae4f1;
+  border-radius: 29px;
+  background: linear-gradient(145deg, #f6fbff 0%, #eaf6fd 68%, #f4f0ff 100%);
+  box-shadow: 0 18px 60px rgba(12, 48, 87, .13);
+}
+.ss97-client-journey::before {
+  position: absolute;
+  right: -160px;
+  top: -230px;
+  width: 480px;
+  height: 480px;
+  content: "";
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(118, 193, 229, .24), rgba(118, 193, 229, 0) 70%);
+  z-index: -1;
+}
+.ss97-client-journey :is(h2,h3,h4) {
+  color: #12314b !important;
+  margin: 0;
+  letter-spacing: -.028em;
+}
+.ss97-client-journey h2 {
+  max-width: 22ch;
+  font-size: clamp(1.8rem, 3.4vw, 2.65rem);
+  line-height: 1.16;
+  text-wrap: balance;
+}
+.ss97-client-journey h3 { margin: 30px 0 18px; font-size: clamp(1.25rem, 2.4vw, 1.65rem); }
+.ss97-client-journey h4 { font-size: 1.08rem; line-height: 1.33; }
+.ss97-client-journey p { color: #45627a !important; line-height: 1.65; }
+.ss97-journey-eyebrow {
+  margin: 0 0 14px;
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .11em;
+  color: #125b87 !important;
+}
+.ss97-journey-intro { max-width: 660px; font-size: 1.09rem; margin: 17px 0 0; }
+.ss97-journey-actions { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 25px; }
+.ss97-client-journey .ss97-journey-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 49px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 750;
+  font-size: 1rem;
+  text-align: center;
+  text-decoration: none;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+.ss97-client-journey .ss97-journey-button--primary { color: #fff !important; background: #147cbb; box-shadow: 0 8px 19px rgba(20, 124, 187, .23); }
+.ss97-client-journey .ss97-journey-button--secondary { color: #14577d !important; border: 1px solid #98c5de; background: #fff; }
+.ss97-client-journey .ss97-journey-button--quiet { color: #155d87 !important; text-decoration: underline; text-underline-offset: 4px; }
+.ss97-client-journey .ss97-journey-button:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(20, 77, 119, .18); }
+.ss97-client-journey :is(a, button):focus-visible { outline: 3px solid #008fd4; outline-offset: 4px; }
+.ss97-journey-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; }
+.ss97-journey-step { border: 1px solid #dce9f2; border-radius: 18px; background: #fff; padding: 19px 17px; box-shadow: 0 7px 20px rgba(11, 51, 83, .05); }
+.ss97-journey-number { display: inline-flex; align-items: center; justify-content: center; background: #e2f3fc; color: #126b9e; border-radius: 10px; font-size: .96rem; font-weight: 800; min-width: 34px; height: 34px; margin-bottom: 13px; }
+.ss97-journey-step p { margin: 10px 0 0; font-size: .94rem; }
+.ss97-journey-safety { margin-top: 22px; border-left: 4px solid #10a6a3; border-radius: 12px; background: #ddf5f3; padding: 17px 21px; }
+.ss97-journey-safety strong { display: block; color: #13504e; font-size: 1.02rem; }
+.ss97-journey-safety p { margin: 6px 0 0; color: #275b5a !important; }
+.ss97-client-journey--ticket { margin-top: 18px; max-width: 930px; }
+.ss97-journey-tips { margin: 24px 0 0; padding-left: 1.5rem; color: #24485f; font-size: 1rem; line-height: 1.65; }
+.ss97-journey-tips li { padding: 4px 0; }
+.ss97-journey-inline-safety { margin: 23px 0 0; border-radius: 12px; border: 1px solid #a4ddd6; background: #e2f7f3; padding: 15px 18px; }
+.ss97-client-form-hint { margin: 15px 0 24px; padding: clamp(17px, 3vw, 25px); border-radius: 17px; border: 1px solid #b8dfed; border-left: 5px solid #1299cc; background: linear-gradient(110deg, #f0faff, #f9fcff); }
+.ss97-client-form-hint h3 { font-size: 1.24rem; color: #15577a; margin: 0 0 8px; }
+.ss97-client-form-hint p { font-size: 1rem; margin: 8px 0 0; line-height: 1.6; }
+.ss97-client-form-hint .ss97-journey-form-languages { font-size: .9rem; color: #496c7d; }
+@media (max-width: 970px) { .ss97-journey-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .ss97-client-journey { width: calc(100% - 22px); margin: 20px auto 36px; padding: 21px 16px; border-radius: 19px; }
+  .ss97-journey-grid { grid-template-columns: 1fr; }
+  .ss97-journey-actions { flex-direction: column; }
+  .ss97-client-journey .ss97-journey-button { width: 100%; justify-content: center; }
+  .ss97-journey-step { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ss97-client-journey .ss97-journey-button { transition: none; }
+  .ss97-client-journey .ss97-journey-button:hover { transform: none; }
+}

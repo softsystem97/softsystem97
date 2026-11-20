@@ -12,7 +12,7 @@
     {"fieldname": "profile", "fieldtype": "Link", "options": "SS97 Technician Profile", "label": "Dossier", "reqd": 1, "search_index": 1, "read_only": 1},
     {"fieldname": "candidate_user", "fieldtype": "Link", "options": "User", "label": "Destinataire", "reqd": 1, "read_only": 1},
     {"fieldname": "event_key", "fieldtype": "Data", "label": "Événement unique", "reqd": 1, "unique": 1, "read_only": 1},
-    {"fieldname": "kind", "fieldtype": "Select", "options": "APPLIED\nIN_REVIEW\nEXAM_VALIDATED\nDOCUMENTS_VALIDATED\nCONTRACT_SIGNED\nACTIVE\nSUSPENDED\nREJECTED", "label": "Type de message", "reqd": 1, "read_only": 1},
+    {"fieldname": "kind", "fieldtype": "Select", "options": "APPLIED\nIN_REVIEW\nEXAM_PASSED_PROVISIONAL\nEXAM_FAILED\nEXAM_EXPIRED\nEXAM_VALIDATED\nDOCUMENTS_VALIDATED\nCONTRACT_SIGNED\nACTIVE\nSUSPENDED\nREJECTED", "label": "Type de message", "reqd": 1, "read_only": 1},
     {"fieldname": "state", "fieldtype": "Select", "options": "HELD\nPENDING\nQUEUED\nERROR", "label": "État de la transmission", "reqd": 1, "read_only": 1},
     {"fieldname": "queued_at", "fieldtype": "Datetime", "label": "Mis en file le", "read_only": 1}
   ],
