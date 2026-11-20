@@ -38,6 +38,8 @@ web_include_js = [
     # but no working script to retrieve appointments or handle errors.
     "/assets/softsystem97/js/technician_agenda.js?v=20261119-agenda-1",
     "/assets/softsystem97/js/technician_portal_ui.js?v=20261119-portal-ui-3",
+    # Session-bound legacy exam link and Frappe v16 training role compatibility.
+    "/assets/softsystem97/js/technician_exam_entry.js?v=20261120-exam-1",
 ]
 app_include_css = ["/assets/softsystem97/css/password-contrast.css"]
 
