@@ -14,6 +14,9 @@ NOTICE = "SS97 Technician Notice"
 MESSAGES = {
     "APPLIED": ("Candidature bien reçue", "Nous avons bien reçu votre candidature. Votre dossier est en attente d'étude."),
     "IN_REVIEW": ("Invitation à la présélection", "Votre candidature est en étude. Connectez-vous à votre espace SS97 TECH OS pour découvrir l'examen de votre spécialité."),
+    "EXAM_PASSED_PROVISIONAL": ("Examen — seuil technique atteint", "Vous avez atteint le seuil de l'examen technique de votre filière. Ce résultat reste provisoire : l'équipe SS97 doit vérifier votre dossier, vos documents et votre entretien avant toute décision."),
+    "EXAM_FAILED": ("Examen — seuil non atteint", "Vous n'avez pas atteint le seuil de réussite à cet examen. Votre candidature n'est pas automatiquement rejetée. Consultez votre espace candidat ou contactez l'équipe de recrutement pour connaître les suites possibles."),
+    "EXAM_EXPIRED": ("Examen — délai dépassé", "Le temps imparti pour votre examen est écoulé. Aucune habilitation n'est accordée. Consultez votre espace candidat pour connaître les étapes possibles."),
     "EXAM_VALIDATED": ("Examen de présélection validé", "Votre résultat technique a été vérifié. Le contrôle de vos justificatifs reste nécessaire."),
     "DOCUMENTS_VALIDATED": ("Justificatifs vérifiés", "Vos justificatifs ont été contrôlés par notre équipe. Le contrat freelance reste à valider."),
     "CONTRACT_SIGNED": ("Contrat freelance enregistré", "La vérification externe de votre contrat a été enregistrée. L'habilitation est encore soumise aux contrôles de sécurité."),
