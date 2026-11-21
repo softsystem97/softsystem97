@@ -1,0 +1,85 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Dependency",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:dependency_id",
+  "allow_rename": 0,
+  "track_changes": 1,
+  "field_order": [
+    "dependency_id",
+    "customer",
+    "created_by_user",
+    "source_asset",
+    "target_asset",
+    "description",
+    "state"
+  ],
+  "fields": [
+    {
+      "fieldname": "dependency_id",
+      "fieldtype": "Data",
+      "label": "Identifiant",
+      "read_only": 1,
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Entreprise",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "Customer",
+      "search_index": 1
+    },
+    {
+      "fieldname": "created_by_user",
+      "fieldtype": "Link",
+      "label": "Déclarant",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "source_asset",
+      "fieldtype": "Link",
+      "label": "Équipement source",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "SS97 Cyber Asset"
+    },
+    {
+      "fieldname": "target_asset",
+      "fieldtype": "Link",
+      "label": "Équipement dépendant",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "SS97 Cyber Asset"
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Small Text",
+      "label": "Lien de dépendance",
+      "read_only": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Select",
+      "label": "État",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "DECLARED\nREVIEWED"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}
