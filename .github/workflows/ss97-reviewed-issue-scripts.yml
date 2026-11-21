@@ -1,0 +1,24 @@
+name: SS97 Ticket Bridge — reviewed Issue script compatibility
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/integrations/ticket_bridge/policy.py'
+      - 'softsystem97/integrations/ticket_bridge/readiness.py'
+      - 'softsystem97/integrations/ticket_bridge/issue_script_review.py'
+      - 'softsystem97/public/js/ss97_bridge_readiness.js'
+      - 'tools/test_ss97_issue_script_compatibility_offline.py'
+      - '.github/workflows/ss97-reviewed-issue-scripts.yml'
+permissions:
+  contents: read
+jobs:
+  bridge-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m compileall -q softsystem97/integrations/ticket_bridge
+      - run: node --check softsystem97/public/js/ss97_bridge_readiness.js
+      - run: python -m unittest -q tools.test_ss97_issue_script_compatibility_offline
