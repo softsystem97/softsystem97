@@ -1,0 +1,19 @@
+.ss97-cyberos{max-width:1200px;margin:0 auto;padding:24px;color:#17334b}
+.ss97-cyberos h1{font-size:clamp(1.8rem,3vw,2.6rem);margin:8px 0}
+.ss97-cyberos .eyebrow{font-weight:800;letter-spacing:.12em;color:#0969a0}
+.ss97-warning{padding:12px 14px;border-left:4px solid #b77624;background:#fff9ed;color:#533b1b}
+.ss97-cyberos-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.ss97-cyberos-kpis article{border:1px solid #d1dee9;border-radius:12px;padding:20px;background:#f6fafd;display:flex;flex-direction:column}
+.ss97-cyberos-kpis strong{font-size:2rem}
+.ss97-cyberos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:16px}
+.ss97-cyberos-grid article,.ss97-cyberos-next{border:1px solid #c9d8e4;border-radius:14px;padding:20px;background:#fff}
+.ss97-cyberos-grid form{display:grid;gap:9px}
+.ss97-cyberos-grid label{font-weight:650}
+.ss97-cyberos-grid input,.ss97-cyberos-grid textarea,.ss97-cyberos-grid select{background:#fff;color:#162e42;border:1px solid #91a6b8;border-radius:9px;padding:10px;width:100%;box-sizing:border-box}
+.ss97-cyberos-grid button{background:#086a9c;color:#fff;border:0;border-radius:9px;padding:12px;font-weight:700;cursor:pointer}
+.ss97-cyberos-grid button:disabled{opacity:.55;cursor:not-allowed}
+.ss97-cyberos-list{padding:0;list-style:none}
+.ss97-cyberos-list li{padding:10px 0;border-bottom:1px solid #e3ebf0;overflow-wrap:anywhere}
+.ss97-cyberos-next{margin-top:18px;background:#f6fafd}
+#cyberos-status{min-height:26px}
+@media(max-width:600px){.ss97-cyberos{padding:14px}.ss97-cyberos-kpis{grid-template-columns:1fr 1fr}}
