@@ -12,6 +12,7 @@ from uuid import uuid4
 import frappe
 from frappe.utils import get_datetime, now_datetime
 
+from .readiness import audit_bank
 from .rules import (
     MAX_ATTEMPTS, TRACKS, grade, public_questions, seconds_remaining,
     track_for, validate_question,
@@ -206,10 +207,13 @@ def start_exam(track):
         fields=["name", "prompt", "options_json", "correct_option", "critical", "category"],
         limit_page_length=501,
     )
-    if len(rows) > 500:
-        frappe.throw("Banque de questions à vérifier par l'administrateur.", frappe.PermissionError)
-    if len(rows) < settings.question_count:
-        frappe.throw("Examen indisponible : banque de questions insuffisante.", frappe.PermissionError)
+    # Verify the entire active bank before sampling. Validating only selected
+    # questions would randomly admit duplicate or invalid active entries.
+    # The audit returns counts only, never prompts or answer keys.
+    bank_audit = audit_bank(rows, required=settings.question_count)
+    if not bank_audit["ready"]:
+        frappe.throw("Banque de questions non conforme : validation administrateur requise.",
+                     frappe.PermissionError)
 
     chosen = secrets.SystemRandom().sample(rows, settings.question_count)
     snapshot = []
