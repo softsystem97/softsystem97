@@ -24,8 +24,11 @@ class IssueScriptCompatibilityTests(unittest.TestCase):
                               self.allow if approved is None else approved,
                               reviewed, reference)
 
-    def test_no_scripts_is_safe(self):
-        self.assertTrue(self.check(scripts=[], reviewed=False, approved={})["approved"])
+    def test_no_scripts_requires_explicit_review(self):
+        # An empty inventory may mean previously approved scripts were removed.
+        self.assertFalse(self.check(scripts=[], reviewed=False, approved={})["approved"])
+        self.assertFalse(self.check(scripts=[], reviewed=True, approved=self.allow)["approved"])
+        self.assertTrue(self.check(scripts=[], reviewed=True, approved={})["approved"])
 
     def test_exact_reviewed_versions(self):
         self.assertTrue(self.check()["approved"])
