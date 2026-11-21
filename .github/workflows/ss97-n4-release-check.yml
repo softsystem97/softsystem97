@@ -1,0 +1,36 @@
+name: SS97 N4 release safety checks
+on:
+  push:
+    branches:
+      - release/ss97-tech-cyber-pilot-20261118
+    paths:
+      - 'softsystem97/integrations/ticket_bridge/**'
+      - 'softsystem97/public/js/ss97_bridge_readiness.js'
+      - 'softsystem97/www/ss97-tech-admin.html'
+      - 'softsystem97/technician_os/**'
+      - 'tools/test_ss97_bridge_readiness_offline.py'
+      - 'tools/test_ss97_n4_bridge_profile_gate.py'
+      - '.github/workflows/ss97-n4-release-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: n4-release-check-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  n4-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out selected release branch
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate ticket bridge Python syntax
+        run: python -m compileall -q softsystem97/integrations/ticket_bridge softsystem97/technician_os
+      - name: Validate readiness JavaScript syntax
+        run: node --check softsystem97/public/js/ss97_bridge_readiness.js
+      - name: Run existing offline readiness and N4 authorization tests
+        run: python -m unittest -q tools.test_ss97_bridge_readiness_offline tools.test_ss97_n4_bridge_profile_gate
