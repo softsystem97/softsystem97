@@ -7,8 +7,8 @@
 <h1>Expertises entreprises à examiner</h1>
 <p class="lead">Seules les missions N4 actives, attribuées et approuvées avec mandat écrit permettent une revue. Un rapport ne représente pas une certification automatique.</p>
 <button id="n4-refresh" type="button">Actualiser les dossiers</button>
-<div id="n4-assessments" role="status">Chargement des dossiers autorisés…</div>
-<section class="panel">
+<div id="n4-assessments" role="status">Chargement des dossiers autorisés…</div><div id="n4-access-guidance" role="status" aria-live="polite"></div>
+<section class="panel" id="n4-review-panel" hidden>
 <h2>Décider après vérification humaine</h2>
 <form id="n4-review-form">
 <label for="n4-assessment-id">Identifiant du dossier (depuis la liste ci-dessus)</label>
@@ -24,5 +24,5 @@
 <p id="n4-review-status" role="status">Aucune décision envoyée.</p>
 </section>
 </main>
-<script src="/assets/softsystem97/js/ss97_cyber_review.js?v=20261119-r1" defer></script>
+<style>#n4-review-panel[hidden]{display:none!important}#n4-access-guidance a{display:inline-block;margin:.5rem 1rem .5rem 0;font-weight:650}</style><script src="/assets/softsystem97/js/ss97_cyber_review.js?v=20261121-access-1" defer></script>
 {% endblock %}

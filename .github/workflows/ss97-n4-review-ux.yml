@@ -1,0 +1,20 @@
+name: SS97 N4 review access guidance
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/www/ss97-cyber-review.html'
+      - 'softsystem97/public/js/ss97_cyber_review.js'
+      - 'tools/test_ss97_n4_review_ui_offline.py'
+      - '.github/workflows/ss97-n4-review-ux.yml'
+permissions:
+  contents: read
+jobs:
+  security-ux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: node --check softsystem97/public/js/ss97_cyber_review.js
+      - run: python -m unittest -q tools.test_ss97_n4_review_ui_offline
