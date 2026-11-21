@@ -75,6 +75,12 @@
       } else if (mission.state === "ACCEPTED") {
         button(card, "Démarrer l'intervention", mission, "IN_PROGRESS");
       } else if (mission.state === "IN_PROGRESS") {
+        // The remote page is opt-in and still requires server-side permission.
+        const assistance = document.createElement("a");
+        assistance.href = "/ss97-remote-assist?ticket=" + encodeURIComponent(mission.ticket_name);
+        assistance.textContent = "Préparer une assistance à distance";
+        assistance.className = "ss97-remote-link";
+        card.append(assistance);
         button(card, "Déposer mon compte rendu", mission, "REPORT_SUBMITTED");
       }
       container.append(card);
