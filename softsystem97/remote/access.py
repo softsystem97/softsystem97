@@ -23,6 +23,14 @@ def _deny():
                  frappe.PermissionError)
 
 
+def _independent_mandate(reference, requester, approver, technician, client):
+    return bool(
+        isinstance(reference, str) and reference.strip()
+        and requester and approver and requester != approver
+        and not ({requester, approver} & {technician, client})
+    )
+
+
 def check_mission(ticket, technician, profile, mission):
     """Pure comparison; the caller must separately verify identity and assignment."""
     if (not mission or not profile or not ticket
@@ -33,14 +41,17 @@ def check_mission(ticket, technician, profile, mission):
             or mission.state != "IN_PROGRESS"
             or not mission.accepted_at):
         return False
-    if profile.track in SENSITIVE_TRACKS:
-        return bool(
-            mission.authorization_reference
-            and mission.approved_by
-            and mission.approved_by != mission.created_by_user
-            and mission.approved_by != mission.technician
-        )
-    return True
+    if profile.track not in SENSITIVE_TRACKS:
+        return True
+    if getattr(mission, "rework_count", 0) or getattr(mission, "rework_requested_at", None):
+        return bool(mission.rework_approved_at and _independent_mandate(
+            mission.rework_authorization_reference, mission.rework_requested_by,
+            mission.rework_approved_by, technician, ticket.raised_by,
+        ))
+    return _independent_mandate(
+        mission.authorization_reference, mission.created_by_user,
+        mission.approved_by, technician, ticket.raised_by,
+    )
 
 
 def authorize_technician_ticket(ticket, technician=None):

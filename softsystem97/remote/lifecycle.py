@@ -25,15 +25,33 @@ def _end_pending(ticket_name, technician=None):
 def revoke_on_issue_close(doc, method=None):
     if not _available():
         return
-    previous = doc.get_doc_before_save() if method != "on_trash" else None
-    if (doc.status == "Closed" or (previous and (
-            previous.customer != doc.customer or previous.raised_by != doc.raised_by))):
+    if method == "on_trash" or doc.status == "Closed":
+        _end_pending(doc.name)
+        return
+    previous = doc.get_doc_before_save()
+    if previous and (
+            previous.customer != doc.customer or previous.raised_by != doc.raised_by):
         _end_pending(doc.name)
 
 
 def revoke_on_mission_change(doc, method=None):
-    """End unconnected requests when an accepted mission is no longer active."""
-    if _available() and doc.state != "IN_PROGRESS":
+    """Invalidate invitations when the approved mission scope changes."""
+    if not _available():
+        return
+    if method == "on_trash":
+        _end_pending(doc.ticket_name, doc.technician)
+        return
+    previous = doc.get_doc_before_save()
+    if previous and any(
+        previous.get(field) != doc.get(field) for field in (
+            "ticket_name", "customer", "technician", "track", "accepted_at",
+            "authorization_reference", "created_by_user", "approved_by",
+            "rework_count", "rework_requested_at", "rework_requested_by",
+            "rework_authorization_reference", "rework_approved_by", "rework_approved_at",
+        )
+    ):
+        _end_pending(previous.ticket_name, previous.technician)
+    elif doc.state != "IN_PROGRESS":
         _end_pending(doc.ticket_name, doc.technician)
 
 
