@@ -1,33 +1,66 @@
-name: Frappe Cloud 404 — website-route release preflight
+name: SS97 — Frappe Cloud release package preflight
 on:
-  pull_request:
+  push:
+    branches:
+      - release/ss97-tech-cyber-pilot-20261118
     paths:
+      - 'pyproject.toml'
+      - 'softsystem97/**'
       - 'tools/check_ss97_web_release.py'
       - 'tools/test_ss97_web_release_offline.py'
       - '.github/workflows/ss97-website-route-preflight.yml'
-      - 'softsystem97/www/**'
-      - 'softsystem97/public/js/ss97_n4_dashboard.js'
-      - 'softsystem97/public/js/ss97_cyberos*.js'
+  pull_request:
+    branches:
+      - release/ss97-tech-cyber-pilot-20261118
+    paths:
+      - 'pyproject.toml'
+      - 'softsystem97/**'
+      - 'tools/check_ss97_web_release.py'
+      - 'tools/test_ss97_web_release_offline.py'
+      - '.github/workflows/ss97-website-route-preflight.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: ss97-frappe-package-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   route-package:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Check out the exact release revision
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Vérifier les routes et les scripts du dépôt
+      - name: Validate website routes and scripts
         run: |
           python tools/check_ss97_web_release.py
           python -m unittest -q tools.test_ss97_web_release_offline
-      - name: Construire et auditer le paquet Python
+      - name: Build and inspect the Frappe Python wheel
         run: |
-          python -m pip install build
+          python -m pip install --disable-pip-version-check build
           python -m build --wheel
-          python tools/check_ss97_web_release.py --wheel "$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
-      - name: Précision sur la production
-        run: echo "Tests hors ligne uniquement. Déploiement bench + mise à jour du site nécessaires."
+          WHEEL="$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          test -n "$WHEEL"
+          python tools/check_ss97_web_release.py --wheel "$WHEEL"
+          echo "Built artifact: $WHEEL"
+      - name: Record tested revision (no production changes)
+        if: always()
+        run: |
+          {
+            echo "### Soft System 97 package preflight"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Ref: \`$GITHUB_REF\`"
+            echo "- Result: \`$JOB_STATUS\`"
+            echo "- Scope: offline source, website routes and Python wheel only"
+            echo "- No Frappe Cloud deploy, site migration, database operation or Stripe payment"
+            echo "- Separate Frappe Cloud bench deploy and site update are still required"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          JOB_STATUS: ${{ job.status }}
