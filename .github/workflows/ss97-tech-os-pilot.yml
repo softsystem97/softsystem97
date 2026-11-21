@@ -29,6 +29,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Installer les dépendances utilisées par les tests PDF
+        run: python -m pip install 'reportlab>=4.2,<5' 'pypdf>=5,<7'
       - name: API, filières, justificatifs, notifications et rémunération - tests hors production
         run: python -m unittest -q tools.test_ss97_tech_os_offline tools.test_ss97_technician_exams_offline tools.test_ss97_technician_documents_offline tools.test_ss97_technician_workflow_v2_offline tools.test_ss97_public_ui_contract_offline
       - name: JavaScript navigateur - syntaxe
