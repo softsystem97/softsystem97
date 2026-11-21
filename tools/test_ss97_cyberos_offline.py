@@ -30,7 +30,7 @@ class CyberOSContracts(unittest.TestCase):
             incident_data("X", "CRITICAL", "")
 
     def test_uuid_only(self):
-        good = "12345678-1234-4234-8234-123456789012"
+        good = "12345678-1234-4234-8234-abcdef123456"
         self.assertEqual(identifier(good), good)
         for bad in ("../other-company", "invalid", good.upper(), "", "1234"):
             with self.assertRaises(ValueError):
