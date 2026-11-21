@@ -10,6 +10,19 @@ on:
       - 'softsystem97/technician_os/**'
       - 'tools/test_ss97_bridge_readiness_offline.py'
       - 'tools/test_ss97_n4_bridge_profile_gate.py'
+      - 'tools/test_ss97_issue_script_review_allowlist.py'
+      - '.github/workflows/ss97-n4-release-check.yml'
+  pull_request:
+    branches:
+      - release/ss97-tech-cyber-pilot-20261118
+    paths:
+      - 'softsystem97/integrations/ticket_bridge/**'
+      - 'softsystem97/public/js/ss97_bridge_readiness.js'
+      - 'softsystem97/www/ss97-tech-admin.html'
+      - 'softsystem97/technician_os/**'
+      - 'tools/test_ss97_bridge_readiness_offline.py'
+      - 'tools/test_ss97_n4_bridge_profile_gate.py'
+      - 'tools/test_ss97_issue_script_review_allowlist.py'
       - '.github/workflows/ss97-n4-release-check.yml'
   workflow_dispatch:
 permissions:
@@ -33,4 +46,4 @@ jobs:
       - name: Validate readiness JavaScript syntax
         run: node --check softsystem97/public/js/ss97_bridge_readiness.js
       - name: Run existing offline readiness and N4 authorization tests
-        run: python -m unittest -q tools.test_ss97_bridge_readiness_offline tools.test_ss97_n4_bridge_profile_gate
+        run: python -m unittest -q tools.test_ss97_bridge_readiness_offline tools.test_ss97_n4_bridge_profile_gate tools.test_ss97_issue_script_review_allowlist
