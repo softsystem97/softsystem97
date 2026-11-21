@@ -7,6 +7,8 @@ on:
       - 'softsystem97/www/ss97-cyber-entreprises.*'
       - 'softsystem97/public/js/ss97_cyber_*.js'
       - 'tools/test_ss97_cyber_assessment_offline.py'
+      - 'tools/test_ss97_cyber_roadmap_offline.py'
+      - 'softsystem97/public/css/ss97_cyber_wizard.css'
       - '.github/workflows/ss97-cyber-assessment-pilot.yml'
   workflow_dispatch:
 
@@ -23,10 +25,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Audit intake contracts
-        run: python -m unittest -q tools.test_ss97_cyber_assessment_offline
+        run: python -m unittest -q tools.test_ss97_cyber_assessment_offline tools.test_ss97_cyber_roadmap_offline
       - name: Javascript syntax
         run: |
           node --check softsystem97/public/js/ss97_cyber_enterprises.js
+          node --check softsystem97/public/js/ss97_cyber_wizard.js
           node --check softsystem97/public/js/ss97_cyber_admin.js
       - name: Python compilation
         run: python -m compileall -q softsystem97/cyber_assessment softsystem97/www/ss97-cyber-entreprises.py

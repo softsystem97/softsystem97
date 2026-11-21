@@ -1,0 +1,16 @@
+.ss97-cyber-wizard-progress {padding:16px;background:#f1f6fa;border:1px solid #c4d7e5;border-radius:12px;margin-bottom:18px}
+.ss97-cyber-wizard-progress p{font-weight:700;color:#123c59;margin:0 0 9px}
+.ss97-cyber-wizard-progress progress{display:block;width:100%;height:10px;accent-color:#1172ac}
+.ss97-cyber-stage{padding:8px 0}
+.ss97-cyber-stage[hidden],.ss97-cyber-wizard-nav[hidden],.ss97-cyber-wizard-nav button[hidden]{display:none!important}
+.ss97-cyber-stage h3{font-size:1.2rem;color:#163e58;margin:0 0 16px}
+.ss97-cyber-stage h3:focus-visible{outline:3px solid #1172ac;outline-offset:4px}
+.ss97-cyber-wizard-nav{display:flex;justify-content:space-between;gap:12px;margin-top:16px}
+.ss97-cyber-wizard-nav button{min-height:43px;padding:10px 18px;border:1px solid #587d9c;border-radius:9px;background:#145f91;color:#fff;cursor:pointer}
+.ss97-cyber-summary{border:1px solid #c4d7e5;border-radius:10px;background:#f5f8fb;padding:16px;margin:14px 0}
+.ss97-cyber-summary h4{font-size:1.1rem;margin:0 0 10px}
+.ss97-cyber-summary dl{display:grid;grid-template-columns:minmax(100px,35%) 1fr;gap:9px 12px}
+.ss97-cyber-summary dt{font-weight:700}
+.ss97-cyber-summary dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.ss97-cyber-summary p{color:#3b5367;font-size:.9rem}
+@media(max-width:520px){.ss97-cyber-summary dl{display:block}.ss97-cyber-summary dt{margin-top:10px}.ss97-cyber-wizard-nav button{flex:1}}
