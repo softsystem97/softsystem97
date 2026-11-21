@@ -12,18 +12,10 @@
     "agency_ref",
     "asset_ref",
     "fallback_ref",
-    "incident_ref",
-    "equipment_model",
-    "installed_version",
-    "candidate_version",
     "service",
     "service_state",
     "opening_check",
     "escalation_team",
-    "onsite_status",
-    "rehearsal_result",
-    "rollback_result",
-    "pilot_result",
     "interrupted_at",
     "resumed_at",
     "restored_at"
@@ -65,30 +57,6 @@
       "length": 80
     },
     {
-      "fieldname": "incident_ref",
-      "fieldtype": "Data",
-      "label": "Référence d’incident commun",
-      "length": 80
-    },
-    {
-      "fieldname": "equipment_model",
-      "fieldtype": "Data",
-      "label": "Modèle de matériel",
-      "length": 80
-    },
-    {
-      "fieldname": "installed_version",
-      "fieldtype": "Data",
-      "label": "Version en place",
-      "length": 80
-    },
-    {
-      "fieldname": "candidate_version",
-      "fieldtype": "Data",
-      "label": "Version testée",
-      "length": 80
-    },
-    {
       "fieldname": "service",
       "fieldtype": "Select",
       "label": "Service touché",
@@ -115,34 +83,6 @@
       "label": "Responsable de la suite",
       "options": "NONE\nBRANCH\nNETWORK\nSECURITY\nMAINTAINER",
       "default": "NONE"
-    },
-    {
-      "fieldname": "onsite_status",
-      "fieldtype": "Select",
-      "label": "Suivi du matériel",
-      "options": "NOT_NEEDED\nEQUIPMENT_REQUESTED\nVISIT_REQUESTED\nCOMPLETE",
-      "default": "NOT_NEEDED"
-    },
-    {
-      "fieldname": "rehearsal_result",
-      "fieldtype": "Select",
-      "label": "Essai en recette",
-      "options": "NOT_TESTED\nPASS\nFAIL",
-      "default": "NOT_TESTED"
-    },
-    {
-      "fieldname": "rollback_result",
-      "fieldtype": "Select",
-      "label": "Retour arrière vérifié",
-      "options": "NOT_TESTED\nPASS\nFAIL",
-      "default": "NOT_TESTED"
-    },
-    {
-      "fieldname": "pilot_result",
-      "fieldtype": "Select",
-      "label": "Résultat du contrôle pilote",
-      "options": "NOT_TESTED\nPASS\nFAIL",
-      "default": "NOT_TESTED"
     },
     {
       "fieldname": "interrupted_at",

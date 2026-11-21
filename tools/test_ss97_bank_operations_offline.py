@@ -39,31 +39,15 @@ class BankOperationRulesTests(unittest.TestCase):
             values(service_state="WORKAROUND", fallback_ref="SCAN-02")
         )["fallback_ref"], "SCAN-02")
 
-    def test_result_requires_versions_and_both_preliminary_checks(self):
-        variants = values(equipment_model="Scanner-A", installed_version="1.0",
-                          candidate_version="2.0", rehearsal_result="PASS")
-        with self.assertRaises(ValueError):
-            parse_operation(values(rehearsal_result="PASS"))
-        with self.assertRaises(ValueError):
-            parse_operation({**variants, "pilot_result": "PASS"})
-        self.assertEqual(parse_operation({
-            **variants, "rollback_result": "PASS", "pilot_result": "FAIL",
-        })["pilot_result"], "FAIL")
-
     def test_server_rejects_unexpected_fields_and_unsafe_reference_format(self):
         for record in (values(technician="another"), values(asset_ref="1234567890"),
                        values(agency_ref="<script>"), values(service_state=[])):
             with self.subTest(record=record), self.assertRaises(ValueError):
                 parse_operation(record)
 
-    def test_previous_results_cannot_be_reused_for_a_new_asset_or_version(self):
-        previous = values(equipment_model="Scanner-A", installed_version="1.0",
-                          candidate_version="2.0", rehearsal_result="PASS")
-        for change in ({"asset_ref": "POSTE-02"}, {"candidate_version": "3.0"}):
-            with self.subTest(change=change), self.assertRaises(ValueError):
-                validate_operation_update(previous, {**previous, **change})
-            validate_operation_update(previous, {**previous, **change,
-                                                 "rehearsal_result": "NOT_TESTED"})
+    def test_completed_assessment_cannot_be_cleared(self):
+        with self.assertRaises(ValueError):
+            validate_operation_update(values(service_state="INTERRUPTED"), values())
 
     def test_interruption_and_workaround_keep_distinct_times(self):
         start = continuity_times({}, "INTERRUPTED", "09:00")

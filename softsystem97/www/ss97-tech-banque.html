@@ -15,7 +15,7 @@
 <p id="universe-status" role="status" aria-live="polite">Vérification des missions autorisées…</p>
 <section class="panel"><h2>Mes missions bancaires</h2><div id="universe-missions" aria-live="polite"></div></section>
 <section class="panel" id="bank-operations" hidden>
-  <h2>Suivi d’agence et de recette</h2>
+  <h2>Suivi d’intervention en agence</h2>
   <label for="bank-mission">Mission bancaire</label>
   <select id="bank-mission"></select>
   <p id="bank-operation-status" role="status" aria-live="polite"></p>
@@ -54,7 +54,6 @@
           </select>
         </label>
         <label>Référence du secours approuvé<input name="fallback_ref" maxlength="80"></label>
-        <label>Référence de l’incident commun<input name="incident_ref" maxlength="80"></label>
         <label>Équipe chargée de la suite
           <select name="escalation_team">
             <option value="NONE">Aucune escalade</option>
@@ -62,42 +61,6 @@
             <option value="NETWORK">Réseau</option>
             <option value="SECURITY">Sécurité</option>
             <option value="MAINTAINER">Mainteneur</option>
-          </select>
-        </label>
-        <label>Échange de matériel ou intervention
-          <select name="onsite_status">
-            <option value="NOT_NEEDED">Sans objet</option>
-            <option value="EQUIPMENT_REQUESTED">Matériel demandé</option>
-            <option value="VISIT_REQUESTED">Intervention sur place demandée</option>
-            <option value="COMPLETE">Terminé</option>
-          </select>
-        </label>
-      </div>
-      <h3>Recette du changement et vérification du retour arrière</h3>
-      <p>Si le poste ou la version change, remettez les trois résultats à « Non testé » avant d’enregistrer.</p>
-      <div class="grid">
-        <label>Modèle d’équipement<input name="equipment_model" maxlength="80"></label>
-        <label>Version en place<input name="installed_version" maxlength="80"></label>
-        <label>Version testée<input name="candidate_version" maxlength="80"></label>
-        <label>Correction en recette
-          <select name="rehearsal_result">
-            <option value="NOT_TESTED">Non testée</option>
-            <option value="PASS">Vérifiée</option>
-            <option value="FAIL">Échec</option>
-          </select>
-        </label>
-        <label>Retour arrière
-          <select name="rollback_result">
-            <option value="NOT_TESTED">Non testé</option>
-            <option value="PASS">Vérifié</option>
-            <option value="FAIL">Échec</option>
-          </select>
-        </label>
-        <label>Contrôle agence pilote
-          <select name="pilot_result">
-            <option value="NOT_TESTED">Non testé</option>
-            <option value="PASS">Vérifié</option>
-            <option value="FAIL">Échec</option>
           </select>
         </label>
       </div>
