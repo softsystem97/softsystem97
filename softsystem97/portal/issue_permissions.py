@@ -54,9 +54,11 @@ def get_permission_query_conditions(user=None):
 def has_permission(doc, ptype=None, user=None):
     user = user or frappe.session.user
     if not _scoped(user):
-        return None  # Default Frappe permissions for clients and staff.
+        # Frappe v16 treats any falsey hook result as a veto. A true result
+        # allows the framework to continue evaluating native permissions.
+        return True
     if not _approval_schema_ready():
         return False
     # An approved assignment only removes our extra restriction; ERPNext's
     # native DocPerm must still independently allow the requested operation.
-    return None if policy.assigned(doc.name, user) else False
+    return policy.assigned(doc.name, user)

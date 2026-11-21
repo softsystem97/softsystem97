@@ -369,13 +369,17 @@ class TestTicketBridge(unittest.TestCase):
 
     def test_existing_workflow_or_issue_producer_blocks_unreviewed_activation(self):
         original = frappe.db.exists
-        for doctype in ['Workflow', 'Server Script', 'Notification']:
+        for doctype in ['Workflow', 'Notification']:
             def exists(dt, *args, **kwargs):
                 return 'Active unadapted component' if dt == doctype else original(dt, *args, **kwargs)
             frappe.conf.ss97_ticket_bridge['email_enabled'] = True
             with self.subTest(doctype=doctype), patch.object(frappe.db, 'exists', side_effect=exists):
                 with self.assertRaises(frappe.PermissionError):
                     policy.settings()
+        scripts = [{'name': 'Unreviewed script', 'doctype_event': 'Before Save', 'script': ''}]
+        with patch.object(policy.issue_script_review, 'inventory', return_value=scripts):
+            with self.assertRaises(frappe.PermissionError):
+                policy.settings()
 
     def test_invalid_audience_and_request_key_rejected(self):
         frappe.set_user(self.client)
