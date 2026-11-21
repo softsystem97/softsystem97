@@ -1,0 +1,84 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Asset",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:asset_id",
+  "allow_rename": 0,
+  "track_changes": 1,
+  "field_order": [
+    "asset_id",
+    "customer",
+    "created_by_user",
+    "label",
+    "kind",
+    "criticality",
+    "business_service"
+  ],
+  "fields": [
+    {
+      "fieldname": "asset_id",
+      "fieldtype": "Data",
+      "label": "Identifiant",
+      "reqd": 1,
+      "unique": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Entreprise",
+      "options": "Customer",
+      "reqd": 1,
+      "read_only": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "created_by_user",
+      "fieldtype": "Link",
+      "label": "Déclarant",
+      "options": "User",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "label",
+      "fieldtype": "Data",
+      "label": "Équipement ou service",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "kind",
+      "fieldtype": "Select",
+      "label": "Type",
+      "options": "WORKSTATION\nSERVER\nNETWORK\nCLOUD\nSOFTWARE\nOTHER",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "criticality",
+      "fieldtype": "Select",
+      "label": "Criticité",
+      "options": "LOW\nMEDIUM\nHIGH\nCRITICAL",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "business_service",
+      "fieldtype": "Data",
+      "label": "Service métier associé",
+      "reqd": 1,
+      "read_only": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

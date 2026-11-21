@@ -1,0 +1,116 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Action",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:action_id",
+  "allow_rename": 0,
+  "track_changes": 1,
+  "field_order": [
+    "action_id",
+    "customer",
+    "created_by_user",
+    "summary",
+    "category",
+    "priority",
+    "state",
+    "asset",
+    "verified_by",
+    "verified_at",
+    "evidence_reference"
+  ],
+  "fields": [
+    {
+      "fieldname": "action_id",
+      "fieldtype": "Data",
+      "label": "Identifiant",
+      "reqd": 1,
+      "unique": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Entreprise",
+      "options": "Customer",
+      "reqd": 1,
+      "read_only": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "created_by_user",
+      "fieldtype": "Link",
+      "label": "Créateur",
+      "options": "User",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary",
+      "fieldtype": "Small Text",
+      "label": "Mesure corrective",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "category",
+      "fieldtype": "Select",
+      "label": "Catégorie",
+      "options": "ACCESS\nBACKUP\nUPDATES\nENDPOINT\nNETWORK\nTRAINING\nINCIDENT\nSUPPLIERS\nOTHER",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priorité",
+      "options": "LOW\nMEDIUM\nHIGH\nCRITICAL",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Select",
+      "label": "État",
+      "options": "OPEN\nIN_PROGRESS\nDONE_DECLARED\nVERIFIED",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "asset",
+      "fieldtype": "Link",
+      "label": "Équipement associé",
+      "options": "SS97 Cyber Asset",
+      "read_only": 1
+    },
+    {
+      "fieldname": "verified_by",
+      "fieldtype": "Link",
+      "label": "Vérifié par",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "verified_at",
+      "fieldtype": "Datetime",
+      "label": "Vérifié le",
+      "read_only": 1
+    },
+    {
+      "fieldname": "evidence_reference",
+      "fieldtype": "Data",
+      "label": "Référence de preuve",
+      "read_only": 1,
+      "hidden": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

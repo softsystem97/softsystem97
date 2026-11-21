@@ -1,0 +1,31 @@
+name: SS97 CyberOS foundation — offline gate
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/cyberos/**'
+      - 'softsystem97/softsystem97/doctype/ss97_cyber_*/**'
+      - 'softsystem97/www/ss97-cyberos.*'
+      - 'softsystem97/public/js/ss97_cyberos.js'
+      - 'softsystem97/public/css/ss97_cyberos.css'
+      - 'tools/test_ss97_cyberos_offline.py'
+      - '.github/workflows/ss97-cyberos-foundation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compiler Python
+        run: python -m compileall -q softsystem97/cyberos softsystem97/softsystem97/doctype/ss97_cyber_*
+      - name: Validate JavaScript
+        run: node --check softsystem97/public/js/ss97_cyberos.js
+      - name: Contrats et isolement CyberOS hors production
+        run: python -m unittest -q tools.test_ss97_cyberos_offline
+      - name: Important
+        run: echo 'NO Frappe Cloud deployment or security/Stripe/AI integration asserted by CI.'

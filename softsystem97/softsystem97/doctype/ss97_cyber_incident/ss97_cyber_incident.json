@@ -1,0 +1,84 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Incident",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:incident_id",
+  "allow_rename": 0,
+  "track_changes": 1,
+  "field_order": [
+    "incident_id",
+    "customer",
+    "reported_by",
+    "summary",
+    "severity",
+    "description",
+    "state"
+  ],
+  "fields": [
+    {
+      "fieldname": "incident_id",
+      "fieldtype": "Data",
+      "label": "Identifiant",
+      "reqd": 1,
+      "unique": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Entreprise",
+      "options": "Customer",
+      "reqd": 1,
+      "read_only": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "reported_by",
+      "fieldtype": "Link",
+      "label": "Déclaré par",
+      "options": "User",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary",
+      "fieldtype": "Data",
+      "label": "Incident déclaré",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "severity",
+      "fieldtype": "Select",
+      "label": "Gravité",
+      "options": "LOW\nMEDIUM\nHIGH\nCRITICAL",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Small Text",
+      "label": "Description sans secrets",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Select",
+      "label": "État",
+      "options": "REPORTED\nUNDER_REVIEW\nCLOSED",
+      "reqd": 1,
+      "read_only": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}

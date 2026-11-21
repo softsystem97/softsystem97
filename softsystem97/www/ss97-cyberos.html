@@ -1,0 +1,88 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_cyberos.css?v=20261120-1">
+<main class="ss97-cyberos">
+  <header>
+    <p class="eyebrow">SOFT SYSTEM 97 · CYBEREXPERT 360</p>
+    <h1>Mon centre de commandement CyberOS</h1>
+    <p>Retrouvez vos équipements, actions et déclarations d'incident dans un même espace sécurisé.</p>
+    <p class="ss97-warning"><strong>Important :</strong> ce registre est déclaratif. Il n'assure pas une surveillance technique, un audit certifié ou une astreinte d'urgence.</p>
+  </header>
+  <div id="cyberos-status" role="status" aria-live="polite">Vérification de votre compte entreprise…</div>
+  <section aria-label="Indicateurs de suivi" class="ss97-cyberos-kpis">
+    <article><strong id="cyberos-assets-count">—</strong><span>Équipements</span></article>
+    <article><strong id="cyberos-actions-count">—</strong><span>Actions à traiter</span></article>
+    <article><strong id="cyberos-incidents-count">—</strong><span>Incidents ouverts</span></article>
+  </section>
+  <section class="ss97-cyberos-grid">
+    <article>
+      <h2>Inventaire de mon entreprise</h2>
+      <form id="cyberos-asset-form">
+        <label for="cyberos-asset-label">Nom de l'équipement ou du service</label>
+        <input id="cyberos-asset-label" maxlength="120" required placeholder="Ex. serveur de fichiers">
+        <label for="cyberos-asset-kind">Catégorie</label>
+        <select id="cyberos-asset-kind" required>
+          <option value="WORKSTATION">Ordinateur</option><option value="SERVER">Serveur</option>
+          <option value="NETWORK">Réseau</option><option value="CLOUD">Cloud</option>
+          <option value="SOFTWARE">Logiciel</option><option value="OTHER">Autre</option>
+        </select>
+        <label for="cyberos-asset-criticality">Importance pour l'activité</label>
+        <select id="cyberos-asset-criticality" required>
+          <option value="LOW">Faible</option><option value="MEDIUM">Moyenne</option>
+          <option value="HIGH">Élevée</option><option value="CRITICAL">Critique</option>
+        </select>
+        <label for="cyberos-asset-service">Service métier concerné</label>
+        <input id="cyberos-asset-service" maxlength="120" required placeholder="Ex. gestion des factures">
+        <button type="submit">Ajouter un équipement</button>
+      </form>
+      <ul id="cyberos-assets-list" class="ss97-cyberos-list"></ul>
+    </article>
+    <article>
+      <h2>Plan de correction</h2>
+      <form id="cyberos-action-form">
+        <label for="cyberos-action-summary">Action à réaliser</label>
+        <textarea id="cyberos-action-summary" maxlength="240" required rows="2" placeholder="Ex. vérifier une restauration de sauvegarde"></textarea>
+        <label for="cyberos-action-category">Domaine</label>
+        <select id="cyberos-action-category">
+          <option value="BACKUP">Sauvegardes</option><option value="ACCESS">Accès</option>
+          <option value="UPDATES">Mises à jour</option><option value="ENDPOINT">Protection des postes</option>
+          <option value="NETWORK">Réseau</option><option value="TRAINING">Sensibilisation</option>
+          <option value="INCIDENT">Incidents</option><option value="SUPPLIERS">Fournisseurs</option>
+          <option value="OTHER">Autre</option>
+        </select>
+        <label for="cyberos-action-priority">Priorité déclarée</label>
+        <select id="cyberos-action-priority">
+          <option value="MEDIUM">Normale</option><option value="LOW">Faible</option>
+          <option value="HIGH">Haute</option><option value="CRITICAL">Critique</option>
+        </select>
+        <button type="submit">Ajouter une action</button>
+      </form>
+      <ul id="cyberos-actions-list" class="ss97-cyberos-list"></ul>
+    </article>
+    <article>
+      <h2>Déclarer un incident de sécurité</h2>
+      <p class="ss97-warning">Ce formulaire n'est pas un numéro d'urgence. Si une attaque est en cours, contactez immédiatement vos équipes et prestataires d'intervention habituels.</p>
+      <form id="cyberos-incident-form">
+        <label for="cyberos-incident-summary">Objet de l'incident</label>
+        <input id="cyberos-incident-summary" maxlength="160" required>
+        <label for="cyberos-incident-severity">Gravité estimée</label>
+        <select id="cyberos-incident-severity">
+          <option value="MEDIUM">Moyenne</option><option value="LOW">Faible</option>
+          <option value="HIGH">Haute</option><option value="CRITICAL">Critique</option>
+        </select>
+        <label for="cyberos-incident-description">Ce qui s'est passé (sans mots de passe ni secrets)</label>
+        <textarea id="cyberos-incident-description" maxlength="2000" required rows="4"></textarea>
+        <button type="submit">Enregistrer une déclaration</button>
+      </form>
+      <ul id="cyberos-incidents-list" class="ss97-cyberos-list"></ul>
+    </article>
+  </section>
+  <section class="ss97-cyberos-next">
+    <h2>Modules prévus dans CyberExpert 360</h2>
+    <p>CyberAI · CyberPilot · CyberTwin · CyberPulse · CyberSentinel · CyberLab · CyberSOS · CyberProof · CyberDirector · CyberTrust · CyberFinance · CyberCompliance · CyberRecovery · CyberResilience Caraïbes</p>
+    <p>Ces modules ne surveillent aucun réseau et ne pilotent aucun équipement tant que les connecteurs, les autorisations, les tests et les validations humaines ne sont pas mis en service.</p>
+  </section>
+  <p><a href="/ss97-cyber-entreprises">Retour au diagnostic CyberExpert 360</a></p>
+</main>
+<script src="/assets/softsystem97/js/ss97_cyberos.js?v=20261120-1" defer></script>
+{% endblock %}
