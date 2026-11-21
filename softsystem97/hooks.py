@@ -73,6 +73,7 @@ doc_events = {
         "validate": "softsystem97.integrations.ticket_bridge.payment_gate.validate_paid_issue",
         # Revocation only; never creates a remote connection.
         "on_update": "softsystem97.remote.lifecycle.revoke_on_issue_close",
+        "on_trash": "softsystem97.remote.lifecycle.revoke_on_issue_close",
     },
     "ToDo": {
         "on_update": [
@@ -86,6 +87,7 @@ doc_events = {
     },
     "SS97 Technician Mission": {
         "on_update": "softsystem97.remote.lifecycle.revoke_on_mission_change",
+        "on_trash": "softsystem97.remote.lifecycle.revoke_on_mission_change",
     },
     "SS97 Technician Profile": {
         "on_update": "softsystem97.remote.lifecycle.revoke_on_profile_change",
