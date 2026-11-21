@@ -1,6 +1,7 @@
 {% extends "templates/web.html" %}
 {% block page_content %}
 <link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css?v=20261118-r2">
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_n4_dashboard.css?v=20261120-n4-1">
 <main class="ss97-universe cyber" data-track="CYBER">
 <p><a href="/ss97-tech-os">← Mon dossier professionnel</a></p>
 <span class="badge">Niveau 4 · Cybersécurité</span>
@@ -14,8 +15,30 @@
 </div>
 <p class="notice">Aucun scan intrusif, test de pénétration, récupération d'identifiants ou intervention hors périmètre sans autorisation écrite supplémentaire. Le coffre de secrets et les accès à durée limitée relèvent d'un futur module séparé.</p>
 <p id="universe-status" role="status" aria-live="polite">Contrôle de mon habilitation cyber…</p>
+<section id="n4-command-center" class="n4-command-center" aria-label="Tableau de bord opérationnel N4">
+<h2>CyberExpert 360 — Tableau de bord N4</h2>
+<p id="n4-command-profile">Vérification du profil technicien…</p>
+<p id="n4-command-status" role="status" aria-live="polite">Contrôle d'accès…</p>
+<button id="n4-command-refresh" type="button">Actualiser mes indicateurs</button>
+<div class="n4-command-kpis">
+<article><strong id="n4-command-total">—</strong><span>Missions autorisées</span></article>
+<article><strong id="n4-command-offered">—</strong><span>Missions proposées</span></article>
+<article><strong id="n4-command-in_progress">—</strong><span>En intervention</span></article>
+<article><strong id="n4-command-reports">—</strong><span>Rapports transmis</span></article>
+<article><strong id="n4-command-closed">—</strong><span>Validées par le client</span></article>
+<article><strong id="n4-command-disputed">—</strong><span>Litiges et reprises</span></article>
+</div>
+<h3>Mes missions N4 avec mandat</h3>
+<div id="n4-command-missions" aria-live="polite"></div>
+<h3>Expertises entreprises accessibles à la revue</h3>
+<div id="n4-command-assessments"></div>
+<p><a href="/ss97-tech-os">Mon profil, mes documents et mon examen</a> ·
+<a href="/ss97-cyber-review">Validation des expertises N4</a></p>
+<p class="notice">Le dashboard ne confère aucune habilitation, n'ouvre aucune mission et n'autorise aucun scan. Les actions existantes imposent encore les contrôles serveur et le mandat écrit.</p>
+</section>
 <section class="panel"><h2>Mes missions cyber</h2><div id="universe-missions" aria-live="polite"></div></section>
 <section class="panel"><h2>Expertises entreprises et rapports N4</h2><p>Une revue humaine est possible uniquement après soumission du rapport d'une mission cyber approuvée et avec un mandat écrit actif.</p><p><a href="/ss97-cyber-review">Ouvrir mon espace de validation N4</a></p></section>
 </main>
 <script src="/assets/softsystem97/js/ss97_tech_universe.js" defer></script>
+<script src="/assets/softsystem97/js/ss97_n4_dashboard.js?v=20261120-n4-1" defer></script>
 {% endblock %}

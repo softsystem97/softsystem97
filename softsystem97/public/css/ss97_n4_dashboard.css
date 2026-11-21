@@ -1,0 +1,11 @@
+.n4-command-center{padding:18px 22px;margin:20px 0;border:1px solid #cbdbe8;border-radius:14px;background:#f6fafe;color:#17334a}
+.n4-command-center h2{color:#124b71;margin-top:0}
+.n4-command-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:18px 0}
+.n4-command-kpis article{background:#fff;border:1px solid #d4e2ed;border-radius:10px;padding:14px}
+.n4-command-kpis strong{display:block;font-size:1.75rem;color:#0c5278}
+.n4-command-kpis span{font-size:.84rem}
+.n4-command-mission{background:white;padding:13px;border:1px solid #d9e5ed;border-radius:10px;margin:9px 0;overflow-wrap:anywhere}
+.n4-command-mission h3{margin:0 0 6px;font-size:1rem}
+.n4-command-mission p{margin:4px 0}
+.n4-command-center button{background:#0d5f8c;color:white;border:0;padding:10px 15px;border-radius:8px;cursor:pointer}
+.n4-command-center a{font-weight:650}

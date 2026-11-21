@@ -1,0 +1,30 @@
+name: SS97 N4 Cyber Dashboard — offline security checks
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/technician_os/cyber_dashboard.py'
+      - 'softsystem97/www/ss97-tech-cyber.html'
+      - 'softsystem97/public/js/ss97_n4_dashboard.js'
+      - 'softsystem97/public/css/ss97_n4_dashboard.css'
+      - 'tools/test_ss97_n4_dashboard_offline.py'
+      - '.github/workflows/ss97-n4-cyber-dashboard.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  n4-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntaxe Python et JavaScript
+        run: |
+          python -m compileall -q softsystem97/technician_os/cyber_dashboard.py
+          node --check softsystem97/public/js/ss97_n4_dashboard.js
+      - name: Tests de contrat et de permissions hors ligne
+        run: python -m unittest -q tools.test_ss97_n4_dashboard_offline
+      - name: Limite
+        run: echo 'Offline only. No Frappe Cloud deployment, N4 credentials or assignments created.'
