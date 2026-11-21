@@ -1,161 +1,109 @@
-"""Read-only, administrator-only production readiness for the SS97 ticket bridge.
-
-The result is NEVER a deployment or payment activation. Explicit reviews are
-stored in server site configuration and must not come from HTTP parameters.
-Payment authorization remains controlled separately by the server.
-"""
+"""Private read-only bridge production preflight; no grants or configuration writes."""
 import frappe
+from . import policy
 
 
-@frappe.whitelist(methods=["GET"])
-def get_readiness():
-    frappe.only_for("System Manager")
-
-    config = frappe.conf.get("ss97_ticket_bridge") or {}
-    if not isinstance(config, dict):
-        config = {}
-    approvals = config.get("release_approvals") or {}
-    if not isinstance(approvals, dict):
-        approvals = {}
-
-    authorizer_path = config.get("business_authorizer")
-    approved_authorizer = (
-        authorizer_path ==
-        "softsystem97.integrations.ticket_bridge.live_authorizer.authorize_ticket_operation"
-    )
-
-    checks = {
-        "bridge_enabled": config.get("enabled") is True,
-        "historical_enabled": config.get("historical_integration") is True,
-        "paid_intervention_gate_enabled": config.get("enforce_paid_interventions") is True,
-        "technician_role_configured": config.get("technician_role") == "SS97 Technician",
-        "profile_reviewed": config.get("profile_required") is False,
-        "authorizer_path_declared": approved_authorizer,
-        "technician_role_exists": False,
-        "technician_field_valid": False,
-        "issue_workflow_requires_review": True,
-        "issue_scripts_require_review": True,
-        "payment_ticket_link_verified": False,
-        "real_authorizer_verified": False,
-        "production_portal_tested": approvals.get("production_portal_tested") is True,
-        "stripe_webhook_delivery_verified": approvals.get("stripe_webhook_delivery_verified") is True,
-        "stripe_accounting_reconciled": approvals.get("stripe_accounting_reconciled") is True,
-        "stripe_configuration_valid": False,
-        "support_writer_valid": False,
-    }
-
-    try:
-        writer = config.get("writer_user")
-        checks["support_writer_valid"] = bool(writer and writer not in ("Administrator", "Guest")
-            and frappe.db.get_value("User", writer, "enabled")
-            and frappe.get_cached_value("User", writer, "user_type") == "System User"
-            and "Support Team" in frappe.get_roles(writer))
-        checks["technician_role_exists"] = bool(
-            frappe.db.exists("Role", {"name": "SS97 Technician", "disabled": 0})
-        )
-        issue_meta = frappe.get_meta("Issue")
-        invoice_meta = frappe.get_meta("Sales Invoice")
-        field = issue_meta.get_field("ss97_technician")
-        checks["technician_field_valid"] = bool(
-            field and field.fieldtype == "Link" and field.options == "User"
-        )
-
-        has_workflow = bool(frappe.db.exists(
-            "Workflow", {"document_type": "Issue", "is_active": 1}
-        ))
-        has_script = bool(frappe.db.exists(
-            "Server Script",
-            {"script_type": "DocType Event",
-             "reference_doctype": "Issue", "disabled": 0}
-        ))
-        checks["issue_workflow_requires_review"] = (
-            has_workflow and approvals.get("issue_workflow_reviewed") is not True
-        )
-        checks["issue_scripts_require_review"] = (
-            has_script and approvals.get("issue_scripts_reviewed") is not True
-        )
-
-        linked = bool(
-            issue_meta.has_field("customer")
-            and invoice_meta.has_field("ss97_linked_issue")
-            and invoice_meta.has_field("ss97_payment_status")
-            and frappe.db.exists("DocType", "SS97 Stripe Event")
-            and frappe.db.exists("DocType", "Payment Entry")
-        )
-        checks["payment_ticket_link_verified"] = (
-            linked and approvals.get("payment_ticket_link_verified") is True
-        )
-
-        # Never resolve an arbitrary dotted path from an HTTP query.
-        if approved_authorizer:
-            checks["real_authorizer_verified"] = (
-                callable(frappe.get_attr(authorizer_path))
-                and approvals.get("real_authorizer_verified") is True
-            )
-
-        try:
-            checks["stripe_configuration_valid"] = all(_stripe_checks().values())
-        except Exception:
-            checks["stripe_configuration_valid"] = False
-
-    except Exception:
-        return {
-            "state": "BLOCKED",
-            "reason": "METADATA_UNAVAILABLE",
-            "production_ready": False,
-            "checks": checks,
-        }
-
-    blockers = [
-        key for key, value in checks.items()
-        if (key.endswith("requires_review") and value)
-        or (not key.endswith("requires_review") and not value)
-    ]
-
-    ready = not blockers
-    return {
-        "state": "READY_FOR_RELEASE_REVIEW" if ready else "BLOCKED",
-        "production_ready": ready,
-        "checks": checks,
-        "blockers": blockers,
-        "note": "Readiness only. Does not deploy, configure Stripe, or authorize payments.",
-    }
+def _enabled_doctype(name):
+    return bool(frappe.db.exists("DocType", name))
 
 
-def _stripe_checks():
-    from softsystem97.integrations.stripe import payment_sync
-    from softsystem97.integrations.stripe.settings import config_value, password, accounting_user, is_test_site
-
-    mode = payment_sync.stripe_mode()
-    secret = payment_sync.resolve_webhook_secret(mode == "live")
-    key = password("live_secret_key" if mode == "live" else "test_secret_key",
-        "STRIPE_SECRET_KEY" if mode == "live" else "STRIPE_TEST_SECRET_KEY")
-    result = {
-        "live_mode": mode == "live",
-        "live_enabled": payment_sync.payments_live_enabled(),
-        "test_writes_disabled": not is_test_site(),
-        "webhook_secret_present": bool(secret),
-        "api_key_type_valid": bool(key and key.startswith(("sk_live_", "rk_live_"))),
-        "clearing_account_configured": bool(config_value("clearing_account")),
-        "service_permissions_valid": False,
-        "transaction_field_present": frappe.get_meta("Payment Entry").has_field("ss97_stripe_transaction_id"),
-    }
-    try:
-        with accounting_user():
-            result["service_permissions_valid"] = all(
-                frappe.has_permission("Payment Entry", ptype=permission) for permission in ("create", "submit"))
-    except frappe.PermissionError:
-        pass
+def _support_writers():
+    # Service-writer candidates: active non-admin users with both identity
+    # and Support Team role. Do not return their identities to the browser.
+    result = []
+    for row in frappe.get_all(
+        "User", filters={"enabled": 1, "user_type": "System User"},
+        fields=["name"], limit_page_length=2000,
+    ):
+        if row.name not in ("Administrator", "Guest") and "Support Team" in frappe.get_roles(row.name):
+            result.append(row.name)
     return result
 
 
 @frappe.whitelist(methods=["GET"])
-def get_stripe_readiness():
-    """No secret, key fragment, arbitrary URL or approval supplied by the caller."""
-    frappe.only_for("System Manager")
+def get_admin_bridge_preflight():
+    """Diagnose fail-closed bridge requirements for an authorized System Manager."""
+    user = frappe.session.user
+    if (not user or user == "Guest"
+            or not frappe.db.get_value("User", user, "enabled")
+            or "System Manager" not in frappe.get_roles(user)):
+        frappe.throw("Accès réservé à la direction.", frappe.PermissionError)
+
+    cfg = frappe.conf.get("ss97_ticket_bridge")
+    if not isinstance(cfg, dict):
+        cfg = {}
+    tech = frappe.conf.get("ss97_tech_os")
+    exams = frappe.conf.get("ss97_technician_exams")
+    config_role = cfg.get("technician_role")
+    existing_roles = []
+    for name in ("SS97 Technicien N4", "SS97 Technicien N3", "SS97 Technicien N2",
+                 "Technician SoftSystem97", "SS97 Technician"):
+        if frappe.db.exists("Role", {"name": name, "disabled": 0}):
+            existing_roles.append(name)
+
+    schema = _enabled_doctype("SS97 Ticket Bridge Event")
+    event = frappe.get_meta("SS97 Ticket Bridge Event") if schema else None
+    issue_present = _enabled_doctype("Issue")
+    issue = frappe.get_meta("Issue") if issue_present else None
+    customer = issue.get_field("customer") if issue else None
+    status = issue.get_field("status") if issue else None
+    permitted_statuses = {"Open", "Replied", "On Hold", "Resolved", "Closed"}
+    statuses = (
+        {item.strip() for item in (status.options or "").splitlines() if item.strip()}
+        if status else set()
+    )
     try:
-        checks = _stripe_checks()
+        workflow_active = bool(frappe.db.exists(
+            "Workflow", {"document_type": "Issue", "is_active": 1}))
     except Exception:
-        return {"production_ready": False, "reason": "STRIPE_CONFIGURATION_UNAVAILABLE"}
-    return {"production_ready": all(checks.values()), "checks": checks,
-        "note": "Configuration only; real signed delivery and accounting reconciliation remain required."}
+        workflow_active = True  # Fail closed if schema check breaks.
+    try:
+        server_script_active = (_enabled_doctype("Server Script") and bool(
+            frappe.db.exists("Server Script", {
+                "script_type": "DocType Event", "reference_doctype": "Issue",
+                "disabled": 0})))
+    except Exception:
+        server_script_active = True
+
+    writers = _support_writers()
+    designated = cfg.get("writer_user")
+    writer_ok = isinstance(designated, str) and designated in writers
+    role_ok = (isinstance(config_role, str)
+               and config_role.casefold() not in policy.FORBIDDEN_ROLES
+               and bool(frappe.db.exists("Role",
+                        {"name": config_role, "disabled": 0})))
+
+    conditions = {
+        "tech_os_active": isinstance(tech, dict) and tech.get("enabled") is True,
+        "exams_service_active": isinstance(exams, dict) and exams.get("enabled") is True,
+        "bridge_event_schema": bool(event and all(
+            event.has_field(key) for key in ("assignment", "technician", "revoked"))),
+        "client_notification_schema": _enabled_doctype("SS97 Client Notification"),
+        "issue_customer_link": bool(customer and customer.fieldtype == "Link"
+                                    and customer.options == "Customer"),
+        "issue_statuses_match": bool(status and status.fieldtype == "Select"
+                                     and statuses == permitted_statuses),
+        "no_active_issue_workflow": not workflow_active,
+        "no_issue_doctype_event_script": not server_script_active,
+        "role_configured": bool(role_ok),
+        "service_writer_configured": bool(writer_ok),
+        "profile_adapter_confirmed": cfg.get("profile_required") is False,
+        "compatibility_signed_off": cfg.get("compatibility_confirmed") is True,
+        "bridge_enabled": cfg.get("enabled") is True,
+    }
+    # Only false/true and non-sensitive role names: never user lists or keys.
+    return {
+        "checks": conditions,
+        "available_technician_roles": existing_roles,
+        "support_writer_candidate_count": len(writers),
+        "configured_writer_is_valid": bool(writer_ok),
+        "currently_enabled": conditions["bridge_enabled"],
+        "activation_prerequisites_met": all(value for key, value in conditions.items()
+            if key != "bridge_enabled"),
+        "limitations": [
+            "L'état de la banque d'examen et la validation réelle des profils N4 sont indépendants.",
+            "Un rôle N4 existant ne prouve pas que l'utilisateur candidat l'a obtenu.",
+            "Les contrats, affectations et mandats restent soumis aux contrôles du serveur.",
+            "Les comptes Support Team ne sont pas créés par ce contrôle.",
+        ],
+    }

@@ -1,0 +1,23 @@
+name: SS97 Ticket Bridge — secure readiness preflight
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/integrations/ticket_bridge/readiness.py'
+      - 'softsystem97/public/js/ss97_bridge_readiness.js'
+      - 'softsystem97/www/ss97-tech-admin.html'
+      - 'tools/test_ss97_bridge_readiness_offline.py'
+      - '.github/workflows/ss97-bridge-readiness.yml'
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m compileall -q softsystem97/integrations/ticket_bridge/readiness.py
+      - run: node --check softsystem97/public/js/ss97_bridge_readiness.js
+      - run: python -m unittest -q tools.test_ss97_bridge_readiness_offline
