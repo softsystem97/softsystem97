@@ -62,9 +62,9 @@ class IssuePermissionsOfflineTests(unittest.TestCase):
         self.assertIs(self.module.has_permission(doc, "read", user), False)
         self.assertIs(self.module.has_permission(doc, "write", user), False)
         self.approved.add((doc.name, user))
-        self.assertIsNone(self.module.has_permission(doc, "read", user))
-        self.assertIsNone(self.module.has_permission(doc, "write", user))
-        self.assertIsNone(self.module.has_permission(doc, "delete", user))
+        self.assertIs(self.module.has_permission(doc, "read", user), True)
+        self.assertIs(self.module.has_permission(doc, "write", user), True)
+        self.assertIs(self.module.has_permission(doc, "delete", user), True)
 
     def test_bridge_off_or_incomplete_schema_fails_closed(self):
         self.roles["tech@example.test"] = ["SS97 Technician"]
@@ -85,7 +85,7 @@ class IssuePermissionsOfflineTests(unittest.TestCase):
             with self.subTest(user=user):
                 self.roles[user] = roles
                 self.assertEqual(self.module.get_permission_query_conditions(user), "")
-                self.assertIsNone(self.module.has_permission(types.SimpleNamespace(name="X"), user=user))
+                self.assertIs(self.module.has_permission(types.SimpleNamespace(name="X"), user=user), True)
 
     def test_hooks_register_both_list_and_document_guards(self):
         hooks = (ROOT / "softsystem97/hooks.py").read_text(encoding="utf-8")

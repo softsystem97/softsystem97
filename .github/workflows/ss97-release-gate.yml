@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - feature/ss97-final-integration
+      - release/ss97-n4-stable-20261121
   workflow_dispatch:
 
 permissions:
