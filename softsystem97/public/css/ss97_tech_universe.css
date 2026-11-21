@@ -17,3 +17,26 @@
 .ss97-universe.bank{--accent:#7550a7;--soft:#f4effa}
 .ss97-universe.cyber{--accent:#a52e3d;--soft:#fff0f0}
 .ss97-universe [hidden]{display:none!important}
+
+#bank-operations input, #bank-operations select {
+  display: block;
+  width: 100%;
+  max-width: 32rem;
+  margin-top: .25rem;
+  padding: .55rem;
+  border: 1px solid #abbacc;
+  border-radius: 7px;
+  background: #fff;
+  color: inherit;
+}
+
+#bank-operation-fields {
+  min-width: 0;
+  margin: 1rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+#bank-operation-fields legend {
+  font-weight: 700;
+}

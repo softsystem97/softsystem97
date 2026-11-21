@@ -1,0 +1,175 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Bank Operation",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:mission",
+  "allow_rename": 0,
+  "track_changes": 0,
+  "field_order": [
+    "mission",
+    "revision",
+    "agency_ref",
+    "asset_ref",
+    "fallback_ref",
+    "incident_ref",
+    "equipment_model",
+    "installed_version",
+    "candidate_version",
+    "service",
+    "service_state",
+    "opening_check",
+    "escalation_team",
+    "onsite_status",
+    "rehearsal_result",
+    "rollback_result",
+    "pilot_result",
+    "interrupted_at",
+    "resumed_at",
+    "restored_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "mission",
+      "fieldtype": "Link",
+      "options": "SS97 Technician Mission",
+      "label": "Mission",
+      "reqd": 1,
+      "unique": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "revision",
+      "fieldtype": "Int",
+      "label": "Révision",
+      "read_only": 1
+    },
+    {
+      "fieldname": "agency_ref",
+      "fieldtype": "Data",
+      "label": "Référence d’agence",
+      "length": 80,
+      "reqd": 1
+    },
+    {
+      "fieldname": "asset_ref",
+      "fieldtype": "Data",
+      "label": "Référence de poste",
+      "length": 80,
+      "reqd": 1
+    },
+    {
+      "fieldname": "fallback_ref",
+      "fieldtype": "Data",
+      "label": "Référence de secours approuvé",
+      "length": 80
+    },
+    {
+      "fieldname": "incident_ref",
+      "fieldtype": "Data",
+      "label": "Référence d’incident commun",
+      "length": 80
+    },
+    {
+      "fieldname": "equipment_model",
+      "fieldtype": "Data",
+      "label": "Modèle de matériel",
+      "length": 80
+    },
+    {
+      "fieldname": "installed_version",
+      "fieldtype": "Data",
+      "label": "Version en place",
+      "length": 80
+    },
+    {
+      "fieldname": "candidate_version",
+      "fieldtype": "Data",
+      "label": "Version testée",
+      "length": 80
+    },
+    {
+      "fieldname": "service",
+      "fieldtype": "Select",
+      "label": "Service touché",
+      "options": "WORKSTATION\nSCAN\nPRINT\nNETWORK\nAUTH\nTERMINAL\nOTHER",
+      "default": "WORKSTATION"
+    },
+    {
+      "fieldname": "service_state",
+      "fieldtype": "Select",
+      "label": "État de l’activité",
+      "options": "UNASSESSED\nINTERRUPTED\nWORKAROUND\nRESTORED",
+      "default": "UNASSESSED"
+    },
+    {
+      "fieldname": "opening_check",
+      "fieldtype": "Select",
+      "label": "Contrôle de préouverture",
+      "options": "NOT_CHECKED\nREADY\nBLOCKED",
+      "default": "NOT_CHECKED"
+    },
+    {
+      "fieldname": "escalation_team",
+      "fieldtype": "Select",
+      "label": "Responsable de la suite",
+      "options": "NONE\nBRANCH\nNETWORK\nSECURITY\nMAINTAINER",
+      "default": "NONE"
+    },
+    {
+      "fieldname": "onsite_status",
+      "fieldtype": "Select",
+      "label": "Suivi du matériel",
+      "options": "NOT_NEEDED\nEQUIPMENT_REQUESTED\nVISIT_REQUESTED\nCOMPLETE",
+      "default": "NOT_NEEDED"
+    },
+    {
+      "fieldname": "rehearsal_result",
+      "fieldtype": "Select",
+      "label": "Essai en recette",
+      "options": "NOT_TESTED\nPASS\nFAIL",
+      "default": "NOT_TESTED"
+    },
+    {
+      "fieldname": "rollback_result",
+      "fieldtype": "Select",
+      "label": "Retour arrière vérifié",
+      "options": "NOT_TESTED\nPASS\nFAIL",
+      "default": "NOT_TESTED"
+    },
+    {
+      "fieldname": "pilot_result",
+      "fieldtype": "Select",
+      "label": "Résultat du contrôle pilote",
+      "options": "NOT_TESTED\nPASS\nFAIL",
+      "default": "NOT_TESTED"
+    },
+    {
+      "fieldname": "interrupted_at",
+      "fieldtype": "Datetime",
+      "label": "Interruption constatée",
+      "read_only": 1
+    },
+    {
+      "fieldname": "resumed_at",
+      "fieldtype": "Datetime",
+      "label": "Reprise constatée",
+      "read_only": 1
+    },
+    {
+      "fieldname": "restored_at",
+      "fieldtype": "Datetime",
+      "label": "Rétablissement constaté",
+      "read_only": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC"
+}

@@ -51,11 +51,13 @@ class PublicUiContracts(unittest.TestCase):
     def test_static_assets_have_a_release_cache_key(self):
         for file in (
             "www/ss97-cyber-entreprises.html", "www/ss97-tech-admin.html",
-            "www/ss97-tech-n2.html", "www/ss97-tech-banque.html",
-            "www/ss97-tech-cyber.html",
+            "www/ss97-tech-n2.html", "www/ss97-tech-cyber.html",
         ):
             with self.subTest(file=file):
                 self.assertIn("ss97_tech_universe.css?v=20261118-r2", source(file))
+        bank = source("www/ss97-tech-banque.html")
+        self.assertIn("ss97_tech_universe.css?v=20261121-bank-1", bank)
+        self.assertIn("ss97_tech_universe.js?v=20261121-bank-1", bank)
         self.assertIn("ss97_tech_admin.js?v=20261118-r5", source("www/ss97-tech-admin.html"))
 
     def test_readiness_is_manager_only_and_never_enables_flags(self):
