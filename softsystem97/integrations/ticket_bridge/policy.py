@@ -1,7 +1,7 @@
 """Fail-closed policy for the replacement bridge, not the unknown legacy portal."""
 import frappe
 from contextlib import contextmanager
-from . import historical, issue_script_review
+from . import historical, issue_script_review, bridge_profile_gate
 
 FORBIDDEN_ROLES = {'system manager', 'administrator', 'all', 'guest', 'customer', 'candidat ss97'}
 TRANSITIONS = {
@@ -49,8 +49,8 @@ def settings():
         frappe.throw('Rôle technicien non validé.', frappe.PermissionError)
     if not frappe.db.exists('Role', {'name': role, 'disabled': 0}):
         frappe.throw('Rôle technicien indisponible.', frappe.PermissionError)
-    if config.get('profile_required') is not False:
-        frappe.throw('Le modèle de profil doit être validé : adaptateur requis ou absence confirmée.',
+    if not bridge_profile_gate.profile_flag_valid(role, config.get('profile_required')):
+        frappe.throw('Pour N4, le profil CYBER actif est obligatoire ; configuration invalide.',
                      frappe.PermissionError)
     approval_meta = frappe.get_meta('SS97 Ticket Bridge Event')
     if not all(approval_meta.has_field(field) for field in ['assignment', 'technician', 'revoked']):
@@ -93,8 +93,20 @@ def active_user(user=None):
 def technician(user=None):
     config = settings()
     user = active_user(user)
-    if config['technician_role'] not in frappe.get_roles(user):
+    roles = frappe.get_roles(user)
+    if config['technician_role'] not in roles:
         frappe.throw('Accès technicien refusé.', frappe.PermissionError)
+    if config['technician_role'] == bridge_profile_gate.N4_ROLE:
+        # The role alone is not a qualification.  Require the real
+        # approved N4 profile at EVERY ticket access and assignment.
+        if not frappe.db.table_exists('SS97 Technician Profile'):
+            frappe.throw('Habilitation N4 indisponible.', frappe.PermissionError)
+        profile = frappe.db.get_value(
+            'SS97 Technician Profile', {'candidate_user': user},
+            ['track', 'state', 'engagement'], as_dict=True)
+        if not bridge_profile_gate.qualified_n4(profile, roles):
+            frappe.throw('Habilitation N4 CYBER inactive ou révoquée.',
+                         frappe.PermissionError)
     return user
 
 

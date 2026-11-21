@@ -1,0 +1,22 @@
+name: SS97 Bridge N4 active profile authorization
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/integrations/ticket_bridge/bridge_profile_gate.py'
+      - 'softsystem97/integrations/ticket_bridge/policy.py'
+      - 'softsystem97/integrations/ticket_bridge/readiness.py'
+      - 'tools/test_ss97_n4_bridge_profile_gate.py'
+      - '.github/workflows/ss97-n4-bridge-profile-gate.yml'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m compileall -q softsystem97/integrations/ticket_bridge
+      - run: python -m unittest -q tools.test_ss97_n4_bridge_profile_gate

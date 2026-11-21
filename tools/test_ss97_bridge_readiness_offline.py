@@ -10,7 +10,7 @@ class BridgeReadinessTests(unittest.TestCase):
         self.assertIn('@frappe.whitelist(methods=["GET"])',text)
         self.assertIn('"no_active_issue_workflow"',text)
         self.assertIn('"service_writer_configured"',text)
-        self.assertIn('cfg.get("profile_required") is False',text)
+        self.assertIn('bridge_profile_gate.profile_flag_valid(',text)
         self.assertNotIn('ignore_permissions=True',text)
         self.assertNotIn("frappe.db.set_value(",text)
         self.assertNotIn('methods=["POST"]',text)

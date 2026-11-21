@@ -1,6 +1,6 @@
 """Private read-only bridge production preflight; no grants or configuration writes."""
 import frappe
-from . import policy, issue_script_review
+from . import policy, issue_script_review, bridge_profile_gate
 
 
 def _enabled_doctype(name):
@@ -99,7 +99,8 @@ def get_admin_bridge_preflight():
         "issue_scripts_approved": issue_state["approved"],
         "role_configured": bool(role_ok),
         "service_writer_configured": bool(writer_ok),
-        "profile_adapter_confirmed": cfg.get("profile_required") is False,
+        "profile_adapter_confirmed": bridge_profile_gate.profile_flag_valid(
+            config_role, cfg.get("profile_required")),
         "compatibility_signed_off": cfg.get("compatibility_confirmed") is True,
         "bridge_enabled": cfg.get("enabled") is True,
     }
@@ -118,6 +119,7 @@ def get_admin_bridge_preflight():
         "limitations": [
             "L'état de la banque d'examen et la validation réelle des profils N4 sont indépendants.",
             "Un rôle N4 existant ne prouve pas que l'utilisateur candidat l'a obtenu.",
+            "Le pont N4 exige un profil CYBER actif, vérifié à chaque accès (profile_required=true).",
             "Les contrats, affectations et mandats restent soumis aux contrôles du serveur.",
             "Les comptes Support Team ne sont pas créés par ce contrôle.",
             "Chaque script Issue doit être examiné par un responsable avant approbation de son empreinte.",
