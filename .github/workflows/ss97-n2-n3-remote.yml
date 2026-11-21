@@ -1,0 +1,34 @@
+name: SS97 N2 N3 remote access safety
+on:
+  pull_request:
+    branches:
+      - release/ss97-tech-cyber-pilot-20261118
+    paths:
+      - 'softsystem97/technician_os/remote_access_rules.py'
+      - 'softsystem97/technician_os/rules.py'
+      - 'tools/test_ss97_remote_n2_n3_offline.py'
+      - '.github/workflows/ss97-n2-n3-remote.yml'
+  push:
+    branches:
+      - release/ss97-tech-cyber-pilot-20261118
+    paths:
+      - 'softsystem97/technician_os/remote_access_rules.py'
+      - 'softsystem97/technician_os/rules.py'
+      - 'tools/test_ss97_remote_n2_n3_offline.py'
+      - '.github/workflows/ss97-n2-n3-remote.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  remote-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate policy syntax
+        run: python -m compileall -q softsystem97/technician_os/remote_access_rules.py
+      - name: Test N2/N3 consent, scope, expiry and double approval
+        run: python -m unittest -q tools.test_ss97_remote_n2_n3_offline
