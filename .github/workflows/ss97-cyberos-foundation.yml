@@ -9,6 +9,8 @@ on:
       - 'softsystem97/public/css/ss97_cyberos.css'
       - 'tools/test_ss97_cyberos_offline.py'
       - 'tools/test_ss97_cyberos_v2_offline.py'
+      - 'tools/test_ss97_cyberos_v3_offline.py'
+      - 'softsystem97/public/js/ss97_cyberos_v3.js'
       - 'softsystem97/public/js/ss97_cyberos_v2.js'
       - '.github/workflows/ss97-cyberos-foundation.yml'
   workflow_dispatch:
@@ -29,7 +31,8 @@ jobs:
         run: |
           node --check softsystem97/public/js/ss97_cyberos.js
           node --check softsystem97/public/js/ss97_cyberos_v2.js
+          node --check softsystem97/public/js/ss97_cyberos_v3.js
       - name: Contrats et isolement CyberOS hors production
-        run: python -m unittest -q tools.test_ss97_cyberos_offline tools.test_ss97_cyberos_v2_offline
+        run: python -m unittest -q tools.test_ss97_cyberos_offline tools.test_ss97_cyberos_v2_offline tools.test_ss97_cyberos_v3_offline
       - name: Important
         run: echo 'NO Frappe Cloud deployment or security/Stripe/AI integration asserted by CI.'

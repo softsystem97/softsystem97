@@ -124,6 +124,25 @@
     </article>
   </div>
 </section>
+<section class="ss97-cyberos-next" id="cyberos-director">
+<h2>CyberDirector — CyberFinance et repères de sécurité</h2>
+<p>Simulation fondée sur les chiffres que vous renseignez. Aucun montant n'est facturé.</p>
+<p id="cyberos-v3-status" role="status" aria-live="polite">Chargement…</p>
+<div class="ss97-cyberos-grid">
+<article><h3>CyberFinance — Simulation d'interruption</h3>
+<form id="cyberos-v3-finance-form">
+<label for="cyberos-v3-hours">Durée d'arrêt hypothétique (heures)</label>
+<input id="cyberos-v3-hours" type="number" min="0" max="720" step=".5" value="4" required>
+<label for="cyberos-v3-hourly">Impact estimé par heure (EUR)</label>
+<input id="cyberos-v3-hourly" type="number" min="0" max="1000000" step=".01" value="100" required>
+<label for="cyberos-v3-recovery">Coût de reprise estimé (EUR)</label>
+<input id="cyberos-v3-recovery" type="number" min="0" max="100000000" step=".01" value="0" required>
+<button type="submit">Calculer</button>
+</form><p id="cyberos-v3-result" role="status"></p></article>
+<article><h3>CyberCompliance — Repères de contrôle déclaratifs</h3>
+<ul id="cyberos-v3-controls" class="ss97-cyberos-list"></ul>
+<p>Aucune certification de conformité n'est générée.</p></article>
+</div></section>
   <section class="ss97-cyberos-next">
     <h2>Modules prévus dans CyberExpert 360</h2>
     <p>CyberAI · CyberPilot · CyberTwin · CyberPulse · CyberSentinel · CyberLab · CyberSOS · CyberProof · CyberDirector · CyberTrust · CyberFinance · CyberCompliance · CyberRecovery · CyberResilience Caraïbes</p>
@@ -133,4 +152,5 @@
 </main>
 <script src="/assets/softsystem97/js/ss97_cyberos.js?v=20261120-1" defer></script>
 <script src="/assets/softsystem97/js/ss97_cyberos_v2.js?v=20261120-v2" defer></script>
+<script src="/assets/softsystem97/js/ss97_cyberos_v3.js?v=20261120-v3" defer></script>
 {% endblock %}
