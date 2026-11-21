@@ -69,6 +69,12 @@
  <div id="admin-notices" aria-live="polite"></div>
 </section>
 <section class="panel">
+ <h2>Compatibilité du pont client–technicien</h2>
+ <p>Ce contrôle est en lecture seule et n'active aucun accès ni mandat.</p>
+ <button id="admin-bridge-refresh" type="button">Contrôler la compatibilité ERPNext</button>
+ <div id="admin-bridge-readiness" role="status" aria-live="polite">Vérification des conditions techniques…</div>
+</section>
+<section class="panel">
  <h2>Contrôle avant ouverture des services</h2>
  <p>Ces vérifications ne déclenchent ni courriel, ni paiement, ni intervention sur un poste client.</p>
  <div id="admin-readiness" role="status">Chargement des contrôles…</div>
@@ -108,4 +114,5 @@
 </main>
 <script src="/assets/softsystem97/js/ss97_tech_admin.js?v=20261118-r5" defer></script>
 <script src="/assets/softsystem97/js/ss97_cyber_admin.js?v=20261119-r3" defer></script>
+<script src="/assets/softsystem97/js/ss97_bridge_readiness.js?v=20261121-a1" defer></script>
 {% endblock %}
