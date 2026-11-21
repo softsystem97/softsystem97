@@ -77,6 +77,53 @@
       <ul id="cyberos-incidents-list" class="ss97-cyberos-list"></ul>
     </article>
   </section>
+<section class="ss97-cyberos-next" id="cyberos-advanced">
+  <h2>CyberTwin, CyberRecovery et CyberDirector</h2>
+  <p>Ces fonctionnalités reposent sur les données que vous déclarez. Elles ne procèdent à aucun scan ou test d'intrusion.</p>
+  <p id="cyberos-v2-status" role="status" aria-live="polite">Chargement des modules complémentaires…</p>
+  <div class="ss97-cyberos-kpis" aria-label="Direction et continuité">
+    <article><strong id="cyberos-v2-critical">—</strong><span>Actifs importants déclarés</span></article>
+    <article><strong id="cyberos-v2-plans">—</strong><span>Plans de continuité</span></article>
+    <article><strong id="cyberos-v2-drills">—</strong><span>Exercices enregistrés</span></article>
+  </div>
+  <div class="ss97-cyberos-grid">
+    <article>
+      <h3>CyberTwin — Lier deux équipements</h3>
+      <form id="cyberos-v2-dependency-form">
+        <label for="cyberos-v2-source">Équipement source</label><select id="cyberos-v2-source" required></select>
+        <label for="cyberos-v2-target">Équipement dépendant</label><select id="cyberos-v2-target" required></select>
+        <label for="cyberos-v2-description">Relation métier</label>
+        <textarea id="cyberos-v2-description" required maxlength="300" rows="2"></textarea>
+        <button type="submit">Enregistrer la dépendance</button>
+      </form>
+      <ul id="cyberos-v2-dependencies" class="ss97-cyberos-list"></ul>
+    </article>
+    <article>
+      <h3>CyberRecovery — Plan de continuité</h3>
+      <form id="cyberos-v2-plan-form">
+        <label for="cyberos-v2-service">Service essentiel</label><input id="cyberos-v2-service" maxlength="120" required>
+        <label for="cyberos-v2-scenario">Scénario</label>
+        <select id="cyberos-v2-scenario"><option value="POWER">Coupure électrique</option><option value="INTERNET">Coupure Internet</option><option value="CYCLONE">Cyclone</option><option value="RANSOMWARE">Rançongiciel</option><option value="DATA_LOSS">Perte de données</option><option value="OTHER">Autre</option></select>
+        <label for="cyberos-v2-impact">Impact estimé</label>
+        <select id="cyberos-v2-impact"><option value="MEDIUM">Moyen</option><option value="HIGH">Élevé</option><option value="CRITICAL">Critique</option><option value="LOW">Faible</option></select>
+        <label for="cyberos-v2-fallback">Procédure de secours, sans secrets</label><textarea id="cyberos-v2-fallback" maxlength="1600" rows="3" required></textarea>
+        <label for="cyberos-v2-owner">Fonction responsable</label><input id="cyberos-v2-owner" maxlength="100" required>
+        <button type="submit">Créer le plan</button>
+      </form>
+      <ul id="cyberos-v2-plan-list" class="ss97-cyberos-list"></ul>
+    </article>
+    <article>
+      <h3>CyberLab — Exercice de crise</h3>
+      <form id="cyberos-v2-drill-form">
+        <label for="cyberos-v2-drill-scenario">Scénario d'entraînement</label>
+        <select id="cyberos-v2-drill-scenario"><option value="PHISHING">Phishing</option><option value="RANSOMWARE">Rançongiciel</option><option value="OUTAGE">Panne</option><option value="DATA_LEAK">Fuite de données</option><option value="OTHER">Autre</option></select>
+        <label for="cyberos-v2-objectives">Objectifs et consignes</label><textarea id="cyberos-v2-objectives" maxlength="1000" rows="3" required></textarea>
+        <button type="submit">Préparer l'exercice</button>
+      </form>
+      <ul id="cyberos-v2-drill-list" class="ss97-cyberos-list"></ul>
+    </article>
+  </div>
+</section>
   <section class="ss97-cyberos-next">
     <h2>Modules prévus dans CyberExpert 360</h2>
     <p>CyberAI · CyberPilot · CyberTwin · CyberPulse · CyberSentinel · CyberLab · CyberSOS · CyberProof · CyberDirector · CyberTrust · CyberFinance · CyberCompliance · CyberRecovery · CyberResilience Caraïbes</p>
@@ -85,4 +132,5 @@
   <p><a href="/ss97-cyber-entreprises">Retour au diagnostic CyberExpert 360</a></p>
 </main>
 <script src="/assets/softsystem97/js/ss97_cyberos.js?v=20261120-1" defer></script>
+<script src="/assets/softsystem97/js/ss97_cyberos_v2.js?v=20261120-v2" defer></script>
 {% endblock %}

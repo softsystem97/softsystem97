@@ -1,0 +1,83 @@
+{
+  "doctype": "DocType",
+  "name": "SS97 Cyber Drill",
+  "module": "SoftSystem97",
+  "engine": "InnoDB",
+  "autoname": "field:drill_id",
+  "allow_rename": 0,
+  "track_changes": 1,
+  "field_order": [
+    "drill_id",
+    "customer",
+    "created_by_user",
+    "scenario",
+    "objectives",
+    "lessons",
+    "state"
+  ],
+  "fields": [
+    {
+      "fieldname": "drill_id",
+      "fieldtype": "Data",
+      "label": "Identifiant",
+      "read_only": 1,
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Entreprise",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "Customer",
+      "search_index": 1
+    },
+    {
+      "fieldname": "created_by_user",
+      "fieldtype": "Link",
+      "label": "Déclarant",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "scenario",
+      "fieldtype": "Select",
+      "label": "Exercice",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "PHISHING\nRANSOMWARE\nOUTAGE\nDATA_LEAK\nOTHER"
+    },
+    {
+      "fieldname": "objectives",
+      "fieldtype": "Small Text",
+      "label": "Objectifs",
+      "read_only": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "lessons",
+      "fieldtype": "Small Text",
+      "label": "Observations",
+      "read_only": 1
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Select",
+      "label": "Statut",
+      "read_only": 1,
+      "reqd": 1,
+      "options": "PLANNED\nCOMPLETED_DECLARED\nREVIEWED"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1
+    }
+  ],
+  "sort_field": "creation",
+  "sort_order": "DESC"
+}
