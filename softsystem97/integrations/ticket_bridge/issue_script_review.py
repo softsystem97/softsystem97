@@ -30,7 +30,14 @@ def approval_state(scripts, approved, reviewed, reference):
     if not isinstance(scripts, list) or len(scripts) > MAX_SCRIPTS:
         return {"approved": False, "count": -1, "unapproved": 0}
     if not scripts:
-        return {"approved": True, "count": 0, "unapproved": 0}
+        # Empty inventories also need an explicit, independently signed review.
+        # Otherwise deleting the last approved script would silently unlock
+        # the bridge despite a previously pinned non-empty allowlist.
+        zero_reviewed = (reviewed is True and isinstance(reference, str)
+                         and REFERENCE.fullmatch(reference)
+                         and isinstance(approved, dict) and not approved)
+        return {"approved": bool(zero_reviewed), "count": 0,
+                "unapproved": 0 if zero_reviewed else 1}
     if (reviewed is not True or not isinstance(reference, str)
             or not REFERENCE.fullmatch(reference)
             or not isinstance(approved, dict)):
