@@ -33,3 +33,21 @@ def action_plan(answers):
     for issue in issues:
         issue.pop("_order")
     return issues
+
+
+def roadmap(answers):
+    """Indicative phased recommendations from declarations, never a verified audit."""
+    checked = validate_answers(answers)
+    steps = []
+    for state in ("NO", "UNKNOWN", "PARTIAL"):
+        for key in QUESTIONS:
+            if checked[key] != state:
+                continue
+            period = "0–30 jours" if state != "PARTIAL" else "31–60 jours"
+            action = RECOMMENDATIONS[key]
+            if state == "UNKNOWN":
+                action = "Confirmer la situation déclarée avec le client, puis : " + action
+            steps.append({"period": period, "domain": QUESTIONS[key], "action": action})
+    steps.append({"period": "61–90 jours", "domain": "Suivi",
+                  "action": "Vérifier les mesures mises en œuvre, les preuves et les risques restant à traiter."})
+    return steps

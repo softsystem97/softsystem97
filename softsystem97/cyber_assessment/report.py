@@ -3,7 +3,7 @@
 from html import escape
 
 from .catalog import ANSWER_LABELS, QUESTIONS, self_assessment
-from .recommendations import action_plan
+from .recommendations import action_plan, roadmap
 
 
 def report_html(doc, profile, answers):
@@ -20,6 +20,12 @@ def report_html(doc, profile, answers):
         "<tr><td>" + h(item["priority"]) + "</td><td>" + h(item["domain"]) +
         "</td><td>" + h(item["recommendation"]) + "</td></tr>"
         for item in actions
+    )
+    milestones = roadmap(answers)
+    milestone_rows = "".join(
+        "<tr><td>" + h(entry["period"]) + "</td><td>" + h(entry["domain"]) +
+        "</td><td>" + h(entry["action"]) + "</td></tr>"
+        for entry in milestones
     )
     reviewed = doc.state == "APPROVED_N4"
     verdict = ("Relecture humaine N4 effectuée" if reviewed else
@@ -53,6 +59,11 @@ effectif : {h(profile['employees'])} ; sites : {h(profile['sites'])} ; postes : 
 La mention « À confirmer » signifie que l'information manque.</p>
 <table><thead><tr><th>État</th><th>Domaine</th><th>Action proposée</th></tr></thead>
 <tbody>{action_rows or '<tr><td colspan="3">Aucune action supplémentaire déclarée.</td></tr>'}</tbody></table>
+<h2>Feuille de route indicative à 30 / 60 / 90 jours</h2>
+<p class="small">Ce calendrier est fondé sur des déclarations et doit être validé avant intervention.
+Il ne constitue ni un diagnostic automatisé par IA, ni une expertise certifiée.</p>
+<table><thead><tr><th>Période</th><th>Domaine</th><th>Mesure proposée</th></tr></thead>
+<tbody>{milestone_rows}</tbody></table>
 <h2>Questionnaire de sécurité</h2><table><thead><tr><th>Domaine</th><th>Réponse déclarée</th></tr></thead>
 <tbody>{answers_rows}</tbody></table>
 <h2>Revue N4</h2>{review or '<p>En attente de revue humaine N4.</p>'}
