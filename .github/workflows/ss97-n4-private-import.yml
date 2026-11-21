@@ -1,0 +1,23 @@
+name: SS97 N4 private import checks
+on:
+  pull_request:
+    paths:
+      - 'softsystem97/technician_exams/private_import*.py'
+      - 'softsystem97/www/ss97-tech-admin.html'
+      - 'softsystem97/public/js/ss97_n4_import.js'
+      - 'tools/test_ss97_n4_private_import_offline.py'
+      - '.github/workflows/ss97-n4-private-import.yml'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m compileall -q softsystem97/technician_exams/private_import.py softsystem97/technician_exams/private_import_rules.py
+      - run: node --check softsystem97/public/js/ss97_n4_import.js
+      - run: python -m unittest -q tools.test_ss97_n4_private_import_offline
