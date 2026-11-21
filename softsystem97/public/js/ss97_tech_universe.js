@@ -79,6 +79,9 @@
       }
       container.append(card);
     }
+    if (expected === "BANK") {
+      root.dispatchEvent(new CustomEvent("ss97-bank-missions", {detail: data.missions || []}));
+    }
     status("Espace " + expected + " chargé avec contrôle de votre habilitation.");
   }
   refresh().catch((error) => status(error.message));

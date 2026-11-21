@@ -1,6 +1,6 @@
 {% extends "templates/web.html" %}
 {% block page_content %}
-<link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css?v=20261118-r2">
+<link rel="stylesheet" href="/assets/softsystem97/css/ss97_tech_universe.css?v=20261121-bank-1">
 <main class="ss97-universe bank" data-track="BANK">
 <p><a href="/ss97-tech-os">← Mon dossier professionnel</a></p>
 <span class="badge">Niveau 3 · Systèmes bancaires</span>
@@ -14,6 +14,61 @@
 <p class="notice">Ne jamais renseigner de code bancaire, secret d'accès, numéro de carte ou donnée client sensible dans une fiche de route ou un rapport.</p>
 <p id="universe-status" role="status" aria-live="polite">Vérification des missions autorisées…</p>
 <section class="panel"><h2>Mes missions bancaires</h2><div id="universe-missions" aria-live="polite"></div></section>
+<section class="panel" id="bank-operations" hidden>
+  <h2>Suivi d’intervention en agence</h2>
+  <label for="bank-mission">Mission bancaire</label>
+  <select id="bank-mission"></select>
+  <p id="bank-operation-status" role="status" aria-live="polite"></p>
+  <p id="bank-operation-times" aria-live="polite"></p>
+  <form id="bank-operation-form" hidden>
+    <p>Utilisez des références techniques. Saisissez les résultats constatés et les références déjà approuvées par la banque.</p>
+    <fieldset id="bank-operation-fields">
+      <legend>Agence et continuité</legend>
+      <div class="grid">
+        <label>Référence de l’agence<input name="agency_ref" maxlength="80" required></label>
+        <label>Référence du poste ou de l’équipement<input name="asset_ref" maxlength="80" required></label>
+        <label>Service touché
+          <select name="service">
+            <option value="WORKSTATION">Poste de travail</option>
+            <option value="SCAN">Numérisation</option>
+            <option value="PRINT">Impression</option>
+            <option value="NETWORK">Réseau</option>
+            <option value="AUTH">Authentification</option>
+            <option value="TERMINAL">Terminal</option>
+            <option value="OTHER">Autre</option>
+          </select>
+        </label>
+        <label>Préouverture
+          <select name="opening_check">
+            <option value="NOT_CHECKED">À vérifier</option>
+            <option value="READY">Contrôles réalisés</option>
+            <option value="BLOCKED">Anomalie à traiter</option>
+          </select>
+        </label>
+        <label>Activité de l’agence
+          <select name="service_state">
+            <option value="UNASSESSED">À évaluer</option>
+            <option value="INTERRUPTED">Interrompue</option>
+            <option value="WORKAROUND">Reprise avec secours</option>
+            <option value="RESTORED">Fonctionnement normal rétabli</option>
+          </select>
+        </label>
+        <label>Référence du secours approuvé<input name="fallback_ref" maxlength="80"></label>
+        <label>Équipe chargée de la suite
+          <select name="escalation_team">
+            <option value="NONE">Aucune escalade</option>
+            <option value="BRANCH">Agence</option>
+            <option value="NETWORK">Réseau</option>
+            <option value="SECURITY">Sécurité</option>
+            <option value="MAINTAINER">Mainteneur</option>
+          </select>
+        </label>
+      </div>
+      <button type="submit">Enregistrer le suivi</button>
+    </fieldset>
+  </form>
+</section>
 </main>
-<script src="/assets/softsystem97/js/ss97_tech_universe.js" defer></script>
+<script src="/assets/softsystem97/js/ss97_bank_operations.js" defer></script>
+<script src="/assets/softsystem97/js/ss97_tech_universe.js?v=20261121-bank-1" defer></script>
 {% endblock %}
