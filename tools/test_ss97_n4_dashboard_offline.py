@@ -1,7 +1,7 @@
 """N4 cyber dashboard: aggregate and least-privilege static regression checks."""
 import unittest
 from pathlib import Path
-from softsystem97.technician_os.cyber_dashboard import summarize
+from softsystem97.technician_os.cyber_dashboard_rules import summarize
 
 ROOT=Path(__file__).resolve().parents[1]
 
