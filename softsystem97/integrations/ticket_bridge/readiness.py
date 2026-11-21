@@ -1,6 +1,6 @@
 """Private read-only bridge production preflight; no grants or configuration writes."""
 import frappe
-from . import policy
+from . import policy, issue_script_review
 
 
 def _enabled_doctype(name):
@@ -58,12 +58,23 @@ def get_admin_bridge_preflight():
     except Exception:
         workflow_active = True  # Fail closed if schema check breaks.
     try:
-        server_script_active = (_enabled_doctype("Server Script") and bool(
-            frappe.db.exists("Server Script", {
-                "script_type": "DocType Event", "reference_doctype": "Issue",
-                "disabled": 0})))
-    except Exception:
-        server_script_active = True
+        issue_scripts = issue_script_review.inventory(frappe)
+        issue_state = issue_script_review.approval_state(
+            issue_scripts, cfg.get("approved_issue_scripts"),
+            cfg.get("issue_scripts_reviewed"),
+            cfg.get("issue_scripts_review_reference"))
+        issue_inventory_complete = True
+        # Only a System Manager may obtain revision hashes; no script code.
+        script_revisions = [{
+            "name": record["name"],
+            "event": record["doctype_event"],
+            "sha256": issue_script_review.fingerprint(
+                record["name"], record["doctype_event"], record["script"])
+        } for record in issue_scripts]
+    except (ValueError, TypeError):
+        issue_inventory_complete = False
+        issue_state = {"approved": False, "count": -1, "unapproved": -1}
+        script_revisions = []
 
     writers = _support_writers()
     designated = cfg.get("writer_user")
@@ -84,7 +95,8 @@ def get_admin_bridge_preflight():
         "issue_statuses_match": bool(status and status.fieldtype == "Select"
                                      and statuses == permitted_statuses),
         "no_active_issue_workflow": not workflow_active,
-        "no_issue_doctype_event_script": not server_script_active,
+        "issue_scripts_inventory_complete": issue_inventory_complete,
+        "issue_scripts_approved": issue_state["approved"],
         "role_configured": bool(role_ok),
         "service_writer_configured": bool(writer_ok),
         "profile_adapter_confirmed": cfg.get("profile_required") is False,
@@ -97,6 +109,9 @@ def get_admin_bridge_preflight():
         "available_technician_roles": existing_roles,
         "support_writer_candidate_count": len(writers),
         "configured_writer_is_valid": bool(writer_ok),
+        "issue_scripts_active_count": issue_state["count"],
+        "issue_scripts_unapproved_count": issue_state["unapproved"],
+        "issue_script_revisions_for_admin": script_revisions,
         "currently_enabled": conditions["bridge_enabled"],
         "activation_prerequisites_met": all(value for key, value in conditions.items()
             if key != "bridge_enabled"),
@@ -105,5 +120,6 @@ def get_admin_bridge_preflight():
             "Un rôle N4 existant ne prouve pas que l'utilisateur candidat l'a obtenu.",
             "Les contrats, affectations et mandats restent soumis aux contrôles du serveur.",
             "Les comptes Support Team ne sont pas créés par ce contrôle.",
+            "Chaque script Issue doit être examiné par un responsable avant approbation de son empreinte.",
         ],
     }

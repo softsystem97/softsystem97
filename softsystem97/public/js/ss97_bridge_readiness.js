@@ -11,7 +11,8 @@
     issue_customer_link:"Lien client du ticket ERPNext",
     issue_statuses_match:"États des tickets compatibles",
     no_active_issue_workflow:"Aucun workflow Issue en conflit",
-    no_issue_doctype_event_script:"Aucun script Issue en conflit",
+    issue_scripts_inventory_complete:"Inventaire complet des scripts ERPNext Issue",
+    issue_scripts_approved:"Versions actives des scripts Issue examinées et approuvées",
     role_configured:"Rôle technicien du pont configuré",
     service_writer_configured:"Compte de service Support Team configuré",
     profile_adapter_confirmed:"Adaptateur de profil validé",
@@ -48,6 +49,10 @@
       writers.textContent = "Comptes de service Support Team possibles : " +
         data.support_writer_candidate_count + " (identités non affichées).";
       result.append(writers);
+      const scriptCount = document.createElement("p");
+      scriptCount.textContent = "Scripts Issue actifs : " + data.issue_scripts_active_count +
+        " · non approuvés/modifiés : " + data.issue_scripts_unapproved_count;
+      result.append(scriptCount);
     } catch (error) {result.textContent=error.message;}
     finally {btn.disabled=false;}
   }

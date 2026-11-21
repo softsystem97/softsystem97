@@ -1,7 +1,7 @@
 """Fail-closed policy for the replacement bridge, not the unknown legacy portal."""
 import frappe
 from contextlib import contextmanager
-from . import historical
+from . import historical, issue_script_review
 
 FORBIDDEN_ROLES = {'system manager', 'administrator', 'all', 'guest', 'customer', 'candidat ss97'}
 TRANSITIONS = {
@@ -64,9 +64,19 @@ def settings():
         frappe.throw('Modèle Issue incompatible.', frappe.PermissionError)
     if frappe.db.exists('Workflow', {'document_type': 'Issue', 'is_active': 1}):
         frappe.throw('Workflow Issue actif : adaptateur requis.', frappe.PermissionError)
-    if frappe.db.exists('Server Script', {'script_type': 'DocType Event',
-            'reference_doctype': 'Issue', 'disabled': 0}):
-        frappe.throw('Scripts Issue actifs : compatibilité et adaptateur requis.', frappe.PermissionError)
+    # Existing Issue scripts may coexist ONLY when their precise reviewed
+    # revisions are pinned in the private site config. Unrecognized changes
+    # stop every bridge operation before any ticket is modified.
+    try:
+        scripts = issue_script_review.inventory(frappe)
+        approval = issue_script_review.approval_state(
+            scripts, config.get('approved_issue_scripts'),
+            config.get('issue_scripts_reviewed'),
+            config.get('issue_scripts_review_reference'))
+    except (ValueError, TypeError):
+        frappe.throw('Inventaire des scripts Issue impossible : pont verrouillé.', frappe.PermissionError)
+    if not approval['approved']:
+        frappe.throw('Scripts Issue non vérifiés ou modifiés : pont verrouillé.', frappe.PermissionError)
     if config.get('email_enabled') is True and frappe.db.exists('Notification', {
             'document_type': 'Issue', 'enabled': 1, 'channel': 'Email'}):
         frappe.throw('Producteur e-mail Issue déjà actif : doublons à résoudre.', frappe.PermissionError)
