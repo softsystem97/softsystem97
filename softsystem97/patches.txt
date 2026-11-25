@@ -3,3 +3,4 @@
 [post_model_sync]
 softsystem97.patches.v1_0.n2_ticket_schema
 softsystem97.patches.v1_0.stripe_accounting
+softsystem97.patches.v1_0.n2_cockpit_schema
