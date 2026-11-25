@@ -73,5 +73,10 @@ doc_events = {
 
 # Pending-only cleanup. No remote engine is controlled by this V1 scheduler.
 scheduler_events = {
+    "cron": {
+        "*/5 * * * *": [
+            "softsystem97.integrations.ticket_bridge.dispatch_scheduler.run_pending",
+        ],
+    },
     "all": ["softsystem97.remote.api.expire_pending_sessions"],
 }
