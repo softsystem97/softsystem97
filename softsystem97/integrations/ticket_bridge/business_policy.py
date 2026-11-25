@@ -64,7 +64,7 @@ def enforce_confirmed_constraints(request, doc=None):
     operations = {'create', 'assign', 'status', 'intervention',
         'cockpit.start', 'cockpit.pause', 'cockpit.resume', 'cockpit.complete',
         'cockpit.submit_close', 'cockpit.admin_clear_security',
-        'cockpit.close_remote', 'cockpit.gwen_emit'}
+        'cockpit.close_remote', 'cockpit.gwen_emit', 'cockpit.admin_close'}
     if not isinstance(request, AuthorizationRequest):
         deny()
     if (any(not isinstance(value, str) for value in vars(request).values())
@@ -83,7 +83,7 @@ def enforce_confirmed_constraints(request, doc=None):
             or request.revision != str(doc.modified)
             or request.customer != (doc.customer or '') or request.status != doc.status):
         deny()
-    if request.operation in ('assign', 'cockpit.admin_clear_security'):
+    if request.operation in ('assign', 'cockpit.admin_clear_security', 'cockpit.admin_close'):
         policy.dispatcher()
         doc.check_permission('write')
         if request.operation == 'assign':

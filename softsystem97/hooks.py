@@ -56,7 +56,10 @@ fixtures = [
 # Only revokes existing bridge approvals; never creates an assignment/grant.
 doc_events = {
     "Issue": {
-        "validate": "softsystem97.integrations.ticket_bridge.payment_gate.validate_paid_issue",
+        "validate": [
+            "softsystem97.integrations.ticket_bridge.payment_gate.validate_paid_issue",
+            "softsystem97.integrations.ticket_bridge.cockpit_completion.validate_pilot_issue",
+        ],
         "on_update": "softsystem97.remote.lifecycle.revoke_on_issue_close",
     },
     "ToDo": {

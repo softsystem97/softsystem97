@@ -1,0 +1,343 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+
+<style>
+.n2 {
+    max-width:850px;
+    margin:30px auto;
+    padding:25px;
+    border-radius:15px;
+    background:#102033;
+    color:white;
+}
+.n2 button,.n2 select {
+    padding:12px;
+    margin:6px;
+    border-radius:8px;
+}
+.n2 select {
+    width:95%;
+    color:#111;
+}
+.n2 button {
+    background:#2563eb;
+    color:white;
+    border:0;
+}
+.n2 button:disabled {
+    opacity:.35;
+}
+.n2 .counter {
+    font-size:28px;
+    padding:15px;
+}
+</style>
+
+<div class="n2">
+
+<h1>Soft System 97 - Cockpit N2</h1>
+<p>Environnement pilote local</p>
+
+<a href="/login?redirect-to=%2Fss97-n2-cockpit-pilot">
+Connexion technicien
+</a>
+
+<br>
+
+<button id="refresh">Actualiser les tickets</button>
+
+<select id="tickets"></select>
+
+<h2 id="subject">Intervention</h2>
+
+<p id="status"></p>
+<p id="payment"></p>
+<p id="security"></p>
+
+<div class="counter">
+Travail : <span id="work">00:00:00</span>
+</div>
+
+<div class="counter">
+Pause : <span id="pause">00:00:00</span>
+</div>
+
+<button id="start" disabled>Demarrer</button>
+<button id="hold" disabled>Pause</button>
+<button id="resume" disabled>Reprendre</button>
+
+
+<hr>
+<h2>Rapport d'intervention</h2>
+
+<label for="diagnostic">Diagnostic</label>
+<textarea id="diagnostic" maxlength="10000"
+style="width:100%;color:#111"></textarea>
+
+<label for="report">Rapport technique</label>
+<textarea id="report" maxlength="10000"
+style="width:100%;color:#111"></textarea>
+
+<label>
+<input id="checklist" type="checkbox">
+Checklist de clôture terminée
+</label>
+
+<br>
+
+<button id="complete" disabled>
+Terminer l'intervention
+</button>
+
+<button id="submit-close" disabled>
+Soumettre à l'administration
+</button>
+
+<p id="message" role="status"></p>
+
+</div>
+
+<script>
+(() => {
+
+const base =
+    "/api/method/softsystem97.integrations.ticket_bridge.cockpit_api.";
+
+const el = id => document.getElementById(id);
+
+let current = null;
+let busy = false;
+
+function duration(value) {
+
+    const s = Math.max(0, Number(value) || 0);
+
+    return [
+        Math.floor(s / 3600),
+        Math.floor(s / 60) % 60,
+        s % 60
+    ].map(x => String(x).padStart(2,"0")).join(":");
+}
+
+async function request(method, params = {}, post = false) {
+
+    const url = base + method +
+        (post ? "" : "?" + new URLSearchParams(params));
+
+    const headers = {
+        "Accept":"application/json"
+    };
+
+    if (post) {
+
+        headers["Content-Type"] = "application/json";
+        headers["X-Frappe-CSRF-Token"] = current.csrf_token;
+    }
+
+    const response = await fetch(url, {
+        method: post ? "POST" : "GET",
+        credentials:"same-origin",
+        cache:"no-store",
+        headers,
+        body:post ? JSON.stringify(params) : undefined
+    });
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Operation refusee : HTTP " + response.status
+        );
+    }
+
+    return (await response.json()).message;
+}
+
+function render() {
+
+    const s = current;
+
+    el("start").disabled = true;
+    el("hold").disabled = true;
+    el("resume").disabled = true;
+
+    el("complete").disabled = true;
+    el("submit-close").disabled = true;
+    if (!s) return;
+
+    el("subject").textContent = s.subject;
+    el("status").textContent = "Statut : " + (s.status || "");
+
+    el("payment").textContent =
+        s.paid ? "Paiement verifie" : "Paiement en attente";
+
+    el("security").textContent =
+        s.suspended ? "Intervention suspendue" :
+        "Aucune suspension enregistree";
+
+    el("work").textContent = duration(s.work_seconds);
+    el("pause").textContent = duration(s.pause_seconds);
+
+    if (busy || !s.paid || s.suspended) return;
+
+    el("complete").disabled =
+        !["running","paused"].includes(s.timer);
+
+    el("submit-close").disabled =
+        s.status !== "Intervention terminée";
+
+
+    el("start").disabled = ![
+        "Accepté par le technicien",
+        "Prêt à commencer"
+    ].includes(s.status);
+
+    el("hold").disabled =
+        s.timer !== "running";
+
+    el("resume").disabled =
+        s.timer !== "paused";
+}
+
+async function loadState() {
+
+    current = null;
+    render();
+
+    const name = el("tickets").value;
+
+    if (!name) return;
+
+    current = await request("state", {name});
+
+    render();
+}
+
+async function loadTickets() {
+
+    current = null;
+    render();
+
+    const response = await request("tickets");
+
+    el("tickets").replaceChildren();
+
+    for (const item of response.tickets) {
+
+        const option = document.createElement("option");
+
+        option.value = item.name;
+
+        option.textContent =
+            item.name + " - " + item.subject;
+
+        el("tickets").append(option);
+    }
+
+    await loadState();
+}
+
+function error(e) {
+
+    el("message").textContent = e.message;
+}
+
+async function transition(action) {
+
+    if (!current || busy) return;
+
+    busy = true;
+    render();
+
+    try {
+
+        await request("transition", {
+            name:current.ticket,
+            action,
+            expected_modified:current.modified
+        }, true);
+
+        el("message").textContent =
+            "Action enregistree avec succes.";
+
+    } catch(e) {
+
+        error(e);
+
+    } finally {
+
+        busy = false;
+
+        try {
+            await loadState();
+        } catch(e) {
+            error(e);
+        }
+    }
+}
+
+el("refresh").onclick =
+    () => loadTickets().catch(error);
+
+el("tickets").onchange =
+    () => loadState().catch(error);
+
+el("start").onclick = () => transition("start");
+el("hold").onclick = () => transition("pause");
+el("resume").onclick = () => transition("resume");
+
+
+async function finishIntervention(method) {
+
+    if (!current || busy) return;
+
+    busy = true;
+    render();
+
+    try {
+
+        const params = {
+            name:current.ticket,
+            expected_modified:current.modified
+        };
+
+        if (method === "complete") {
+
+            params.diagnostic = el("diagnostic").value;
+            params.report = el("report").value;
+            params.checklist =
+                el("checklist").checked ? 1 : 0;
+        }
+
+        await request(method, params, true);
+
+        el("message").textContent =
+            "Operation enregistree.";
+
+    } catch(e) {
+
+        error(e);
+
+    } finally {
+
+        busy = false;
+
+        try {
+            await loadState();
+        } catch(e) {
+            error(e);
+        }
+    }
+}
+
+el("complete").onclick =
+    () => finishIntervention("complete");
+
+el("submit-close").onclick =
+    () => finishIntervention("submit_close");
+
+loadTickets().catch(error);
+
+})();
+</script>
+
+{% endblock %}
