@@ -54,6 +54,22 @@ def state(name):
             doc.get("ss97_security_suspend")
         ),
         "modified": str(doc.modified),
+
+        "active_seconds": cockpit.elapsed(
+            doc.get("ss97_timer_resumed_on")
+            if doc.get("ss97_timer_status") == "running"
+            else doc.get("ss97_pause_started_on"),
+            frappe.utils.now_datetime()
+        ) if (
+            (
+                doc.get("ss97_timer_status") == "running"
+                and doc.get("ss97_timer_resumed_on")
+            )
+            or (
+                doc.get("ss97_timer_status") == "paused"
+                and doc.get("ss97_pause_started_on")
+            )
+        ) else 0,
         "csrf_token": get_csrf_token()
     }
 
