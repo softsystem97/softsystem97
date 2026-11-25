@@ -56,12 +56,45 @@ def browser_test():
 
             tech = login(data["tech"])
 
+            # SS97 COMMERCIAL ACCESS TEST
+
+            availability = (
+                base +
+                "/api/method/softsystem97.integrations."
+                "ticket_bridge.cockpit_api.availability"
+            )
+
+            anonymous = browser.new_context()
+
+            denied = anonymous.request.get(
+                availability
+            )
+
+            assert denied.status in (401, 403)
+
+            anonymous.close()
+
+            allowed = tech.request.get(
+                availability
+            )
+
+            assert allowed.status == 200
+
+            assert allowed.json()["message"] == {
+                "enabled": True,
+                "route": "/espace-technicien/cockpit-n2"
+            }
+
+            print("ACCES ANONYME BLOQUE : OK")
+            print("ACCES COCKPIT COMMERCIAL : OK")
+
+
             page = tech.new_page()
 
             page.set_default_timeout(30000)
 
             page.goto(
-                base + "/ss97-n2-cockpit-pilot"
+                base + "/espace-technicien/cockpit-n2"
             )
 
             expect(
@@ -172,7 +205,7 @@ def browser_test():
             page = admin.new_page()
 
             page.goto(
-                base + "/ss97-n2-admin-pilot"
+                base + "/administration-n2/interventions"
             )
 
             expect(

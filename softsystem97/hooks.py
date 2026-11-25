@@ -83,3 +83,17 @@ scheduler_events = {
     },
     "all": ["softsystem97.remote.api.expire_pending_sessions"],
 }
+
+
+# SS97 N2 commercial route adapters.
+# Backend authorization remains mandatory.
+website_route_rules = [
+    {
+        "from_route": "/espace-technicien/cockpit-n2",
+        "to_route": "ss97-n2-cockpit-pilot",
+    },
+    {
+        "from_route": "/administration-n2/interventions",
+        "to_route": "ss97-n2-admin-pilot",
+    },
+]

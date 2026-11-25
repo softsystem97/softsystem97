@@ -129,3 +129,15 @@ def admin_close(name, expected_modified):
     return cockpit_completion.execute(
         name, "admin_close", expected_modified
     )
+
+
+@frappe.whitelist(methods=["GET"])
+def availability():
+    """Availability for an authenticated technician only."""
+
+    require_pilot()
+
+    return {
+        "enabled": True,
+        "route": "/espace-technicien/cockpit-n2"
+    }

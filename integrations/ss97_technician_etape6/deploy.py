@@ -23,6 +23,15 @@ def page_tickets(P) -> str:
     {P._presence_bar()}
     {P._kpi_block()}
     {P._ticket_tables()}
+    <div style="margin:16px 0">
+      <a id="ss97-n2-cockpit-link"
+         class="btn btn-p"
+         href="/espace-technicien/cockpit-n2"
+         hidden>
+         Ouvrir mon cockpit N2
+      </a>
+    </div>
+
     <div class="btns" style="margin-top:14px">
       <a class="btn btn-p" href="/ss97-tech-missions">Workflow missions</a>
       <a class="btn btn-g" href="/espace-technicien/dashboard">Dashboard</a>
@@ -41,6 +50,49 @@ def page_tickets(P) -> str:
   </div>
 </div>
 {P.TECH_DASH_JS}
+<script>
+(() => {{
+
+    const link = document.getElementById(
+        "ss97-n2-cockpit-link"
+    );
+
+    if (!link) return;
+
+    link.hidden = true;
+
+    fetch(
+        "/api/method/softsystem97.integrations.ticket_bridge.cockpit_api.availability",
+        {{
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: {{
+                "Accept": "application/json"
+            }}
+        }}
+    ).then(async response => {{
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        if (data.message &&
+            data.message.enabled === true &&
+            data.message.route ===
+                "/espace-technicien/cockpit-n2") {{
+
+            link.hidden = false;
+        }}
+
+    }}).catch(() => {{
+
+        link.hidden = true;
+
+    }});
+
+}})();
+</script>
+
 {close_shell()}
 </div>
 """
