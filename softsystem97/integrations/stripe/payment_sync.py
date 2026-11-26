@@ -315,7 +315,21 @@ def create_payment_entry_for_invoice(invoice_name: str, amount: float, reference
 	inv = lock_invoice(invoice_name)
 	if flt(inv.outstanding_amount) <= 0:
 		return None
-	account = config_value("clearing_account")
+	from .clearing_routing import select_account
+
+	try:
+		account = select_account(
+			setting("ss97_stripe_clearing_accounts"),
+			stripe_mode(),
+			inv.company,
+			inv.currency,
+			config_value("clearing_account")
+		)
+	except (ValueError, TypeError, AttributeError):
+		frappe.throw(
+			"Compte Stripe par devise non configure.",
+			frappe.ValidationError
+		)
 	bank = frappe.db.get_value("Account", account,
 		["company", "account_currency", "account_type", "is_group", "disabled"], as_dict=True) if account else None
 	if (not bank or bank.company != inv.company or bank.account_currency != inv.currency

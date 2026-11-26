@@ -94,10 +94,44 @@ doc_events = {
         "validate": "softsystem97.recruitment.validation.validate_technician_application",
     },
     "Issue": {
-        "validate": "softsystem97.integrations.ticket_bridge.payment_gate.validate_paid_issue",
+        "validate": [
+            "softsystem97.integrations.ticket_bridge.payment_gate.validate_paid_issue",
+            "softsystem97.integrations.ticket_bridge.cockpit_completion.validate_pilot_issue",
+        ],
+        "on_update": "softsystem97.remote.lifecycle.revoke_on_issue_close",
     },
     "ToDo": {
-        "on_update": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
-        "on_trash": "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+        "on_update": [
+            "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+            "softsystem97.remote.lifecycle.revoke_on_todo_change",
+        ],
+        "on_trash": [
+            "softsystem97.integrations.ticket_bridge.policy.revoke_changed_assignment",
+            "softsystem97.remote.lifecycle.revoke_on_todo_change",
+        ],
     },
 }
+
+# Pending-only cleanup. No remote engine is controlled by this V1 scheduler.
+scheduler_events = {
+    "cron": {
+        "*/5 * * * *": [
+            "softsystem97.integrations.ticket_bridge.dispatch_scheduler.run_pending",
+        ],
+    },
+    "all": ["softsystem97.remote.api.expire_pending_sessions"],
+}
+
+
+# SS97 N2 commercial route adapters.
+# Backend authorization remains mandatory.
+website_route_rules = [
+    {
+        "from_route": "/espace-technicien/cockpit-n2",
+        "to_route": "ss97-n2-cockpit-pilot",
+    },
+    {
+        "from_route": "/administration-n2/interventions",
+        "to_route": "ss97-n2-admin-pilot",
+    },
+]

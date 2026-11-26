@@ -1,0 +1,436 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+
+<style>
+.n2 {
+    max-width:850px;
+    margin:30px auto;
+    padding:25px;
+    border-radius:15px;
+    background:#102033;
+    color:white;
+}
+.n2 button,.n2 select {
+    padding:12px;
+    margin:6px;
+    border-radius:8px;
+}
+.n2 select {
+    width:95%;
+    color:#111;
+}
+.n2 button {
+    background:#2563eb;
+    color:white;
+    border:0;
+}
+.n2 button:disabled {
+    opacity:.35;
+}
+.n2 .counter {
+    font-size:28px;
+    padding:15px;
+}
+</style>
+
+<div class="n2">
+
+<h1>Soft System 97 - Cockpit N2</h1>
+<p>Environnement pilote local</p>
+
+<a href="/login?redirect-to=%2Fespace-technicien%2Fcockpit-n2">
+Connexion technicien
+</a>
+
+<br>
+
+<button id="refresh">Actualiser les tickets</button>
+
+<select id="tickets"></select>
+
+<h2 id="subject">Intervention</h2>
+
+<p id="status"></p>
+<p id="payment"></p>
+<p id="security"></p>
+
+<div class="counter">
+Travail : <span id="work">00:00:00</span>
+</div>
+
+<div class="counter">
+Pause : <span id="pause">00:00:00</span>
+</div>
+
+<button id="start" disabled>Demarrer</button>
+<button id="hold" disabled>Pause</button>
+<button id="resume" disabled>Reprendre</button>
+
+
+<hr>
+<h2>Rapport d'intervention</h2>
+
+<label for="diagnostic">Diagnostic</label>
+<textarea id="diagnostic" maxlength="10000"
+style="width:100%;color:#111"></textarea>
+
+<label for="report">Rapport technique</label>
+<textarea id="report" maxlength="10000"
+style="width:100%;color:#111"></textarea>
+
+<label>
+<input id="checklist" type="checkbox">
+Checklist de clôture terminée
+</label>
+
+<br>
+
+<button id="complete" disabled>
+Terminer l'intervention
+</button>
+
+<button id="submit-close" disabled>
+Soumettre à l'administration
+</button>
+
+<p id="message" role="status"></p>
+
+</div>
+
+
+<script>
+(() => {
+
+"use strict";
+
+const el = id => document.getElementById(id);
+
+const base =
+"/api/method/softsystem97.integrations.ticket_bridge.cockpit_api.";
+
+let current = null;
+let busy = false;
+let loadedAt = 0;
+
+function duration(value) {
+
+    const sec = Math.max(
+        0, Math.floor(Number(value) || 0)
+    );
+
+    return [
+        Math.floor(sec / 3600),
+        Math.floor(sec / 60) % 60,
+        sec % 60
+    ].map(x => String(x).padStart(2,"0")).join(":");
+}
+
+function counters() {
+
+    if (!current) {
+
+        el("work").textContent = "00:00:00";
+        el("pause").textContent = "00:00:00";
+
+        return;
+    }
+
+    const active =
+        Number(current.active_seconds || 0) +
+        Math.floor(
+            (performance.now() - loadedAt) / 1000
+        );
+
+    let work = Number(current.work_seconds || 0);
+    let pause = Number(current.pause_seconds || 0);
+
+    if(current.timer === "running") work += active;
+    if(current.timer === "paused") pause += active;
+
+    el("work").textContent = duration(work);
+    el("pause").textContent = duration(pause);
+}
+
+async function request(method, data={}, post=false) {
+
+    const headers = {
+        "Accept":"application/json"
+    };
+
+    if(post) {
+
+        if(!current || !current.csrf_token)
+            throw new Error("Session a actualiser.");
+
+        headers["Content-Type"] = "application/json";
+
+        headers["X-Frappe-CSRF-Token"] =
+            current.csrf_token;
+    }
+
+    const response = await fetch(
+        base + method +
+        (post ? "" : "?" + new URLSearchParams(data)),
+        {
+            method:post ? "POST" : "GET",
+            credentials:"same-origin",
+            cache:"no-store",
+            headers,
+            body:post ? JSON.stringify(data) : undefined
+        }
+    );
+
+    if(!response.ok)
+        throw new Error("Operation refusee : HTTP " + response.status);
+
+    return (await response.json()).message;
+}
+
+function clearReport() {
+
+    el("diagnostic").value = "";
+    el("report").value = "";
+    el("checklist").checked = false;
+}
+
+function render() {
+
+    el("refresh").disabled = busy;
+    el("tickets").disabled = busy;
+
+    for(const id of [
+        "start","hold","resume",
+        "complete","submit-close"
+    ]) {
+
+        el(id).disabled = true;
+    }
+
+    if(!current) {
+
+        el("subject").textContent = "Aucun ticket selectionne";
+        el("status").textContent = "";
+        el("payment").textContent = "";
+        el("security").textContent = "";
+
+        counters();
+
+        return;
+    }
+
+    const s = current;
+
+    el("subject").textContent = s.subject;
+    el("status").textContent = "Statut : " + (s.status || "");
+
+    el("payment").textContent =
+        s.paid ? "Paiement verifie" : "Paiement en attente";
+
+    el("security").textContent =
+        s.suspended ? "Intervention suspendue" :
+        "Aucune suspension enregistree";
+
+    counters();
+
+    if(busy || !s.paid || s.suspended) return;
+
+    el("start").disabled = ![
+        "Accepté par le technicien",
+        "Prêt à commencer"
+    ].includes(s.status);
+
+    el("hold").disabled = s.timer !== "running";
+
+    el("resume").disabled = s.timer !== "paused";
+
+    el("complete").disabled =
+        !["running","paused"].includes(s.timer);
+
+    el("submit-close").disabled =
+        s.status !== "Intervention terminée";
+}
+
+async function loadState() {
+
+    current = null;
+
+    render();
+
+    const name = el("tickets").value;
+
+    if(!name) return;
+
+    current = await request("state",{name});
+
+    loadedAt = performance.now();
+
+    render();
+}
+
+async function loadTickets(preferred=null) {
+
+    current = null;
+
+    el("tickets").replaceChildren();
+
+    render();
+
+    const result = await request("tickets");
+
+    for(const ticket of result.tickets) {
+
+        const option = document.createElement("option");
+
+        option.value = ticket.name;
+
+        option.textContent =
+            ticket.name + " - " + ticket.subject;
+
+        el("tickets").append(option);
+    }
+
+    if(preferred && Array.from(
+        el("tickets").options
+    ).some(o => o.value === preferred)) {
+
+        el("tickets").value = preferred;
+    }
+
+    await loadState();
+}
+
+async function perform(fn) {
+
+    if(busy) return;
+
+    busy = true;
+
+    render();
+
+    try {
+
+        await fn();
+
+    } catch(error) {
+
+        current = null;
+
+        el("message").textContent = error.message;
+
+    } finally {
+
+        busy = false;
+
+        render();
+    }
+}
+
+async function transition(action) {
+
+    if(!current) return;
+
+    await request("transition",{
+        name:current.ticket,
+        action,
+        expected_modified:current.modified
+    },true);
+
+    await loadState();
+
+    el("message").textContent =
+        "Action enregistree avec succes.";
+}
+
+async function complete() {
+
+    if(!current) return;
+
+    const diagnostic = el("diagnostic").value.trim();
+    const report = el("report").value.trim();
+
+    if(
+        diagnostic.length < 10 ||
+        report.length < 10 ||
+        !el("checklist").checked
+    ) {
+
+        el("message").textContent =
+            "Diagnostic, rapport et checklist obligatoires.";
+
+        return;
+    }
+
+    await request("complete",{
+        name:current.ticket,
+        expected_modified:current.modified,
+        diagnostic,
+        report,
+        checklist:1
+    },true);
+
+    await loadState();
+
+    clearReport();
+
+    el("message").textContent =
+        "Rapport enregistre avec succes.";
+}
+
+async function submit() {
+
+    if(!current) return;
+
+    await request("submit_close",{
+        name:current.ticket,
+        expected_modified:current.modified
+    },true);
+
+    clearReport();
+
+    await loadTickets();
+
+    el("message").textContent =
+        "Rapport transmis a l'administration.";
+}
+
+el("refresh").onclick = () => perform(async () => {
+
+    const previous = el("tickets").value;
+
+    await loadTickets(previous);
+
+    if(previous !== el("tickets").value)
+        clearReport();
+});
+
+el("tickets").onchange = () => perform(async () => {
+
+    clearReport();
+
+    await loadState();
+});
+
+el("start").onclick =
+    () => perform(() => transition("start"));
+
+el("hold").onclick =
+    () => perform(() => transition("pause"));
+
+el("resume").onclick =
+    () => perform(() => transition("resume"));
+
+el("complete").onclick =
+    () => perform(complete);
+
+el("submit-close").onclick =
+    () => perform(submit);
+
+setInterval(counters,1000);
+
+perform(loadTickets);
+
+})();
+</script>
+
+
+{% endblock %}

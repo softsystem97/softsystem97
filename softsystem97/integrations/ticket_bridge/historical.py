@@ -45,7 +45,9 @@ def validate_configuration(config, meta):
     if value is not True:
         return
     field = meta.get_field('ss97_technician')
-    if (config.get('technician_role') != 'SS97 Technician' or not field
+    if (config.get('technician_role') not in (
+            'SS97 Technician', 'SS97 Technicien N2'
+        ) or not field
             or field.fieldtype != 'Link' or field.options != 'User'):
         frappe.throw('Rôle canonique et lien ss97_technician vers User requis ; adaptateur de profil sinon.',
                      frappe.PermissionError)

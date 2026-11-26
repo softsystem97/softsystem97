@@ -96,6 +96,9 @@ def technician(user=None):
     roles = frappe.get_roles(user)
     if config['technician_role'] not in roles:
         frappe.throw('Accès technicien refusé.', frappe.PermissionError)
+    if config['technician_role'] == "SS97 Technicien N2":
+        from .n2_profile_access import enforce
+        enforce(user, roles)
     if config['technician_role'] == bridge_profile_gate.N4_ROLE:
         # The role alone is not a qualification.  Require the real
         # approved N4 profile at EVERY ticket access and assignment.

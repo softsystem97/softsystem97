@@ -4,7 +4,7 @@ N4_ROLE = "SS97 Technicien N4"
 
 
 def profile_flag_valid(role, required):
-    if role == N4_ROLE:
+    if role in (N4_ROLE, "SS97 Technicien N2"):
         return required is True
     return required is False
 

@@ -34,6 +34,24 @@ def authorize_ticket_operation(request):
 
     # Cockpit/exception operations remain denied until their private workflows
     # are explicitly validated. No client-supplied paid flag is trusted.
+
+    if request.operation in (
+        "cockpit.start",
+        "cockpit.pause",
+        "cockpit.resume"
+    ):
+        from .cockpit import authorized
+        return decision(authorized(request))
+
+
+    if request.operation in (
+        "cockpit.complete",
+        "cockpit.submit_close",
+        "cockpit.admin_close"
+    ):
+        from .cockpit_completion import authorized
+        return decision(authorized(request))
+
     if request.operation not in ("assign", "status", "intervention"):
         return decision()
     if not request.issue or not request.customer or not request.technician:
