@@ -206,12 +206,28 @@ def controlled_write():
 
 def validate_pilot_issue(doc, method=None):
 
-    if frappe.local.site != "audit.n2.localhost":
-        return
+    from .cockpit_commercial import managed_ticket
 
     previous = doc.get_doc_before_save()
 
+    config = frappe.conf.get("ss97_ticket_bridge") or {}
+
+    if not managed_ticket(
+        frappe.local.site, config, previous, doc
+    ):
+        return
+
     if not previous:
+        if (
+            frappe.local.site != "audit.n2.localhost"
+            and (
+                doc.get("ss97_intervention_started_on")
+                or doc.get("ss97_timer_resumed_on")
+                or doc.get("ss97_timer_status")
+                in ("running", "paused")
+            )
+        ):
+            deny("Creation directe d'une intervention interdite.")
         return
 
     if not (

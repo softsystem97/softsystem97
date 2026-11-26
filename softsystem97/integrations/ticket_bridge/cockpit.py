@@ -33,7 +33,7 @@ REQUIRED_FIELDS = (
 )
 
 
-def enabled():
+def pilot_enabled():
 
     config = frappe.conf.get("ss97_ticket_bridge") or {}
 
@@ -46,6 +46,38 @@ def enabled():
         and config.get("enforce_paid_interventions") is True
         and historical.enabled()
     )
+
+
+def enabled():
+
+    if pilot_enabled():
+        return True
+
+    from .cockpit_commercial import commercial_allowed
+
+    config = frappe.conf.get("ss97_ticket_bridge") or {}
+
+    if not commercial_allowed(
+        frappe.local.site, frappe.conf, config
+    ):
+        return False
+
+    try:
+
+        policy.settings()
+
+        from softsystem97.integrations.stripe.payment_sync import (
+            stripe_mode,
+            payments_live_enabled
+        )
+
+        return (
+            stripe_mode() == "live"
+            and payments_live_enabled()
+        )
+
+    except frappe.PermissionError:
+        return False
 
 
 def deny(message):
